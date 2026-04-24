@@ -3,7 +3,7 @@ title: "OSem Archive - Concept Proposal"
 author: "Nimesh, Esther, and Hridayashree"
 date: today
 format:
-  html:
+  pdf:
     embed-resources: true
 ---
 
@@ -43,4 +43,4 @@ We propose a **web application** that transforms the archive into an accessible,
 
 # Target Users
 
-The primary audience is **researchers and citizens** interested in accessing and analyzing historical environmental data from the openSenseMap network — including academics conducting environmental studies, urban planners, and data-curious members of the public.
+The primary audience is **researchers and citizens** interested in accessing and analyzing historical environmental data from the openSenseMap network including academics conducting environmental studies, urban planners, and data-curious members of the public.
