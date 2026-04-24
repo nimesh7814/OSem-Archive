@@ -1,0 +1,46 @@
+---
+title: "OSem Archive - Concept Proposal"
+author: "Nimesh, Esther, and Hridayashree"
+date: today
+format:
+  html:
+    embed-resources: true
+---
+
+# Introduction
+
+The **openSenseMap Archive** is a long-term data repository capturing environmental sensor readings from [openSenseMap](https://opensensemap.org/) since 2014-06-03. While openSenseMap itself retains only the most recent three years of data, the archive preserves the complete historical record and is updated daily.
+
+The archive is accessible at [archive.opensensemap.org](https://archive.opensensemap.org) and organizes data by a hierarchical folder structure: **year-month-day → stations → sensor**. Measurements are stored as CSV files, where each row represents a timestamped sensor reading, information about the sensors are stored in a .json file with their respective sensor IDs.
+
+# Problem Statement
+
+The openSenseMap archive is a valuable resource for researchers and citizens seeking historical environmental data. However, its current form, a raw directory of folders with no search, filtering, or visualization capabilities makes it difficult and time-consuming to use in practice.
+
+Users must manually navigate nested folder structures to locate the data they need, with no spatial search, no date range filtering, and no integrated analytical tools. This significantly limits the archive's usefulness for both casual exploration and rigorous research.
+
+# Proposed Solution
+
+We propose a **web application** that transforms the archive into an accessible, interactive data exploration platform. The application would allow users to:
+
+1. **Discover stations spatially** : using bounding box, radius, or geolocation based queries on an interactive map.
+2. **Browse sensor availability** : view which sensors are active for a selected station and on which dates data was recorded.
+3. **Visualize time-series data** : plot sensor measurements as a dotted line chart for a chosen date range.
+4. **Compare sensors** : overlay multiple sensors on the same timeline for side-by-side comparison.
+5. **Analyze data** : apply built-in tools such as moving averages, trend lines, outlier detection, and configurable threshold cut-off lines.
+6. **Export data** : download results in `.shp`, `.geojson`, or `.csv` format for use in external GIS and analysis workflows.
+
+# Feature Overview
+
+| Feature | Description |
+|---|---|
+| Spatial search | Find stations by bounding box, radius, or geolocation |
+| Sensor listing | Browse available sensors and their recording date ranges |
+| Time-series chart | Interactive dotted line chart with configurable date range |
+| Multi-sensor comparison | Overlay multiple sensors on a shared timeline |
+| Analytical tools | Averages, trend detection, outlier flagging, cut-off lines |
+| Data export | Download as `.shp`, `.geojson`, or `.csv` |
+
+# Target Users
+
+The primary audience is **researchers and citizens** interested in accessing and analyzing historical environmental data from the openSenseMap network — including academics conducting environmental studies, urban planners, and data-curious members of the public.
