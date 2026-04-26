@@ -13,10 +13,16 @@ services:
       POSTGRES_USER:     ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB:       ${DB_NAME}
+      # Passed through so 02_readonly_role.sh can create the role with the
+      # correct credentials on first initialisation.
+      DB_RO_USER:        ${DB_RO_USER:-web_anonymous}
+      DB_RO_PASSWORD:    ${DB_RO_PASSWORD:-osem_readonly}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # schema.sql runs once when the data directory is first initialised
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      # read-only role — shell script so it can read DB_RO_PASSWORD from env
+      - ./02_readonly_role.sh:/docker-entrypoint-initdb.d/02_readonly_role.sh:ro
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
@@ -92,26 +98,27 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
-  # Map viewer — interactive Leaflet map of all ingested stations
-  # Open: http://localhost:${MAP_PORT:-5052}
-  # Click any station marker to see its sensors and reading statistics.
+  # API — read-only spatial REST API
+  # Open: http://localhost:${API_PORT:-5052}
+  # All endpoints are anonymous GET requests, no authentication required.
+  # Supports GeoJSON / Shapefile / CSV download.
   # ---------------------------------------------------------------------------
-  map_viewer:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opensensemap_map
+    container_name: opensensemap_api
     restart: unless-stopped
     mem_limit: 256m
-    command: ["python", "-u", "map_viewer.py"]
+    command: ["python", "-u", "api.py"]
     environment:
-      DB_HOST:     db
-      DB_PORT:     5432
-      DB_NAME:     ${DB_NAME}
-      DB_USER:     ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST:        db
+      DB_PORT:        5432
+      DB_NAME:        ${DB_NAME}
+      DB_RO_USER:     ${DB_RO_USER:-web_anonymous}
+      DB_RO_PASSWORD: ${DB_RO_PASSWORD:-osem_readonly}
     ports:
-      - "${MAP_PORT:-5052}:5052"
+      - "${API_PORT:-5052}:5052"
     depends_on:
       db:
         condition: service_healthy
@@ -150,5 +157,11 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: archiveportal_postgres_data
   scraper_data:
+    external: true
+    name: archiveportal_scraper_data
   pgadmin_data:
+    external: true
+    name: archiveportal_pgadmin_data

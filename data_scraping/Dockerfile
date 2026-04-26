@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY scraper.py .
 COPY monitor.py .
-COPY map_viewer.py .
+COPY api.py .
 
 # /data is a named volume — holds progress.json across restarts
 VOLUME ["/data"]
