@@ -1,0 +1,4 @@
+requests
+tqdm
+psycopg2-binary
+flask

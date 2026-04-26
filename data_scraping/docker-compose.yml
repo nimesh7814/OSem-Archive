@@ -1,0 +1,148 @@
+services:
+
+  # ---------------------------------------------------------------------------
+  # TimescaleDB  (PostgreSQL 16 + TimescaleDB + PostGIS bundled)
+  # Schema is applied automatically on first start via initdb.d
+  # ---------------------------------------------------------------------------
+  db:
+    image: timescale/timescaledb-ha:pg16
+    container_name: opensensemap_db
+    restart: unless-stopped
+    mem_limit: 4g
+    environment:
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB:       ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # schema.sql runs once when the data directory is first initialised
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Scraper — downloads the OpenSenseMap archive and writes to TimescaleDB.
+  #
+  # Start:   docker compose up -d scraper
+  # Stop:    docker compose stop scraper          (sends SIGTERM → clean exit)
+  # Restart: docker compose start scraper         (resumes from last checkpoint)
+  # Logs:    docker compose logs -f scraper
+  #
+  # The named volume "scraper_data" persists progress.json across restarts so
+  # the scraper always resumes from the last fully-committed date.
+  # ---------------------------------------------------------------------------
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_scraper
+    restart: "no"          # do NOT auto-restart — operator decides when to run
+    stop_grace_period: 2m  # give the scraper time to finish the current station
+    mem_limit: 1g
+    environment:
+      DB_HOST:        db
+      DB_PORT:        5432
+      DB_NAME:        ${DB_NAME}
+      DB_USER:        ${DB_USER}
+      DB_PASSWORD:    ${DB_PASSWORD}
+      PROGRESS_FILE:  /data/progress.json
+      DELAY_MIN:      ${DELAY_MIN:-0.1}
+      DELAY_MAX:      ${DELAY_MAX:-0.4}
+      DELAY_PER_DATE: ${DELAY_PER_DATE:-0.5}
+      DELAY_429_BASE: ${DELAY_429_BASE:-60}
+      MAX_429_RETRIES: ${MAX_429_RETRIES:-5}
+    volumes:
+      - scraper_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Monitor — scraper progress dashboard
+  # Open: http://localhost:${MONITOR_PORT:-5051}
+  # Shows live date/station/sensor progress bars, KPI counters, and tables.
+  # Reads progress.json from the shared scraper_data volume + queries the DB.
+  # ---------------------------------------------------------------------------
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_monitor
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["python", "-u", "monitor.py"]
+    environment:
+      DB_HOST:       db
+      DB_PORT:       5432
+      DB_NAME:       ${DB_NAME}
+      DB_USER:       ${DB_USER}
+      DB_PASSWORD:   ${DB_PASSWORD}
+      PROGRESS_FILE: /data/progress.json
+    volumes:
+      - scraper_data:/data:ro   # read-only — monitor never writes progress
+    ports:
+      - "${MONITOR_PORT:-5051}:5051"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Map viewer — interactive Leaflet map of all ingested stations
+  # Open: http://localhost:${MAP_PORT:-5052}
+  # Click any station marker to see its sensors and reading statistics.
+  # ---------------------------------------------------------------------------
+  map_viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_map
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["python", "-u", "map_viewer.py"]
+    environment:
+      DB_HOST:     db
+      DB_PORT:     5432
+      DB_NAME:     ${DB_NAME}
+      DB_USER:     ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${MAP_PORT:-5052}:5052"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin 4 — web UI for the database
+  # Open: http://localhost:${PGADMIN_PORT:-5050}
+  # The OpenSenseMap DB server is pre-configured (no manual setup needed).
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: opensensemap_pgadmin
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      PGADMIN_DEFAULT_EMAIL:            ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD:         ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE:       "False"   # desktop mode — no login screen
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
+      # Write a pgpass file so pgAdmin can connect without prompting for a password
+      - ./pgadmin_pgpass:/pgpass:ro
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  scraper_data:
+  pgadmin_data:

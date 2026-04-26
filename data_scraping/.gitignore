@@ -1,0 +1,14 @@
+# Secret — never commit real credentials
+.env
+pgadmin_pgpass
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Scraper state (local dev only — in Docker this lives in a named volume)
+data/
+progress.json
+progress.json.tmp
+progress.json.corrupt
