@@ -246,9 +246,20 @@ def _iso(dt):
 
 
 def _parse_dt(raw: Optional[str]) -> Optional[datetime.datetime]:
+    """
+    Accepts any of these formats (all treated as UTC):
+      - 2015-01-02 09:00            (space-separated, no seconds → assumed UTC)
+      - 2015-01-02 09:00:00         (space-separated, with seconds → assumed UTC)
+      - 2015-01-02T09:00:00Z        (ISO 8601 with Z)
+      - 2015-01-02T09:00:00+00:00   (ISO 8601 with offset)
+    """
     if not raw:
         return None
-    return datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    normalised = raw.strip().replace(" ", "T").replace("Z", "+00:00")
+    dt = datetime.datetime.fromisoformat(normalised)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
 
 
 RESOLUTION_TABLES = {
@@ -685,11 +696,11 @@ def sensor_data(
     from_: Annotated[Optional[str], Query(
         alias="from",
         description="Start of time range (ISO 8601). Omit for all available data.",
-        example="2023-01-01T00:00:00Z",
+        example="2015-01-02 09:00",
     )] = None,
     to: Annotated[Optional[str], Query(
         description="End of time range (ISO 8601). Omit for all available data.",
-        example="2023-12-31T23:59:59Z",
+        example="2023-01-02 23:00",
     )] = None,
     resolution: Annotated[
         Literal["raw", "hourly", "daily", "monthly", "yearly"],
@@ -886,10 +897,16 @@ def _to_shp_zip(rows: list[dict]) -> bytes:
         header_size = 32 + len(fields) * 32 + 1
         rec_size = 1 + sum(f[2] for f in fields)
         buf = bytearray()
+        today = datetime.date.today()
         buf += struct.pack(
-            "<BBHHHH20x",
-            3, *datetime.date.today().timetuple()[:3],
-            num_recs, header_size, rec_size,
+            "<BBBBIHh20x",
+            3,                  # dBASE III version
+            today.year % 100,   # last-update YY
+            today.month,        # last-update MM
+            today.day,          # last-update DD
+            num_recs,
+            header_size,
+            rec_size,
         )
         for f in fields:
             name = f[0].encode("ascii").ljust(11, b"\x00")[:11]
@@ -902,7 +919,7 @@ def _to_shp_zip(rows: list[dict]) -> bytes:
                 str(r["sensor_id"]  or "")[:24].ljust(24),
                 str(r["sensor_title"] or "")[:80].ljust(80),
                 str(r["unit"] or "")[:20].ljust(20),
-                (r["recorded_at"].isoformat() if r["recorded_at"] else "")[:25].ljust(25),
+                (r["recorded_at"].strftime("%Y-%m-%dT%H:%M:%SZ") if r["recorded_at"] else "")[:25].ljust(25),
                 f"{float(r['value'] or 0):19.6f}" if r["value"] is not None else " " * 19,
                 f"{float(r['lon']   or 0):15.6f}" if r["lon"]   is not None else " " * 15,
                 f"{float(r['lat']   or 0):15.6f}" if r["lat"]   is not None else " " * 15,
@@ -1005,8 +1022,15 @@ def station_download(
         description="Comma-separated sensor IDs to include (default: all sensors)",
         example="5f7b1e2d3a4c5e6f7b8c9d0e,5f7b1e2d3a4c5e6f7b8c9d0f",
     )] = None,
-    from_: Annotated[Optional[str], Query(alias="from", description="Start of time range (ISO 8601)")] = None,
-    to:    Annotated[Optional[str], Query(description="End of time range (ISO 8601)")] = None,
+    from_: Annotated[Optional[str], Query(
+        alias="from",
+        description="Start of time range (ISO 8601)",
+        example="2015-01-02 09:00",
+    )] = None,
+    to: Annotated[Optional[str], Query(
+        description="End of time range (ISO 8601)",
+        example="2023-01-02 23:00",
+    )] = None,
 ):
     dt_from = _parse_dt(from_)
     dt_to   = _parse_dt(to)
@@ -1033,7 +1057,10 @@ def station_download(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return _build_download_response(rows, station_id, format)
+    try:
+        return _build_download_response(rows, station_id, format)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to build response: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -1055,8 +1082,15 @@ def sensor_download(
     format: Annotated[Literal["geojson", "csv", "shp"], Query(
         description="Output format", example="geojson",
     )],
-    from_: Annotated[Optional[str], Query(alias="from", description="Start of time range (ISO 8601)")] = None,
-    to:    Annotated[Optional[str], Query(description="End of time range (ISO 8601)")] = None,
+    from_: Annotated[Optional[str], Query(
+        alias="from",
+        description="Start of time range (ISO 8601)",
+        example="2015-01-02 09:00",
+    )] = None,
+    to: Annotated[Optional[str], Query(
+        description="End of time range (ISO 8601)",
+        example="2023-01-02 23:00",
+    )] = None,
 ):
     dt_from = _parse_dt(from_)
     dt_to   = _parse_dt(to)
@@ -1070,7 +1104,10 @@ def sensor_download(
     if not rows:
         raise HTTPException(status_code=404, detail="Sensor not found or no readings in range")
 
-    return _build_download_response(rows, sensor_id, format)
+    try:
+        return _build_download_response(rows, sensor_id, format)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to build response: {e}")
 
 
 # ---------------------------------------------------------------------------
