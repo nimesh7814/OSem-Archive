@@ -110,7 +110,7 @@ services:
     container_name: opensensemap_api
     restart: unless-stopped
     mem_limit: 256m
-    command: ["python", "-u", "api.py"]
+    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "5052"]
     environment:
       DB_HOST:        db
       DB_PORT:        5432

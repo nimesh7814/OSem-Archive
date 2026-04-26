@@ -1,6 +1,6 @@
 # OpenSenseMap → TimescaleDB Pipeline
 
-A self-contained Docker stack that downloads the full [OpenSenseMap](https://opensensemap.org/) historical archive and stores it locally in a TimescaleDB database. Comes with a live progress monitor and an interactive station map — no external services required after first run.
+A self-contained Docker stack that downloads the full [OpenSenseMap](https://opensensemap.org/) historical archive and stores it locally in a TimescaleDB database. Comes with a live progress monitor and a read-only spatial REST API — no external services required after first run.
 
 ---
 
@@ -66,7 +66,7 @@ Two features make TimescaleDB the right choice here specifically:
 │         │ progress.json             │ SQL queries           │
 │         ▼                           ▼                       │
 │  ┌──────────────┐   ┌───────────────────────────────────┐  │
-│  │ scraper_data │   │   monitor        map_viewer        │  │
+│  │ scraper_data │   │   monitor            api           │  │
 │  │   (volume)   │◀──│   port 5051      port 5052         │  │
 │  └──────────────┘   └───────────────────────────────────┘  │
 │                                                             │
@@ -77,7 +77,7 @@ Two features make TimescaleDB the right choice here specifically:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Five services, one shared image. The scraper, monitor, and map viewer are all built from the same Dockerfile — the `command:` override in `docker-compose.yml` selects which Python script runs in each container.
+Five services, one shared image. The scraper, monitor, and API are all built from the same Dockerfile — the `command:` override in `docker-compose.yml` selects which Python script runs in each container.
 
 ---
 
@@ -86,8 +86,279 @@ Five services, one shared image. The scraper, monitor, and map viewer are all bu
 | Service | URL | Purpose |
 |---|---|---|
 | **Progress Monitor** | http://localhost:5051 | Live scraper KPIs, progress bars for dates/stations/sensors, top sensor types and stations |
-| **Station Map** | http://localhost:5052 | Interactive Leaflet map of all ingested stations with per-sensor stats on click |
+| **REST API** | http://localhost:5052 | Read-only spatial API (FastAPI) |
+| **API Docs (Swagger)** | http://localhost:5052/docs | Interactive OpenAPI documentation |
+| **API Docs (ReDoc)** | http://localhost:5052/redoc | Alternate API reference |
 | **pgAdmin** | http://localhost:5050 | Full SQL database UI — pre-configured, no setup required |
+
+---
+
+## REST API — port 5052
+
+The API is built with **FastAPI** and served by **Uvicorn**. It connects to the database via the read-only `web_anonymous` role (configured in `.env` as `DB_RO_USER` / `DB_RO_PASSWORD`).
+
+All endpoints are:
+- **GET only** — no writes, no authentication
+- **CORS-enabled** — any origin is allowed
+- **GiST-accelerated** — spatial queries use the GiST index on `stations.geometry`
+
+Interactive documentation is available at **[/docs](http://localhost:5052/docs)** (Swagger UI) and **[/redoc](http://localhost:5052/redoc)**.
+
+---
+
+### `GET /api/stations` — Stations in bounding box
+
+Returns a GeoJSON FeatureCollection of all stations whose GPS coordinates fall inside the given bounding box.
+
+**Spatial implementation:** uses the PostGIS `&&` operator against the **GiST index** on `stations.geometry`. Station statistics come from `sensor_data_hourly` — the raw `readings` hypertable is never scanned.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `bbox` | string | ✅ | `minLon,minLat,maxLon,maxLat` in WGS 84 |
+| `exposure` | string | — | Filter by exposure: `outdoor`, `indoor`, `mobile` (case-insensitive) |
+| `box_type` | string | — | Filter by box type: `fixed`, `mobile`, `portable` (case-insensitive) |
+| `limit` | integer | — | Max stations to return (1–10 000, default: 10 000) |
+
+**Example:**
+```bash
+curl "http://localhost:5052/api/stations?bbox=7.0,51.5,8.5,52.5&exposure=outdoor&limit=100"
+```
+
+**Response:**
+```json
+{
+  "type": "FeatureCollection",
+  "bbox": [7.0, 51.5, 8.5, 52.5],
+  "count": 42,
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [7.6261, 51.9607] },
+      "properties": {
+        "station_id": "5f7b1e2d3a4c5e6f7b8c9d0e",
+        "name": "Münster Innenstadt",
+        "box_type": "fixed",
+        "exposure": "outdoor",
+        "sensor_count": 5,
+        "reading_count": 182400,
+        "earliest": "2021-03-01T00:00:00+00:00",
+        "latest": "2024-12-31T23:00:00+00:00"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/stations/near` — Stations within radius
+
+Returns stations within a radius of a centre point, ordered by distance ascending.
+
+**Spatial implementation:** uses PostGIS `ST_DWithin` on the `geography` cast of `stations.geometry` for true great-circle distance. The GiST index is used for the initial bounding-box pre-filter.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `lon` | float | ✅ | Longitude of centre point (WGS 84) |
+| `lat` | float | ✅ | Latitude of centre point (WGS 84) |
+| `radius_km` | float | ✅ | Search radius in kilometres (max 500) |
+| `exposure` | string | — | Filter by exposure |
+| `box_type` | string | — | Filter by box type |
+| `limit` | integer | — | Max stations to return (1–10 000, default: 500) |
+
+**Example:**
+```bash
+# All stations within 20 km of Münster, Germany
+curl "http://localhost:5052/api/stations/near?lon=7.6261&lat=51.9607&radius_km=20"
+```
+
+**Response:** GeoJSON FeatureCollection (same schema as `/api/stations`).
+
+---
+
+### `GET /api/station/{station_id}` — Single station detail
+
+Returns full metadata for one station as a GeoJSON Feature.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `station_id` | path | 24-character hex OpenSenseMap station ID |
+
+**Example:**
+```bash
+curl "http://localhost:5052/api/station/5f7b1e2d3a4c5e6f7b8c9d0e"
+```
+
+**Response:**
+```json
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [7.6261, 51.9607] },
+  "properties": {
+    "station_id": "5f7b1e2d3a4c5e6f7b8c9d0e",
+    "name": "Münster Innenstadt",
+    "box_type": "fixed",
+    "exposure": "outdoor",
+    "created_at": "2021-03-01T08:00:00+00:00"
+  }
+}
+```
+
+---
+
+### `GET /api/station/{station_id}/sensors` — Sensors for a station
+
+Returns all sensors belonging to the station with aggregate statistics, ordered by `reading_count` descending. Stats are sourced from `sensor_data_hourly`.
+
+**Example:**
+```bash
+curl "http://localhost:5052/api/station/5f7b1e2d3a4c5e6f7b8c9d0e/sensors"
+```
+
+**Response:**
+```json
+[
+  {
+    "sensor_id": "5f7b1e2d3a4c5e6f7b8c9d0f",
+    "title": "Temperature",
+    "sensor_type": "HDC1080",
+    "unit": "°C",
+    "reading_count": 87600,
+    "earliest": "2021-03-01T00:00:00+00:00",
+    "latest": "2024-12-31T23:00:00+00:00",
+    "min": -12.4,
+    "max": 38.7,
+    "avg": 11.32
+  }
+]
+```
+
+---
+
+### `GET /api/sensor/{sensor_id}/data` — Sensor time-series
+
+Returns time-series data at the requested resolution. Aggregated resolutions use pre-computed continuous-aggregate views for maximum performance.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `sensor_id` | path | ✅ | 24-character hex sensor ID |
+| `from` | string | — | Start of time range (ISO 8601, e.g. `2023-01-01T00:00:00Z`) |
+| `to` | string | — | End of time range (ISO 8601) |
+| `resolution` | string | — | `raw` · `hourly` · `daily` · `monthly` · `yearly` (default: `hourly`) |
+
+**Resolution guide:**
+
+| Resolution | Source | Cap | Use when |
+|---|---|---|---|
+| `raw` | `readings` hypertable | 100 000 rows | Need exact values for a short window |
+| `hourly` | `sensor_data_hourly` | none | Default — good balance of detail and speed |
+| `daily` | `sensor_data_daily` | none | Multi-year trends |
+| `monthly` | `sensor_data_monthly` | none | Long-term climate analysis |
+| `yearly` | `sensor_data_yearly` | none | Decade-level overview |
+
+**Example:**
+```bash
+curl "http://localhost:5052/api/sensor/5f7b1e2d3a4c5e6f7b8c9d0f/data?resolution=daily&from=2023-06-01T00:00:00Z&to=2023-08-31T23:59:59Z"
+```
+
+**Response (`hourly` / `daily` / `monthly` / `yearly`):**
+```json
+{
+  "sensor_id": "5f7b1e2d3a4c5e6f7b8c9d0f",
+  "title": "Temperature",
+  "unit": "°C",
+  "sensor_type": "HDC1080",
+  "resolution": "daily",
+  "record_count": 92,
+  "data": [
+    { "time": "2023-06-01T00:00:00+00:00", "avg": 18.4, "min": 12.1, "max": 26.8, "count": 24 },
+    { "time": "2023-06-02T00:00:00+00:00", "avg": 19.2, "min": 13.5, "max": 27.1, "count": 24 }
+  ]
+}
+```
+
+**Response (`raw`):**
+```json
+{
+  "sensor_id": "5f7b1e2d3a4c5e6f7b8c9d0f",
+  "resolution": "raw",
+  "record_count": 1440,
+  "data": [
+    { "time": "2023-06-01T00:05:00+00:00", "value": 17.8 },
+    { "time": "2023-06-01T00:10:00+00:00", "value": 17.6 }
+  ]
+}
+```
+
+---
+
+### `GET /api/station/{station_id}/download` — Bulk download by station
+
+Downloads raw readings for all (or selected) sensors of a station.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `station_id` | path | ✅ | 24-character hex station ID |
+| `format` | string | ✅ | `geojson` · `csv` · `shp` |
+| `sensor_ids` | string | — | Comma-separated sensor IDs (default: all sensors) |
+| `from` | string | — | Start of time range (ISO 8601) |
+| `to` | string | — | End of time range (ISO 8601) |
+
+Results are capped at **500 000 rows**. Use `from` / `to` to narrow large stations.
+
+**Examples:**
+```bash
+# All sensors as CSV
+curl -O "http://localhost:5052/api/station/5f7b1e2d3a4c5e6f7b8c9d0e/download?format=csv"
+
+# One sensor as GeoJSON, last year only
+curl -O "http://localhost:5052/api/station/5f7b1e2d3a4c5e6f7b8c9d0e/download?format=geojson&sensor_ids=5f7b1e2d3a4c5e6f7b8c9d0f&from=2024-01-01T00:00:00Z"
+
+# Shapefile ZIP
+curl -O "http://localhost:5052/api/station/5f7b1e2d3a4c5e6f7b8c9d0e/download?format=shp"
+```
+
+**Download formats:**
+
+| Format | MIME type | Contents |
+|---|---|---|
+| `geojson` | `application/geo+json` | GeoJSON FeatureCollection — one Point feature per reading |
+| `csv` | `text/csv` | Flat CSV with columns: `station_id`, `sensor_id`, `sensor_title`, `unit`, `recorded_at`, `value`, `lon`, `lat` |
+| `shp` | `application/zip` | ZIP containing `data.shp` / `.shx` / `.dbf` / `.prj` (WGS 84, ESRI Shapefile) |
+
+---
+
+### `GET /api/sensor/{sensor_id}/download` — Bulk download by sensor
+
+Downloads raw readings for a single sensor.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `sensor_id` | path | ✅ | 24-character hex sensor ID |
+| `format` | string | ✅ | `geojson` · `csv` · `shp` |
+| `from` | string | — | Start of time range (ISO 8601) |
+| `to` | string | — | End of time range (ISO 8601) |
+
+**Example:**
+```bash
+curl -O "http://localhost:5052/api/sensor/5f7b1e2d3a4c5e6f7b8c9d0f/download?format=csv&from=2023-01-01T00:00:00Z&to=2023-12-31T23:59:59Z"
+```
+
+---
+
+### API error responses
+
+All errors return a JSON body with a single `detail` field and an appropriate HTTP status code.
+
+| Code | Meaning |
+|---|---|
+| `400` | Bad request — invalid parameter format or value |
+| `404` | Resource not found |
+| `500` | Database or server error — `detail` contains the underlying message |
+
+```json
+{ "detail": "bbox must be four comma-separated floats: minLon,minLat,maxLon,maxLat" }
+```
 
 ---
 
@@ -236,10 +507,10 @@ Open `.env` and replace the placeholder passwords. The database password and the
 openssl rand -base64 32
 ```
 
-### 2. Start the database, monitor, and map
+### 2. Start the database, monitor, and API
 
 ```bash
-docker compose up -d db monitor map_viewer pgadmin
+docker compose up -d db monitor api pgadmin
 ```
 
 This starts everything except the scraper. The database schema is applied automatically on first boot. Give it about 10–15 seconds for the database to initialise, then check:
@@ -248,10 +519,11 @@ This starts everything except the scraper. The database schema is applied automa
 docker compose ps
 ```
 
-All four services should show `healthy` or `running`. Open:
+All services should show `healthy` or `running`. Open:
 
 - **Progress monitor** → http://localhost:5051
-- **Station map** → http://localhost:5052
+- **REST API** → http://localhost:5052
+- **API docs** → http://localhost:5052/docs
 - **pgAdmin** → http://localhost:5050
 
 ### 3. Start the scraper
@@ -288,7 +560,7 @@ The scraper reads `progress.json` and the `_scraper_processed_dates` table, dete
 
 ### 6. Rebuild the image after code changes
 
-If you edit `scraper.py`, `monitor.py`, or `map_viewer.py`:
+If you edit `scraper.py`, `monitor.py`, or `api.py`:
 
 ```bash
 docker compose build
@@ -311,25 +583,6 @@ The monitor is a lightweight Flask app that reads `progress.json` from the share
 - A table of the 100 stations with the most readings
 
 The status and KPI section refreshes every 5 seconds. The tables refresh every 30 seconds.
-
----
-
-## Station Map — port 5052
-
-An interactive Leaflet map served by a Flask app. On load it fetches a GeoJSON FeatureCollection of up to 5,000 stations (those with valid coordinates) from the database, renders them as circle markers, and fits the viewport to show all of them.
-
-**Marker colours** indicate reading volume:
-
-| Colour | Readings |
-|---|---|
-| Blue | < 100 |
-| Green | 100 – 1,000 |
-| Amber | 1,000 – 10,000 |
-| Red | > 10,000 |
-
-**Click any marker** to open a side panel showing the station's name, ID, box type, and exposure, plus a card for every sensor with its min, average, max, and total reading count.
-
-**Filters** in the header let you narrow by `exposure` (outdoor / indoor / mobile) and `box_type` (fixed / mobile). Filtering updates the map immediately without reloading the page.
 
 ---
 
@@ -363,6 +616,7 @@ ORDER BY bucket DESC
 LIMIT 30;
 
 -- All stations within 20 km of Münster, Germany
+-- (uses the GiST index on stations.geometry via ST_DWithin)
 SELECT station_id, name,
        ROUND((ST_Distance(
            geometry::geography,
@@ -395,13 +649,15 @@ Copy `.env.example` to `.env` and set your own values before starting.
 | `DB_HOST` | `db` | Database hostname (use `db` inside Docker) |
 | `DB_PORT` | `5432` | Database port exposed on the host |
 | `DB_NAME` | `opensensemap` | Database name |
-| `DB_USER` | `osm` | Database username |
+| `DB_USER` | `osm` | Database username (read-write, used by scraper) |
 | `DB_PASSWORD` | *(set this)* | Database password — use 32+ random characters |
+| `DB_RO_USER` | `web_anonymous` | Read-only API user (created automatically on first start) |
+| `DB_RO_PASSWORD` | `osem_readonly` | Read-only user password |
 | `PGADMIN_EMAIL` | *(set this)* | pgAdmin login email |
 | `PGADMIN_PASSWORD` | *(set this)* | pgAdmin login password |
 | `PGADMIN_PORT` | `5050` | Host port for pgAdmin |
 | `MONITOR_PORT` | `5051` | Host port for the progress monitor |
-| `MAP_PORT` | `5052` | Host port for the station map |
+| `API_PORT` | `5052` | Host port for the REST API |
 | `DELAY_MIN` | `0.1` | Minimum per-request delay in seconds |
 | `DELAY_MAX` | `0.4` | Maximum per-request delay in seconds |
 | `DELAY_PER_DATE` | `0.5` | Extra pause between archive dates |
@@ -417,9 +673,10 @@ Copy `.env.example` to `.env` and set your own values before starting.
 ├── schema.sql              DB schema — applied once on first container start
 ├── scraper.py              Archive downloader and DB writer
 ├── monitor.py              Progress monitor web app  (port 5051)
-├── map_viewer.py           Interactive station map   (port 5052)
-├── Dockerfile              Single image for scraper + both dashboards
+├── api.py                  Spatial REST API — FastAPI + Uvicorn  (port 5052)
+├── Dockerfile              Single image for scraper + monitor + API
 ├── docker-compose.yml      Full service definitions
+├── 02_readonly_role.sh     Creates the read-only web_anonymous DB role
 ├── pgadmin_servers.json    Pre-configured pgAdmin server connection
 ├── pgadmin_init.sh         Entrypoint script — writes pgpass from env vars
 ├── requirements.txt        Python dependencies
