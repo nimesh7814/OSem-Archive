@@ -33,6 +33,7 @@ GRANT SELECT ON
     stations,
     sensors,
     readings,
+    boundaries,
     sensor_data_hourly,
     sensor_data_daily,
     sensor_data_monthly,

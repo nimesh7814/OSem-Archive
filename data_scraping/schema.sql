@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS stations (
     name        TEXT,
     box_type    TEXT,
     exposure    TEXT,
-    geometry    GEOMETRY(Point, 4326),
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    geometry    GEOMETRY(Point, 4326)
+    -- region_code (FK → boundaries) is added below after the boundaries table is created
 );
 
 CREATE INDEX IF NOT EXISTS idx_stations_geometry
@@ -33,18 +33,15 @@ CREATE TABLE IF NOT EXISTS sensors (
     sensor_id   osm_public_id PRIMARY KEY,
     station_id  osm_public_id NOT NULL REFERENCES stations(station_id) ON DELETE CASCADE,
     title       TEXT,
-    sensor_type TEXT,
-    unit        TEXT,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    sensor_info TEXT,
+    type        TEXT,
+    unit        TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_sensors_station
-    ON sensors (station_id);
+CREATE INDEX IF NOT EXISTS idx_sensors_station ON sensors (station_id);
 
 -- 3. Readings  (TimescaleDB hypertable, partitioned by recorded_at)
 CREATE TABLE IF NOT EXISTS readings (
-    -- Ingested timestamps are expected to be RFC 3339 UTC ("...Z").
-    -- TIMESTAMPTZ stores them as absolute UTC instants.
     recorded_at TIMESTAMPTZ  NOT NULL,
     sensor_id   osm_public_id NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
     value       DOUBLE PRECISION
@@ -97,18 +94,17 @@ SELECT create_hypertable(
 CREATE INDEX IF NOT EXISTS idx_readings_sensor_time
     ON readings (sensor_id, recorded_at DESC);
 
--- 4. Compression  (chunks older than 1 day are compressed ~10-20x)
-ALTER TABLE readings SET (
-    timescaledb.compress,
-    timescaledb.compress_segmentby = 'sensor_id',
-    timescaledb.compress_orderby   = 'recorded_at DESC'
-);
-
-SELECT add_compression_policy(
-    'readings',
-    compress_after => INTERVAL '1 day',
-    if_not_exists  => TRUE
-);
+-- 4. Compression removed — raw chunks are kept uncompressed for full write
+--    throughput during the initial archive ingest.
+--    To re-enable compression after ingest is complete, run:
+--
+--      ALTER TABLE readings SET (
+--          timescaledb.compress,
+--          timescaledb.compress_segmentby = 'sensor_id',
+--          timescaledb.compress_orderby   = 'recorded_at DESC'
+--      );
+--      SELECT add_compression_policy('readings',
+--          compress_after => INTERVAL '1 day', if_not_exists => TRUE);
 
 -- 5. Continuous Aggregates
 
@@ -201,7 +197,11 @@ SELECT add_continuous_aggregate_policy(
     if_not_exists     => TRUE
 );
 
--- 7. Scraper bookkeeping  (internal — not part of the domain schema)
+-- 7. Geographic resolution is handled solely via the boundaries table (section 9).
+--    The ne_countries and ne_admin1 Natural Earth tables are not used.
+
+
+-- 8. Scraper bookkeeping  (internal — not part of the domain schema)
 --    Tracks which archive dates have been fully committed so the scraper can
 --    safely resume after a stop or crash without double-inserting data.
 
@@ -209,3 +209,115 @@ CREATE TABLE IF NOT EXISTS _scraper_processed_dates (
     date_str     DATE        PRIMARY KEY,
     processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ---------------------------------------------------------------------------
+-- 9. Admin-1 boundaries table + station.region_code foreign key
+--    Populated by load_boundaries.py from data/admin_boundary.geojson.
+--    GeoJSON property → column:
+--      adm1_code → region_code (PK)
+--      adm0_code → country_code
+--      adm0_name → country_name
+--      adm1_name → region_name
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS boundaries (
+    region_code  TEXT    PRIMARY KEY,            -- adm1_code  e.g. "ABW-5150"
+    country_code CHAR(3),                        -- adm0_code  e.g. "ARG"
+    country_name TEXT,                           -- adm0_name  e.g. "Argentina"
+    region_name  TEXT,                           -- adm1_name  e.g. "Entre Ríos"
+    geometry     GEOMETRY(MultiPolygon, 4326) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_boundaries_geometry
+    ON boundaries USING GIST (geometry);
+
+CREATE INDEX IF NOT EXISTS idx_boundaries_country_code
+    ON boundaries (country_code);
+
+-- Add region_code FK column to stations if not present
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_name = 'stations' AND column_name = 'region_code'
+    ) THEN
+        ALTER TABLE stations
+            ADD COLUMN region_code TEXT
+                REFERENCES boundaries (region_code)
+                ON DELETE SET NULL
+                ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_stations_region_code
+    ON stations (region_code);
+
+-- Trigger: auto-resolve region_code when a station's geometry is set.
+-- Exact containment (fast with GIST index). Nearest-neighbour fallback
+-- for offshore / border stations.
+CREATE OR REPLACE FUNCTION stations_set_region_code()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    -- NULL geometry → clear region_code
+    IF NEW.geometry IS NULL THEN
+        NEW.region_code := NULL;
+        RETURN NEW;
+    END IF;
+
+    -- Skip spatial work when geometry hasn't changed on UPDATE
+    IF TG_OP = 'UPDATE' AND OLD.geometry IS NOT DISTINCT FROM NEW.geometry THEN
+        RETURN NEW;
+    END IF;
+
+    -- Exact containment (fast with GIST index)
+    SELECT region_code
+      INTO NEW.region_code
+      FROM boundaries
+     WHERE ST_Within(NEW.geometry, geometry)
+     LIMIT 1;
+
+    -- Nearest-neighbour fallback for offshore / border stations
+    IF NEW.region_code IS NULL THEN
+        SELECT region_code
+          INTO NEW.region_code
+          FROM boundaries
+         ORDER BY geometry <-> NEW.geometry
+         LIMIT 1;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_stations_set_region_code ON stations;
+CREATE TRIGGER trg_stations_set_region_code
+    BEFORE INSERT OR UPDATE OF geometry ON stations
+    FOR EACH ROW EXECUTE FUNCTION stations_set_region_code();
+
+-- Backfill helper — only fills NULL rows, safe to call multiple times.
+CREATE OR REPLACE FUNCTION backfill_station_region_code()
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+    -- Exact containment pass
+    UPDATE stations s
+    SET region_code = (
+        SELECT b.region_code
+          FROM boundaries b
+         WHERE ST_Within(s.geometry, b.geometry)
+         LIMIT 1
+    )
+    WHERE s.geometry IS NOT NULL
+      AND s.region_code IS NULL;
+
+    -- Nearest-neighbour fallback for any still-unresolved stations
+    UPDATE stations s
+    SET region_code = (
+        SELECT b.region_code
+          FROM boundaries b
+         ORDER BY b.geometry <-> s.geometry
+         LIMIT 1
+    )
+    WHERE s.geometry IS NOT NULL
+      AND s.region_code IS NULL;
+END;
+$$;

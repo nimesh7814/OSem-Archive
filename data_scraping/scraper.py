@@ -243,16 +243,16 @@ def upsert_station(conn, station_id: str, name: str | None,
 
 def upsert_sensor(conn, sensor_id: str, station_id: str,
                   title: str | None, unit: str | None,
-                  sensor_type: str | None) -> None:
+                  sensor_info: str | None) -> None:
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO sensors (sensor_id, station_id, title, unit, sensor_type)
+            INSERT INTO sensors (sensor_id, station_id, title, unit, sensor_info)
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (sensor_id) DO UPDATE SET
                 title       = EXCLUDED.title,
                 unit        = EXCLUDED.unit,
-                sensor_type = EXCLUDED.sensor_type
-        """, (sensor_id, station_id, title, unit, sensor_type))
+                sensor_info = EXCLUDED.sensor_info
+        """, (sensor_id, station_id, title, unit, sensor_info))
 
 
 def insert_readings_bulk(conn, rows: list[tuple]) -> tuple[int, int]:
@@ -585,7 +585,7 @@ def run_scraper() -> None:
                                   station_id  = metadata_station_id,
                                   title       = sensor.get("title"),
                                   unit        = sensor.get("unit"),
-                                  sensor_type = sensor.get("sensorType"))
+                                  sensor_info = sensor.get("sensorType"))
 
                     csv_text = fetch_sensor_csv(date_str, station_path, sensor_id)
                     if csv_text is None:

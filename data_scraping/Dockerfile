@@ -8,6 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY scraper.py .
 COPY monitor.py .
 COPY api.py .
+COPY load_boundaries.py .
+COPY geo_resolver.py .
 
 # /data is a named volume — holds progress.json across restarts
 VOLUME ["/data"]

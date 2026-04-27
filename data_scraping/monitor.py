@@ -69,9 +69,9 @@ def sensor_breakdown() -> list:
         conn = psycopg2.connect(connect_timeout=3, **DB_CONFIG)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                SELECT title, sensor_type, unit, COUNT(*) AS sensor_count
+                SELECT title, sensor_info, unit, COUNT(*) AS sensor_count
                 FROM sensors
-                GROUP BY title, sensor_type, unit
+                GROUP BY title, sensor_info, unit
                 ORDER BY sensor_count DESC
                 LIMIT 30
             """)
@@ -515,7 +515,7 @@ async function refreshSensors() {
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td>${r.title || '—'}</td>
-      <td><span class="badge">${r.sensor_type || '—'}</span></td>
+      <td><span class="badge">${r.sensor_info || '—'}</span></td>
       <td>${r.unit || '—'}</td>
       <td class="num">${fmt(r.sensor_count)}</td>
     </tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted);padding:20px">No data yet</td></tr>';

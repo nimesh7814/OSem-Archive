@@ -1,6 +1,6 @@
 requests
 tqdm
-psycopg2-binary
+psycopg2-binary>=2.9
 flask
 fastapi
 uvicorn[standard]

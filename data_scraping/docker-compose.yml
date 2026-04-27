@@ -19,10 +19,12 @@ services:
       DB_RO_PASSWORD:    ${DB_RO_PASSWORD:-osem_readonly}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # schema.sql runs once when the data directory is first initialised
+      # 01: core schema — stations, sensors, readings, continuous aggregates
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
-      # read-only role — shell script so it can read DB_RO_PASSWORD from env
+      # 02: read-only role for the API
       - ./02_readonly_role.sh:/docker-entrypoint-initdb.d/02_readonly_role.sh:ro
+      # 03: boundaries table + region_code FK on stations — must run before scraper
+      - ./04_boundaries.sql:/docker-entrypoint-initdb.d/04_boundaries.sql:ro
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
@@ -30,6 +32,38 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Boundaries loader — one-shot service that imports admin_boundary.geojson
+  # into the `boundaries` table on first run, then exits and never runs again.
+  #
+  # Behaviour:
+  #   • If boundaries table already has rows → prints "already loaded" and exits
+  #   • If table is empty                   → loads all GeoJSON rows, then exits
+  #
+  # First run:  docker compose up -d boundaries-loader
+  # Force re-load (e.g. after replacing the GeoJSON):
+  #   docker compose run --rm boundaries-loader python load_boundaries.py \
+  #     --geojson /data/admin_boundary.geojson \
+  #     --dsn postgresql://<user>:<pass>@db:5432/<db>
+  # ---------------------------------------------------------------------------
+  boundaries-loader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_boundaries_loader
+    restart: "no"
+    mem_limit: 512m
+    command: [
+      "python", "load_boundaries.py",
+      "--geojson", "/data/admin_boundary.geojson",
+      "--dsn", "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+    ]
+    volumes:
+      - ./data/admin_boundary.geojson:/data/admin_boundary.geojson:ro
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ---------------------------------------------------------------------------
   # Scraper — downloads the OpenSenseMap archive and writes to TimescaleDB.
@@ -151,6 +185,40 @@ services:
       - ./pgadmin_init.sh:/pgadmin4/pgadmin_init.sh:ro
     ports:
       - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Geo-resolver — resolves region_code FK on stations via ST_Within against
+  # the boundaries table. Runs every 30 minutes, first run after 30 min delay.
+  #
+  # Progress and stats are written to the shared scraper_data volume at:
+  #   /data/geo_resolver_progress.json
+  #
+  # Logs:  docker compose logs -f geo-resolver
+  # Tune timing via RESOLVE_INTERVAL / INITIAL_DELAY (seconds).
+  # ---------------------------------------------------------------------------
+  geo-resolver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_geo_resolver
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["python", "-u", "geo_resolver.py"]
+    environment:
+      DB_HOST:          db
+      DB_PORT:          5432
+      DB_NAME:          ${DB_NAME}
+      DB_USER:          ${DB_USER}
+      DB_PASSWORD:      ${DB_PASSWORD}
+      PROGRESS_FILE:    /data/geo_resolver_progress.json
+      RESOLVE_INTERVAL: ${RESOLVE_INTERVAL:-1800}
+      INITIAL_DELAY:    ${INITIAL_DELAY:-1800}
+      BATCH_SIZE:       ${GEO_BATCH_SIZE:-500}
+    volumes:
+      - scraper_data:/data
     depends_on:
       db:
         condition: service_healthy

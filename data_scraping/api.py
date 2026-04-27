@@ -32,10 +32,10 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",        "localhost"),
-    "port":     int(os.getenv("DB_PORT",    "5432")),
-    "dbname":   os.getenv("DB_NAME",        "osem_db"),
-    "user":     os.getenv("DB_RO_USER",     "web_anonymous"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "dbname": os.getenv("DB_NAME", "osem_db"),
+    "user": os.getenv("DB_RO_USER", "web_anonymous"),
     "password": os.getenv("DB_RO_PASSWORD", "osem_readonly"),
 }
 
@@ -97,16 +97,16 @@ rather than the raw `readings` hypertable — making them orders of magnitude fa
 """,
     contact={
         "name":  "OpenSenseMap Archive API",
-        "url":   "https://opensensemap.org/",
+        "url":   "https://api.akalanka.me/",
     },
     license_info={
         "name": "Public Domain / ODbL",
         "url":  "https://opendatacommons.org/licenses/odbl/",
     },
     openapi_tags=[
-        {"name": "Stations",    "description": "Discover and inspect weather stations"},
-        {"name": "Sensors",     "description": "Query sensor metadata and time-series data"},
-        {"name": "Downloads",   "description": "Bulk export as GeoJSON · CSV · Shapefile"},
+        {"name": "Stations", "description": "Discover and inspect weather stations"},
+        {"name": "Sensors", "description": "Query sensor metadata and time-series data"},
+        {"name": "Downloads", "description": "Bulk export as GeoJSON · CSV · Shapefile"},
     ],
 )
 
@@ -174,7 +174,7 @@ class StationCollection(BaseModel):
 class SensorSummary(BaseModel):
     sensor_id:     str
     title:         Optional[str]
-    sensor_type:   Optional[str]
+    sensor_info:   Optional[str]
     unit:          Optional[str]
     reading_count: int
     earliest:      Optional[str]
@@ -201,7 +201,7 @@ class SensorDataResponse(BaseModel):
     sensor_id:    str
     title:        Optional[str]
     unit:         Optional[str]
-    sensor_type:  Optional[str]
+    sensor_info:  Optional[str]
     resolution:   str
     record_count: int
     data:         list[RawDataPoint] | list[AggDataPoint]
@@ -621,7 +621,7 @@ def station_sensors(
                         GROUP BY h.sensor_id
                     )
                     SELECT
-                        s.sensor_id, s.title, s.sensor_type, s.unit,
+                        s.sensor_id, s.title, s.sensor_info, s.unit,
                         COALESCE(ss.reading_count, 0) AS reading_count,
                         ss.earliest, ss.latest,
                         ss.min_val, ss.max_val, ss.avg_val
@@ -645,7 +645,7 @@ def station_sensors(
         SensorSummary(
             sensor_id=r[0],
             title=r[1],
-            sensor_type=r[2],
+            sensor_info=r[2],
             unit=r[3],
             reading_count=int(r[4]),
             earliest=_iso(r[5]),
@@ -726,7 +726,7 @@ def sensor_data(
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(
-                    "SELECT title, unit, sensor_type FROM sensors WHERE sensor_id = %s",
+                    "SELECT title, unit, sensor_info FROM sensors WHERE sensor_id = %s",
                     (sensor_id,),
                 )
                 meta = cur.fetchone()
@@ -790,7 +790,7 @@ def sensor_data(
         "sensor_id":    sensor_id,
         "title":        meta["title"],
         "unit":         meta["unit"],
-        "sensor_type":  meta["sensor_type"],
+        "sensor_info":  meta["sensor_info"],
         "resolution":   resolution,
         "record_count": len(data),
         "data":         data,
