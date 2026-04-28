@@ -85,16 +85,16 @@ services:
     stop_grace_period: 2m  # give the scraper time to finish the current station
     mem_limit: 1g
     environment:
-      DB_HOST:        db
-      DB_PORT:        5432
-      DB_NAME:        ${DB_NAME}
-      DB_USER:        ${DB_USER}
-      DB_PASSWORD:    ${DB_PASSWORD}
-      PROGRESS_FILE:  /data/progress.json
-      DELAY_MIN:      ${DELAY_MIN:-0.1}
-      DELAY_MAX:      ${DELAY_MAX:-0.4}
-      DELAY_PER_DATE: ${DELAY_PER_DATE:-0.5}
-      DELAY_429_BASE: ${DELAY_429_BASE:-60}
+      DB_HOST:         db
+      DB_PORT:         5432
+      DB_NAME:         ${DB_NAME}
+      DB_USER:         ${DB_USER}
+      DB_PASSWORD:     ${DB_PASSWORD}
+      PROGRESS_FILE:   /data/progress.json
+      DELAY_MIN:       ${DELAY_MIN:-0.1}
+      DELAY_MAX:       ${DELAY_MAX:-0.4}
+      DELAY_PER_DATE:  ${DELAY_PER_DATE:-0.5}
+      DELAY_429_BASE:  ${DELAY_429_BASE:-60}
       MAX_429_RETRIES: ${MAX_429_RETRIES:-5}
     volumes:
       - scraper_data:/data
@@ -169,15 +169,15 @@ services:
     mem_limit: 512m
     entrypoint: ["/bin/sh", "/pgadmin4/pgadmin_init.sh"]
     environment:
-      DB_HOST:                          db
-      DB_PORT:                          5432
-      DB_NAME:                          ${DB_NAME}
-      DB_USER:                          ${DB_USER}
-      DB_PASSWORD:                      ${DB_PASSWORD}
-      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
-      PGADMIN_DEFAULT_EMAIL:            ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD:         ${PGADMIN_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE:       "False"   # desktop mode — no login screen
+      DB_HOST:                             db
+      DB_PORT:                             5432
+      DB_NAME:                             ${DB_NAME}
+      DB_USER:                             ${DB_USER}
+      DB_PASSWORD:                         ${DB_PASSWORD}
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP:  "True"
+      PGADMIN_DEFAULT_EMAIL:               ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD:            ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE:          "False"   # desktop mode — no login screen
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
@@ -197,7 +197,7 @@ services:
   #   /data/geo_resolver_progress.json
   #
   # Logs:  docker compose logs -f geo-resolver
-  # Tune timing via RESOLVE_INTERVAL / INITIAL_DELAY (seconds).
+  # Tune timing via RESOLVE_INTERVAL / GEO_INITIAL_DELAY (seconds).
   # ---------------------------------------------------------------------------
   geo-resolver:
     build:
@@ -215,8 +215,44 @@ services:
       DB_PASSWORD:      ${DB_PASSWORD}
       PROGRESS_FILE:    /data/geo_resolver_progress.json
       RESOLVE_INTERVAL: ${RESOLVE_INTERVAL:-1800}
-      INITIAL_DELAY:    ${INITIAL_DELAY:-1800}
+      INITIAL_DELAY:    ${GEO_INITIAL_DELAY:-1800}
       BATCH_SIZE:       ${GEO_BATCH_SIZE:-500}
+    volumes:
+      - scraper_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Sensor classifier — fills the sensors.type column by matching sensor_info
+  # and unit against a rule table. Runs every 30 minutes (first run after 60s).
+  # Only touches rows where type IS NULL — never overwrites existing values.
+  #
+  # Progress is written to /data/sensor_classifier_progress.json
+  #
+  # Logs:  docker compose logs -f sensor-classifier
+  # Force re-classify "Unknown" rows after adding new rules:
+  #   docker compose run --rm -e OVERWRITE_UNKNOWN=1 sensor-classifier
+  # ---------------------------------------------------------------------------
+  sensor-classifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_sensor_classifier
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["python", "-u", "sensor_classifier.py"]
+    environment:
+      DB_HOST:           db
+      DB_PORT:           5432
+      DB_NAME:           ${DB_NAME}
+      DB_USER:           ${DB_USER}
+      DB_PASSWORD:       ${DB_PASSWORD}
+      PROGRESS_FILE:     /data/sensor_classifier_progress.json
+      CLASSIFY_INTERVAL: ${CLASSIFY_INTERVAL:-1800}
+      INITIAL_DELAY:     ${CLASSIFIER_INITIAL_DELAY:-60}
+      BATCH_SIZE:        ${CLASSIFIER_BATCH_SIZE:-500}
+      OVERWRITE_UNKNOWN: ${OVERWRITE_UNKNOWN:-0}
     volumes:
       - scraper_data:/data
     depends_on:
