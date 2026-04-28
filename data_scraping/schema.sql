@@ -1,37 +1,44 @@
--- OpenSenseMap Schema
--- Target: TimescaleDB (PostgreSQL 16 + TimescaleDB + PostGIS)
--- Applied automatically on first container start via docker-entrypoint-initdb.d
-
--- Extensions
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS timescaledb;
-
--- OpenSenseMap public IDs are 24-char lowercase hex strings.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'osm_public_id') THEN
-        CREATE DOMAIN osm_public_id AS VARCHAR(24)
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
+        BEGIN
+            EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_cron';
+        EXCEPTION
+            WHEN undefined_object OR undefined_file OR invalid_parameter_value OR invalid_catalog_name OR insufficient_privilege THEN
+                RAISE NOTICE 'pg_cron is available but could not be initialized; skipping cron jobs (%).', SQLERRM;
+        END;
+    ELSE
+        RAISE NOTICE 'pg_cron extension is not available; skipping cron jobs.';
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'osem_code') THEN
+        CREATE DOMAIN osem_code AS VARCHAR(24)
             CHECK (VALUE ~ '^[0-9a-f]{24}$');
     END IF;
 END $$;
 
--- 1. Stations
 CREATE TABLE IF NOT EXISTS stations (
-    station_id  osm_public_id PRIMARY KEY,
+    station_id  osem_code PRIMARY KEY,
     name        TEXT,
     box_type    TEXT,
     exposure    TEXT,
     geometry    GEOMETRY(Point, 4326)
-    -- region_code (FK → boundaries) is added below after the boundaries table is created
+    -- region_code (FK → boundaries) is added below after boundaries table
 );
 
 CREATE INDEX IF NOT EXISTS idx_stations_geometry
     ON stations USING GIST (geometry);
 
--- 2. Sensors
+
 CREATE TABLE IF NOT EXISTS sensors (
-    sensor_id   osm_public_id PRIMARY KEY,
-    station_id  osm_public_id NOT NULL REFERENCES stations(station_id) ON DELETE CASCADE,
+    sensor_id   osem_code PRIMARY KEY,
+    station_id  osem_code NOT NULL REFERENCES stations(station_id) ON DELETE CASCADE,
     title       TEXT,
     sensor_info TEXT,
     type        TEXT,
@@ -40,14 +47,13 @@ CREATE TABLE IF NOT EXISTS sensors (
 
 CREATE INDEX IF NOT EXISTS idx_sensors_station ON sensors (station_id);
 
--- 3. Readings  (TimescaleDB hypertable, partitioned by recorded_at)
 CREATE TABLE IF NOT EXISTS readings (
-    recorded_at TIMESTAMPTZ  NOT NULL,
-    sensor_id   osm_public_id NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
+    recorded_at TIMESTAMPTZ   NOT NULL,
+    sensor_id   osem_code NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
     value       DOUBLE PRECISION
 );
 
--- Backward-compatible hardening for databases created before osm_public_id.
+-- Backward-compatible hardening for databases created before osem_code.
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -87,26 +93,12 @@ END $$;
 SELECT create_hypertable(
     'readings',
     'recorded_at',
-    chunk_time_interval => INTERVAL '1 week',
+    chunk_time_interval => INTERVAL '1 week',   -- auto-adjusted at runtime
     if_not_exists       => TRUE
 );
 
 CREATE INDEX IF NOT EXISTS idx_readings_sensor_time
     ON readings (sensor_id, recorded_at DESC);
-
--- 4. Compression removed — raw chunks are kept uncompressed for full write
---    throughput during the initial archive ingest.
---    To re-enable compression after ingest is complete, run:
---
---      ALTER TABLE readings SET (
---          timescaledb.compress,
---          timescaledb.compress_segmentby = 'sensor_id',
---          timescaledb.compress_orderby   = 'recorded_at DESC'
---      );
---      SELECT add_compression_policy('readings',
---          compress_after => INTERVAL '1 day', if_not_exists => TRUE);
-
--- 5. Continuous Aggregates
 
 -- Hourly rollup
 CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_data_hourly
@@ -164,67 +156,16 @@ FROM sensor_data_monthly
 GROUP BY time_bucket('1 year', bucket), sensor_id
 WITH NO DATA;
 
--- 6. Continuous Aggregate Refresh Policies
-SELECT add_continuous_aggregate_policy(
-    'sensor_data_hourly',
-    start_offset      => INTERVAL '3 hours',
-    end_offset        => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy(
-    'sensor_data_daily',
-    start_offset      => INTERVAL '3 days',
-    end_offset        => INTERVAL '1 day',
-    schedule_interval => INTERVAL '1 day',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy(
-    'sensor_data_monthly',
-    start_offset      => INTERVAL '3 months',
-    end_offset        => INTERVAL '1 month',
-    schedule_interval => INTERVAL '1 month',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy(
-    'sensor_data_yearly',
-    start_offset      => INTERVAL '3 years',
-    end_offset        => INTERVAL '1 year',
-    schedule_interval => INTERVAL '1 year',
-    if_not_exists     => TRUE
-);
-
--- 7. Geographic resolution is handled solely via the boundaries table (section 9).
---    The ne_countries and ne_admin1 Natural Earth tables are not used.
-
-
--- 8. Scraper bookkeeping  (internal — not part of the domain schema)
---    Tracks which archive dates have been fully committed so the scraper can
---    safely resume after a stop or crash without double-inserting data.
-
 CREATE TABLE IF NOT EXISTS _scraper_processed_dates (
     date_str     DATE        PRIMARY KEY,
     processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ---------------------------------------------------------------------------
--- 9. Admin-1 boundaries table + station.region_code foreign key
---    Populated by load_boundaries.py from data/admin_boundary.geojson.
---    GeoJSON property → column:
---      adm1_code → region_code (PK)
---      adm0_code → country_code
---      adm0_name → country_name
---      adm1_name → region_name
--- ---------------------------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS boundaries (
-    region_code  TEXT    PRIMARY KEY,            -- adm1_code  e.g. "ABW-5150"
-    country_code CHAR(3),                        -- adm0_code  e.g. "ARG"
-    country_name TEXT,                           -- adm0_name  e.g. "Argentina"
-    region_name  TEXT,                           -- adm1_name  e.g. "Entre Ríos"
+    region_code  TEXT    PRIMARY KEY,
+    country_code CHAR(3),
+    country_name TEXT,
+    region_name  TEXT,
     geometry     GEOMETRY(MultiPolygon, 4326) NOT NULL
 );
 
@@ -234,7 +175,6 @@ CREATE INDEX IF NOT EXISTS idx_boundaries_geometry
 CREATE INDEX IF NOT EXISTS idx_boundaries_country_code
     ON boundaries (country_code);
 
--- Add region_code FK column to stations if not present
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -252,31 +192,24 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_stations_region_code
     ON stations (region_code);
 
--- Trigger: auto-resolve region_code when a station's geometry is set.
--- Exact containment (fast with GIST index). Nearest-neighbour fallback
--- for offshore / border stations.
 CREATE OR REPLACE FUNCTION stations_set_region_code()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-    -- NULL geometry → clear region_code
     IF NEW.geometry IS NULL THEN
         NEW.region_code := NULL;
         RETURN NEW;
     END IF;
 
-    -- Skip spatial work when geometry hasn't changed on UPDATE
     IF TG_OP = 'UPDATE' AND OLD.geometry IS NOT DISTINCT FROM NEW.geometry THEN
         RETURN NEW;
     END IF;
 
-    -- Exact containment (fast with GIST index)
     SELECT region_code
       INTO NEW.region_code
       FROM boundaries
      WHERE ST_Within(NEW.geometry, geometry)
      LIMIT 1;
 
-    -- Nearest-neighbour fallback for offshore / border stations
     IF NEW.region_code IS NULL THEN
         SELECT region_code
           INTO NEW.region_code
@@ -294,11 +227,9 @@ CREATE TRIGGER trg_stations_set_region_code
     BEFORE INSERT OR UPDATE OF geometry ON stations
     FOR EACH ROW EXECUTE FUNCTION stations_set_region_code();
 
--- Backfill helper — only fills NULL rows, safe to call multiple times.
 CREATE OR REPLACE FUNCTION backfill_station_region_code()
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-    -- Exact containment pass
     UPDATE stations s
     SET region_code = (
         SELECT b.region_code
@@ -309,7 +240,6 @@ BEGIN
     WHERE s.geometry IS NOT NULL
       AND s.region_code IS NULL;
 
-    -- Nearest-neighbour fallback for any still-unresolved stations
     UPDATE stations s
     SET region_code = (
         SELECT b.region_code
@@ -319,5 +249,135 @@ BEGIN
     )
     WHERE s.geometry IS NOT NULL
       AND s.region_code IS NULL;
+END;
+$$;
+
+CREATE TABLE IF NOT EXISTS _readings_meta (
+    id               INT PRIMARY KEY DEFAULT 1,   -- single-row table
+    last_min_at      TIMESTAMPTZ,                 -- lowest  recorded_at seen
+    last_max_at      TIMESTAMPTZ,                 -- highest recorded_at seen
+    last_chunk_ivl   INTERVAL,
+    last_adjusted_at TIMESTAMPTZ,
+    CONSTRAINT single_row CHECK (id = 1)
+);
+
+INSERT INTO _readings_meta (id) VALUES (1)
+    ON CONFLICT (id) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION auto_adjust_readings()
+RETURNS void LANGUAGE plpgsql AS $$
+DECLARE
+    v_min         TIMESTAMPTZ;
+    v_max         TIMESTAMPTZ;
+    v_span_days   DOUBLE PRECISION;
+    v_interval    INTERVAL;
+    v_meta        _readings_meta%ROWTYPE;
+    v_refresh_min TIMESTAMPTZ;
+    v_refresh_max TIMESTAMPTZ;
+BEGIN
+    -- Step 1: Read the actual recorded_at range from the hypertable.
+    --   MIN/MAX scan is fast because TimescaleDB maintains per-chunk
+    --   statistics and can answer this without a full table scan.
+    SELECT MIN(recorded_at), MAX(recorded_at)
+      INTO v_min, v_max
+      FROM readings;
+
+    IF v_min IS NULL THEN
+        RAISE NOTICE 'auto_adjust_readings: readings is empty, skipping.';
+        RETURN;
+    END IF;
+
+    -- Step 2: Compare against last known range.
+    SELECT * INTO v_meta FROM _readings_meta WHERE id = 1;
+
+    IF v_meta.last_min_at IS NOT DISTINCT FROM v_min
+       AND v_meta.last_max_at IS NOT DISTINCT FROM v_max THEN
+        RAISE NOTICE 'auto_adjust_readings: recorded_at range unchanged (% → %), skipping.',
+            v_min, v_max;
+        RETURN;
+    END IF;
+
+    -- Step 3: Pick chunk interval based on total span.
+    v_span_days := EXTRACT(EPOCH FROM (v_max - v_min)) / 86400.0;
+
+    IF v_span_days > 5 * 365 THEN
+        v_interval := INTERVAL '3 months';
+    ELSIF v_span_days > 365 THEN
+        v_interval := INTERVAL '1 month';
+    ELSE
+        v_interval := INTERVAL '1 week';
+    END IF;
+
+    RAISE NOTICE 'auto_adjust_readings: span=% days → chunk_interval=%',
+        round(v_span_days::numeric, 1), v_interval;
+
+    -- Step 4: Update chunk interval only if it changed.
+    IF v_meta.last_chunk_ivl IS DISTINCT FROM v_interval THEN
+        PERFORM set_chunk_time_interval('readings', v_interval);
+        RAISE NOTICE 'auto_adjust_readings: chunk interval updated to %', v_interval;
+    END IF;
+
+    IF v_meta.last_min_at IS NULL THEN
+        -- First run: full range
+        v_refresh_min := date_trunc('hour', v_min) - INTERVAL '1 hour';
+        v_refresh_max := date_trunc('hour', v_max) + INTERVAL '1 hour';
+    ELSE
+        -- Delta refresh: only the slice that is new since last run.
+        -- Use LEAST on the low end in case data was backfilled further
+        -- into the past than before.
+        v_refresh_min := date_trunc('hour', LEAST(v_min, v_meta.last_min_at))
+                         - INTERVAL '1 hour';
+        v_refresh_max := date_trunc('hour', v_max) + INTERVAL '1 hour';
+    END IF;
+
+    RAISE NOTICE 'auto_adjust_readings: refreshing aggregates % → %',
+        v_refresh_min, v_refresh_max;
+
+    -- Refresh in dependency order: hourly first, then each coarser level
+    -- reads from the level below it — so order matters.
+    CALL refresh_continuous_aggregate('sensor_data_hourly',  v_refresh_min, v_refresh_max);
+    RAISE NOTICE 'auto_adjust_readings: sensor_data_hourly done.';
+
+    CALL refresh_continuous_aggregate('sensor_data_daily',   v_refresh_min, v_refresh_max);
+    RAISE NOTICE 'auto_adjust_readings: sensor_data_daily done.';
+
+    CALL refresh_continuous_aggregate('sensor_data_monthly', v_refresh_min, v_refresh_max);
+    RAISE NOTICE 'auto_adjust_readings: sensor_data_monthly done.';
+
+    CALL refresh_continuous_aggregate('sensor_data_yearly',  v_refresh_min, v_refresh_max);
+    RAISE NOTICE 'auto_adjust_readings: sensor_data_yearly done.';
+
+    -- Step 6: Persist the new high-water marks.
+    UPDATE _readings_meta SET
+        last_min_at      = v_min,
+        last_max_at      = v_max,
+        last_chunk_ivl   = v_interval,
+        last_adjusted_at = NOW()
+    WHERE id = 1;
+
+    RAISE NOTICE 'auto_adjust_readings: complete. Range now % → %', v_min, v_max;
+END;
+$$;
+
+SELECT auto_adjust_readings();
+
+DO $$
+BEGIN
+    IF to_regnamespace('cron') IS NULL THEN
+        RAISE NOTICE 'pg_cron schema is not available; skipping auto_adjust_readings schedule.';
+        RETURN;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+          FROM cron.job
+         WHERE jobname = 'auto_adjust_readings'
+    ) THEN
+        PERFORM cron.schedule(
+            'auto_adjust_readings',
+            '0 0 * * *',
+            'SELECT auto_adjust_readings()'
+        );
+    END IF;
 END;
 $$;

@@ -17,14 +17,16 @@ services:
       # correct credentials on first initialisation.
       DB_RO_USER:        ${DB_RO_USER:-web_anonymous}
       DB_RO_PASSWORD:    ${DB_RO_PASSWORD:-osem_readonly}
+      # Required for pg_cron — enables the daily auto_adjust_readings() job
+      # that keeps chunk interval and aggregates in sync with recorded_at range.
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: 'timescaledb,pg_cron'
+      POSTGRES_CRON_DATABASE: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # 01: core schema — stations, sensors, readings, continuous aggregates
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       # 02: read-only role for the API
       - ./02_readonly_role.sh:/docker-entrypoint-initdb.d/02_readonly_role.sh:ro
-      # 03: boundaries table + region_code FK on stations — must run before scraper
-      - ./04_boundaries.sql:/docker-entrypoint-initdb.d/04_boundaries.sql:ro
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
@@ -32,6 +34,23 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  # ---------------------------------------------------------------------------
+  # Schema migrator — reapplies schema.sql on every compose up so existing
+  # volumes are repaired automatically when app tables are missing.
+  # ---------------------------------------------------------------------------
+  schema-migrator:
+    image: timescale/timescaledb-ha:pg16
+    container_name: opensensemap_schema_migrator
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    command: ["bash", "-lc", "psql -h db -v ON_ERROR_STOP=1 -U ${DB_USER} -d ${DB_NAME} -f /schema.sql"]
+    volumes:
+      - ./schema.sql:/schema.sql:ro
 
   # ---------------------------------------------------------------------------
   # Boundaries loader — one-shot service that imports admin_boundary.geojson
@@ -64,6 +83,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # Scraper — downloads the OpenSenseMap archive and writes to TimescaleDB.
@@ -101,6 +122,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # Monitor — scraper progress dashboard
@@ -130,6 +153,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # API — read-only spatial REST API
@@ -156,6 +181,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # pgAdmin 4 — web UI for the database
@@ -188,6 +215,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # Geo-resolver — resolves region_code FK on stations via ST_Within against
@@ -222,6 +251,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
   # ---------------------------------------------------------------------------
   # Sensor classifier — fills the sensors.type column by matching sensor_info
@@ -258,6 +289,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
