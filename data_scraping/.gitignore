@@ -12,3 +12,5 @@ data/
 progress.json
 progress.json.tmp
 progress.json.corrupt
+downloader.py
+archive_data

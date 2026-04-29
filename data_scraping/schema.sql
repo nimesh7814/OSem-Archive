@@ -24,36 +24,51 @@ BEGIN
 END $$;
 
 CREATE TABLE IF NOT EXISTS stations (
-    station_id  osem_code PRIMARY KEY,
-    name        TEXT,
-    box_type    TEXT,
-    exposure    TEXT,
-    geometry    GEOMETRY(Point, 4326)
-    -- region_code (FK → boundaries) is added below after boundaries table
+    station_dbid  BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    station_id    osem_code   NOT NULL,
+    name          TEXT,
+    box_type      TEXT,
+    exposure      TEXT,
+    geometry      GEOMETRY(Point, 4326),
+    station_date  DATE
 );
+
+-- Unique index so lookups by the original hex ID remain fast
+CREATE UNIQUE INDEX IF NOT EXISTS uq_stations_station_id ON stations (station_id);
 
 CREATE INDEX IF NOT EXISTS idx_stations_geometry
     ON stations USING GIST (geometry);
 
+CREATE INDEX IF NOT EXISTS idx_stations_station_date
+    ON stations (station_date);
+
 
 CREATE TABLE IF NOT EXISTS sensors (
-    sensor_id   osem_code PRIMARY KEY,
-    station_id  osem_code NOT NULL REFERENCES stations(station_id) ON DELETE CASCADE,
-    title       TEXT,
-    sensor_info TEXT,
-    type        TEXT,
-    unit        TEXT
+    sensor_dbid  BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    sensor_id    osem_code   NOT NULL,
+    station_dbid BIGINT      NOT NULL REFERENCES stations(station_dbid) ON DELETE CASCADE,
+    station_id   osem_code   NOT NULL,
+    title        TEXT,
+    sensor_info  TEXT,
+    type         TEXT,
+    unit         TEXT,
+    sensor_date  DATE 
 );
 
-CREATE INDEX IF NOT EXISTS idx_sensors_station ON sensors (station_id);
+-- Unique index so lookups by the original hex ID remain fast
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sensors_sensor_id ON sensors (sensor_id);
+
+CREATE INDEX IF NOT EXISTS idx_sensors_station ON sensors (station_dbid);
+
+CREATE INDEX IF NOT EXISTS idx_sensors_sensor_date ON sensors (sensor_date);
 
 CREATE TABLE IF NOT EXISTS readings (
-    recorded_at TIMESTAMPTZ   NOT NULL,
-    sensor_id   osem_code NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
-    value       DOUBLE PRECISION
+    recorded_at  TIMESTAMPTZ NOT NULL,
+    sensor_dbid  BIGINT      NOT NULL REFERENCES sensors(sensor_dbid) ON DELETE CASCADE,
+    value        DOUBLE PRECISION
 );
 
--- Backward-compatible hardening for databases created before osem_code.
+-- Backward-compatible hardening: ensure hex-24 format on the natural key columns.
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -98,20 +113,22 @@ SELECT create_hypertable(
 );
 
 CREATE INDEX IF NOT EXISTS idx_readings_sensor_time
-    ON readings (sensor_id, recorded_at DESC);
+    ON readings (sensor_dbid, recorded_at DESC);
 
 -- Hourly rollup
+-- Joins back to sensors to expose sensor_id (hex) for API queries,
+-- while grouping internally on the integer sensor_dbid for efficiency.
 CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_data_hourly
 WITH (timescaledb.continuous) AS
 SELECT
-    time_bucket('1 hour', recorded_at) AS bucket,
-    sensor_id,
-    AVG(value)   AS avg_value,
-    MIN(value)   AS min_value,
-    MAX(value)   AS max_value,
-    COUNT(*)     AS reading_count
-FROM readings
-GROUP BY bucket, sensor_id
+    time_bucket('1 hour', r.recorded_at) AS bucket,
+    r.sensor_dbid,
+    AVG(r.value)   AS avg_value,
+    MIN(r.value)   AS min_value,
+    MAX(r.value)   AS max_value,
+    COUNT(*)       AS reading_count
+FROM readings r
+GROUP BY bucket, r.sensor_dbid
 WITH NO DATA;
 
 -- Daily rollup  (built on hourly)
@@ -119,13 +136,13 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_data_daily
 WITH (timescaledb.continuous) AS
 SELECT
     time_bucket('1 day', bucket)                            AS bucket,
-    sensor_id,
+    sensor_dbid,
     SUM(avg_value * reading_count) / SUM(reading_count)    AS avg_value,
     MIN(min_value)                                          AS min_value,
     MAX(max_value)                                          AS max_value,
     SUM(reading_count)                                      AS reading_count
 FROM sensor_data_hourly
-GROUP BY time_bucket('1 day', bucket), sensor_id
+GROUP BY time_bucket('1 day', bucket), sensor_dbid
 WITH NO DATA;
 
 -- Monthly rollup  (built on daily)
@@ -133,13 +150,13 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_data_monthly
 WITH (timescaledb.continuous) AS
 SELECT
     time_bucket('1 month', bucket)                          AS bucket,
-    sensor_id,
+    sensor_dbid,
     SUM(avg_value * reading_count) / SUM(reading_count)    AS avg_value,
     MIN(min_value)                                          AS min_value,
     MAX(max_value)                                          AS max_value,
     SUM(reading_count)                                      AS reading_count
 FROM sensor_data_daily
-GROUP BY time_bucket('1 month', bucket), sensor_id
+GROUP BY time_bucket('1 month', bucket), sensor_dbid
 WITH NO DATA;
 
 -- Yearly rollup  (built on monthly)
@@ -147,13 +164,13 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS sensor_data_yearly
 WITH (timescaledb.continuous) AS
 SELECT
     time_bucket('1 year', bucket)                           AS bucket,
-    sensor_id,
+    sensor_dbid,
     SUM(avg_value * reading_count) / SUM(reading_count)    AS avg_value,
     MIN(min_value)                                          AS min_value,
     MAX(max_value)                                          AS max_value,
     SUM(reading_count)                                      AS reading_count
 FROM sensor_data_monthly
-GROUP BY time_bucket('1 year', bucket), sensor_id
+GROUP BY time_bucket('1 year', bucket), sensor_dbid
 WITH NO DATA;
 
 CREATE TABLE IF NOT EXISTS _scraper_processed_dates (

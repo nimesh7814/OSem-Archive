@@ -292,6 +292,42 @@ services:
       schema-migrator:
         condition: service_completed_successfully
 
+  # ---------------------------------------------------------------------------
+  # Date-resolver — fills sensors.sensor_date and stations.station_date
+  # by looking up MIN(recorded_at) from the readings hypertable.
+  # Runs every 30 minutes (first run after 60 s).
+  #
+  # Logs:  docker compose logs -f date-resolver
+  # Force re-fill all rows (e.g. after backdated readings):
+  #   docker compose run --rm -e OVERWRITE_EXISTING=1 date-resolver
+  # ---------------------------------------------------------------------------
+  date-resolver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opensensemap_date_resolver
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["python", "-u", "date_resolver.py"]
+    environment:
+      DB_HOST:            db
+      DB_PORT:            5432
+      DB_NAME:            ${DB_NAME}
+      DB_USER:            ${DB_USER}
+      DB_PASSWORD:        ${DB_PASSWORD}
+      PROGRESS_FILE:      /data/date_resolver_progress.json
+      RESOLVE_INTERVAL:   ${DATE_RESOLVE_INTERVAL:-1800}
+      INITIAL_DELAY:      ${DATE_INITIAL_DELAY:-60}
+      BATCH_SIZE:         ${DATE_BATCH_SIZE:-500}
+      OVERWRITE_EXISTING: ${OVERWRITE_EXISTING:-0}
+    volumes:
+      - scraper_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      schema-migrator:
+        condition: service_completed_successfully
+
 volumes:
   postgres_data:
     external: true

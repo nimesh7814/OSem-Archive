@@ -246,13 +246,15 @@ def upsert_sensor(conn, sensor_id: str, station_id: str,
                   sensor_info: str | None) -> None:
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO sensors (sensor_id, station_id, title, unit, sensor_info)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO sensors (sensor_id, station_dbid, station_id, title, unit, sensor_info)
+            SELECT %s, st.station_dbid, %s, %s, %s, %s
+            FROM   stations st
+            WHERE  st.station_id = %s
             ON CONFLICT (sensor_id) DO UPDATE SET
                 title       = EXCLUDED.title,
                 unit        = EXCLUDED.unit,
                 sensor_info = EXCLUDED.sensor_info
-        """, (sensor_id, station_id, title, unit, sensor_info))
+        """, (sensor_id, station_id, title, unit, sensor_info, station_id))
 
 
 def insert_readings_bulk(conn, rows: list[tuple]) -> tuple[int, int]:
@@ -261,6 +263,10 @@ def insert_readings_bulk(conn, rows: list[tuple]) -> tuple[int, int]:
     with a NOT EXISTS guard.  If the transaction is rolled back or the process
     crashes before commit, the temp table vanishes and readings is untouched.
     Returns (valid_count, inserted_count).
+
+    rows items: (sensor_id [hex], recorded_at, raw_value)
+    The INSERT resolves sensor_id → sensor_dbid via a JOIN so readings only
+    stores the integer FK.
     """
     clean: list[tuple] = []
     for sensor_id, recorded_at, raw_value in rows:
@@ -278,8 +284,6 @@ def insert_readings_bulk(conn, rows: list[tuple]) -> tuple[int, int]:
     buf.seek(0)
 
     with conn.cursor() as cur:
-        # Temp table is dropped automatically on commit (ON COMMIT DELETE ROWS
-        # keeps the structure but empties it, which is fine — re-created each call)
         cur.execute("""
             CREATE TEMP TABLE IF NOT EXISTS _readings_stage (
                 sensor_id   TEXT,
@@ -295,14 +299,17 @@ def insert_readings_bulk(conn, rows: list[tuple]) -> tuple[int, int]:
             buf,
         )
 
+        # Resolve sensor_id → sensor_dbid in the INSERT; readings never stores
+        # the hex string — only the integer surrogate FK.
         cur.execute("""
-            INSERT INTO readings (recorded_at, sensor_id, value)
-            SELECT s.recorded_at, s.sensor_id, s.value
+            INSERT INTO readings (recorded_at, sensor_dbid, value)
+            SELECT s.recorded_at, sen.sensor_dbid, s.value
             FROM   _readings_stage s
+            JOIN   sensors sen ON sen.sensor_id = s.sensor_id
             WHERE  NOT EXISTS (
                 SELECT 1 FROM readings r
-                WHERE  r.sensor_id   = s.sensor_id
-                  AND  r.recorded_at = s.recorded_at
+                WHERE  r.sensor_dbid  = sen.sensor_dbid
+                  AND  r.recorded_at  = s.recorded_at
             )
         """)
         inserted = cur.rowcount

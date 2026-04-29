@@ -295,16 +295,17 @@ def _build_attr_filters(
 
 # Shared CTE that aggregates per-station stats from the hourly rollup view.
 # Injected into every station-list query so the pattern stays consistent.
+# Joins sensors→sensor_data_hourly on sensor_dbid (integer FK, fast).
 _SENSOR_STATS_CTE = """
     sensor_stats AS (
         SELECT
             s.station_id,
-            COUNT(DISTINCT s.sensor_id)               AS sensor_count,
+            COUNT(DISTINCT s.sensor_dbid)              AS sensor_count,
             COALESCE(SUM(h.reading_count), 0)::BIGINT  AS reading_count,
             MIN(h.bucket)                              AS earliest,
             MAX(h.bucket) + INTERVAL '1 hour'          AS latest
         FROM sensors s
-        LEFT JOIN sensor_data_hourly h ON h.sensor_id = s.sensor_id
+        LEFT JOIN sensor_data_hourly h ON h.sensor_dbid = s.sensor_dbid
         GROUP BY s.station_id
     )
 """
@@ -605,7 +606,7 @@ def station_sensors(
                 cur.execute("""
                     WITH ss AS (
                         SELECT
-                            h.sensor_id,
+                            h.sensor_dbid,
                             SUM(h.reading_count)::BIGINT                              AS reading_count,
                             MIN(h.bucket)                                             AS earliest,
                             MAX(h.bucket) + INTERVAL '1 hour'                        AS latest,
@@ -616,9 +617,9 @@ def station_sensors(
                                       / SUM(h.reading_count)
                             END                                                       AS avg_val
                         FROM sensor_data_hourly h
-                        JOIN sensors s ON s.sensor_id = h.sensor_id
+                        JOIN sensors s ON s.sensor_dbid = h.sensor_dbid
                         WHERE s.station_id = %s
-                        GROUP BY h.sensor_id
+                        GROUP BY h.sensor_dbid
                     )
                     SELECT
                         s.sensor_id, s.title, s.sensor_info, s.unit,
@@ -626,7 +627,7 @@ def station_sensors(
                         ss.earliest, ss.latest,
                         ss.min_val, ss.max_val, ss.avg_val
                     FROM sensors s
-                    LEFT JOIN ss ON ss.sensor_id = s.sensor_id
+                    LEFT JOIN ss ON ss.sensor_dbid = s.sensor_dbid
                     WHERE s.station_id = %s
                     ORDER BY ss.reading_count DESC NULLS LAST
                 """, (station_id, station_id))
@@ -726,14 +727,15 @@ def sensor_data(
         with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(
-                    "SELECT title, unit, sensor_info FROM sensors WHERE sensor_id = %s",
+                    "SELECT sensor_dbid, title, unit, sensor_info FROM sensors WHERE sensor_id = %s",
                     (sensor_id,),
                 )
                 meta = cur.fetchone()
                 if meta is None:
                     raise HTTPException(status_code=404, detail="Sensor not found")
 
-                params: list = [sensor_id]
+                sensor_dbid = meta["sensor_dbid"]
+                params: list = [sensor_dbid]
                 time_filter = ""
                 if dt_from:
                     time_filter += " AND time_col >= %s"
@@ -746,7 +748,7 @@ def sensor_data(
                     sql = f"""
                         SELECT recorded_at AS time_col, value
                         FROM readings
-                        WHERE sensor_id = %s
+                        WHERE sensor_dbid = %s
                         {time_filter.replace('time_col', 'recorded_at')}
                         ORDER BY recorded_at
                         LIMIT %s OFFSET %s
@@ -766,7 +768,7 @@ def sensor_data(
                             max_value     AS max,
                             reading_count AS count
                         FROM {table}
-                        WHERE sensor_id = %s
+                        WHERE sensor_dbid = %s
                         {time_filter}
                         ORDER BY bucket
                     """
@@ -814,7 +816,7 @@ def _fetch_readings(conn, sensor_ids, dt_from=None, dt_to=None):
     sql = f"""
         SELECT
             r.recorded_at,
-            r.sensor_id,
+            s.sensor_id,
             s.title        AS sensor_title,
             s.unit,
             s.station_id,
@@ -822,11 +824,11 @@ def _fetch_readings(conn, sensor_ids, dt_from=None, dt_to=None):
             ST_Y(st.geometry) AS lat,
             r.value
         FROM readings r
-        JOIN sensors  s  ON s.sensor_id   = r.sensor_id
-        JOIN stations st ON st.station_id = s.station_id
-        WHERE r.sensor_id IN ({placeholders})
+        JOIN sensors  s  ON s.sensor_dbid  = r.sensor_dbid
+        JOIN stations st ON st.station_dbid = s.station_dbid
+        WHERE s.sensor_id IN ({placeholders})
         {time_filter}
-        ORDER BY r.recorded_at, r.sensor_id
+        ORDER BY r.recorded_at, s.sensor_id
         LIMIT 500000
     """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
