@@ -57,12 +57,66 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from tqdm import tqdm
 
+# Lazy import for spatial lookup (only needed when admin_boundary.geojson exists)
+try:
+    import json as _json  # already imported above, alias for clarity
+    from shapely.geometry import Point, shape
+    _SHAPELY_AVAILABLE = True
+except ImportError:
+    _SHAPELY_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 DATE_FOLDER_RE  = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DRY_RUN_DIR     = Path("dry_run_output")
 STATION_ID_LEN  = 24
+ADMIN_BOUNDARY_PATH = Path("data/admin_boundary.geojson")
+
+# ---------------------------------------------------------------------------
+# Admin boundary spatial index (loaded once at startup)
+# ---------------------------------------------------------------------------
+# Each entry: (shapely geometry, adm0_name, adm1_name)
+_ADMIN_FEATURES: list[tuple] = []
+
+
+def load_admin_boundaries(geojson_path: Path = ADMIN_BOUNDARY_PATH) -> None:
+    """Load admin_boundary.geojson into an in-memory list for point-in-polygon lookups."""
+    global _ADMIN_FEATURES
+    if not _SHAPELY_AVAILABLE:
+        print("[WARN] shapely not installed — country/region will not be populated.")
+        print("       pip install shapely")
+        return
+    if not geojson_path.exists():
+        print(f"[WARN] Admin boundary file not found: {geojson_path}")
+        print("       country/region will be set to NULL.")
+        return
+
+    with open(geojson_path, encoding="utf-8") as f:
+        fc = json.load(f)
+
+    for feature in fc.get("features", []):
+        props = feature.get("properties", {})
+        geom  = shape(feature["geometry"])
+        _ADMIN_FEATURES.append((geom, props.get("adm0_name"), props.get("adm1_name")))
+
+    print(f"[INFO] Loaded {len(_ADMIN_FEATURES):,} admin boundary polygons from {geojson_path}")
+
+
+def lookup_admin(lon: float, lat: float) -> tuple[Optional[str], Optional[str]]:
+    """Return (country, region) for a point using ST_Within logic.
+
+    Iterates admin boundary polygons and returns the first match.
+    Returns (None, None) if the point falls outside all polygons or
+    shapely is unavailable.
+    """
+    if not _ADMIN_FEATURES or not _SHAPELY_AVAILABLE:
+        return None, None
+    pt = Point(lon, lat)
+    for geom, country, region in _ADMIN_FEATURES:
+        if geom.contains(pt):
+            return country, region
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -223,57 +277,92 @@ def parse_sensor_csv(raw: bytes) -> list[dict]:
 # ---------------------------------------------------------------------------
 # DB upsert helpers
 # ---------------------------------------------------------------------------
-def upsert_station(cur, data: dict) -> Optional[int]:
-    """Insert or get st_uuid for a station."""
+def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str]]:
+    """Insert or get st_uuid for a station.
+
+    Returns (st_uuid, is_new, country) where is_new=True when freshly inserted.
+    """
     coords = data.get("loc", {}).get("geometry", {}).get("coordinates", [None, None])
     lon, lat = coords[0], coords[1]
     if lon is None or lat is None:
         print(f"  [WARN] Station {data.get('id')} has no geometry, skipping")
         return None
 
+    country, region = lookup_admin(lon, lat)
+
     cur.execute("""
         INSERT INTO stations (st_id, boxtype, exposure, model, geometry, region, country, init_date)
         VALUES (
             %s, %s, %s, %s,
             ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-            NULL, NULL, NULL
+            %s, %s, %s
         )
         ON CONFLICT (st_id) DO UPDATE
-            SET boxtype  = EXCLUDED.boxtype,
-                exposure = EXCLUDED.exposure,
-                model    = EXCLUDED.model,
-                geometry = EXCLUDED.geometry
-        RETURNING st_uuid
+            SET boxtype   = EXCLUDED.boxtype,
+                exposure  = EXCLUDED.exposure,
+                model     = EXCLUDED.model,
+                geometry  = EXCLUDED.geometry,
+                country   = EXCLUDED.country,
+                region    = EXCLUDED.region,
+                init_date = CASE
+                    WHEN stations.init_date IS NULL THEN EXCLUDED.init_date
+                    WHEN EXCLUDED.init_date < stations.init_date THEN EXCLUDED.init_date
+                    ELSE stations.init_date
+                END
+        RETURNING st_uuid, (xmax = 0) AS is_new, country
     """, (
         data.get("id"),
         data.get("boxType"),
         data.get("exposure"),
         data.get("model"),
         lon, lat,
+        region,
+        country,
+        data.get("_init_date"),  # injected by caller from the date_folder
     ))
     row = cur.fetchone()
-    return row[0] if row else None
+    if not row:
+        return None, False, None
+    st_uuid, is_new, stored_country = row
+    return st_uuid, is_new, stored_country
 
 
-def upsert_sensor(cur, sensor: dict, st_uuid: int) -> Optional[int]:
-    """Insert or get se_uuid for a sensor."""
+def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Optional[int], bool]:
+    """Insert or get se_uuid for a sensor.
+
+    init_date should be the earliest timestamp from the readings CSV for this
+    sensor. Written only on first insert; subsequent runs leave it untouched so
+    the earliest date is always preserved.
+
+    Returns (se_uuid, is_new) where is_new is True when the row was freshly
+    inserted (xmax = 0 means INSERT path, not UPDATE path).
+    """
     cur.execute("""
         INSERT INTO sensors (se_id, st_uuid, title, unit, info, type, init_date)
-        VALUES (%s, %s, %s, %s, %s, NULL, NULL)
+        VALUES (%s, %s, %s, %s, %s, NULL, %s)
         ON CONFLICT (se_id) DO UPDATE
-            SET title = EXCLUDED.title,
-                unit  = EXCLUDED.unit,
-                info  = EXCLUDED.info
-        RETURNING se_uuid
+            SET title     = EXCLUDED.title,
+                unit      = EXCLUDED.unit,
+                info      = EXCLUDED.info,
+                init_date = CASE
+                    WHEN sensors.init_date IS NULL THEN EXCLUDED.init_date
+                    WHEN EXCLUDED.init_date < sensors.init_date THEN EXCLUDED.init_date
+                    ELSE sensors.init_date
+                END
+        RETURNING se_uuid, (xmax = 0) AS is_new, init_date
     """, (
         sensor.get("id"),
         st_uuid,
         sensor.get("title"),
         sensor.get("unit"),
         sensor.get("sensorType"),
+        init_date,
     ))
     row = cur.fetchone()
-    return row[0] if row else None
+    if not row:
+        return None, False
+    se_uuid, is_new, stored_init_date = row
+    return se_uuid, is_new
 
 
 def insert_readings(cur, se_uuid: int, rows: list[dict]) -> int:
@@ -342,7 +431,7 @@ def process_station_folder(
     dry_buffers: Optional[dict],
 ) -> dict:
     """Process one station folder. Returns counts."""
-    counts = {"sensors": 0, "readings": 0, "skipped_csv": 0}
+    counts = {"sensors": 0, "readings": 0, "skipped_csv": 0, "new_sensors_by_year": {}, "new_stations_by_country": {}}
 
     # Locate the .json file
     if is_remote:
@@ -380,22 +469,32 @@ def process_station_folder(
     coords = station_data.get("loc", {}).get("geometry", {}).get("coordinates", [None, None])
     lon, lat = coords[0], coords[1]
 
+    # Inject the archive folder date as the station's init_date (first-seen date)
+    folder_date = datetime.strptime(date_folder, "%Y-%m-%d").date()
+    station_data["_init_date"] = folder_date
+
     # ── DB or dry-run: station ──────────────────────────────────────────────
     if dry_buffers is not None:
         st_id = station_data.get("id", "")
+        country, region = lookup_admin(lon, lat) if (lon is not None and lat is not None) else (None, None)
         dry_buffers["stations"].append([
             st_id,
             station_data.get("boxType"),
             station_data.get("model"),
             lon, lat,
-            None, None, None,
+            region,
+            country,
+            folder_date,
         ])
     else:
         with conn.cursor() as cur:
-            st_uuid = upsert_station(cur, station_data)
+            st_uuid, is_new_station, station_country = upsert_station(cur, station_data)
         conn.commit()
         if st_uuid is None:
             return counts
+        if is_new_station:
+            key = station_country or "Unknown"
+            counts["new_stations_by_country"][key] = counts["new_stations_by_country"].get(key, 0) + 1
 
     # ── Sensors ────────────────────────────────────────────────────────────
     sensors = station_data.get("sensors", [])
@@ -404,6 +503,34 @@ def process_station_folder(
     for sensor in sensors:
         se_id = sensor.get("id", "")
 
+        # ── Readings CSV — parse early to extract earliest timestamp ─────────
+        csv_filename = csv_files.get(se_id)
+        if not csv_filename:
+            counts["skipped_csv"] += 1
+            # Still upsert the sensor (no readings yet for this period)
+            rows = []
+        else:
+            if is_remote:
+                raw_csv = read_url_file(urljoin(base, csv_filename))
+            else:
+                raw_csv = read_local_file(folder_path / csv_filename)
+
+            if not raw_csv:
+                counts["skipped_csv"] += 1
+                rows = []
+            else:
+                rows = parse_sensor_csv(raw_csv)
+
+        # Derive sensor init_date from the earliest timestamp in the CSV
+        sensor_init_date = None
+        for row in rows:
+            try:
+                t = datetime.fromisoformat(row["createdAt"].replace("Z", "+00:00"))
+                if sensor_init_date is None or t < sensor_init_date:
+                    sensor_init_date = t
+            except (KeyError, ValueError):
+                continue
+
         if dry_buffers is not None:
             dry_buffers["sensors"].append([
                 se_id,
@@ -411,31 +538,21 @@ def process_station_folder(
                 sensor.get("title"),
                 sensor.get("unit"),
                 sensor.get("sensorType"),
-                None, None,
+                None,
+                sensor_init_date,
             ])
         else:
             with conn.cursor() as cur:
-                se_uuid = upsert_sensor(cur, sensor, st_uuid)
+                se_uuid, is_new_sensor = upsert_sensor(cur, sensor, st_uuid, init_date=sensor_init_date)
             conn.commit()
             if se_uuid is None:
                 continue
+            if is_new_sensor and sensor_init_date is not None:
+                year = sensor_init_date.year
+                counts["new_sensors_by_year"][year] = counts["new_sensors_by_year"].get(year, 0) + 1
 
-        # ── Readings CSV ───────────────────────────────────────────────────
-        csv_filename = csv_files.get(se_id)
-        if not csv_filename:
-            counts["skipped_csv"] += 1
+        if not rows:
             continue
-
-        if is_remote:
-            raw_csv = read_url_file(urljoin(base, csv_filename))
-        else:
-            raw_csv = read_local_file(folder_path / csv_filename)
-
-        if not raw_csv:
-            counts["skipped_csv"] += 1
-            continue
-
-        rows = parse_sensor_csv(raw_csv)
 
         if dry_buffers is not None:
             for row in rows:
@@ -452,6 +569,77 @@ def process_station_folder(
     return counts
 
 
+
+# ---------------------------------------------------------------------------
+# Sensor-by-year progress chart
+# ---------------------------------------------------------------------------
+def print_sensor_year_chart(by_year: dict) -> None:
+    """Print a bar chart + table of new sensors grouped by init_date year."""
+    if not by_year:
+        print("\n[INFO] No new sensors were added this run (all already existed).")
+        return
+
+    years      = sorted(by_year)
+    counts_    = [by_year[y] for y in years]
+    max_count  = max(counts_)
+    bar_width  = 40          # max bar length in characters
+    col_w_year = 6
+    col_w_cnt  = 10
+    col_w_bar  = bar_width + 2
+
+    sep = "+" + "-" * col_w_year + "+" + "-" * col_w_cnt + "+" + "-" * col_w_bar + "+"
+
+    print("\n  New sensors added — by init_date year")
+    print(sep)
+    print(f"| {'Year':<{col_w_year-1}}| {'Count':>{col_w_cnt-1}} | {'Bar':<{col_w_bar-1}}|")
+    print(sep)
+
+    for year, count in zip(years, counts_):
+        filled = round(count / max_count * bar_width) if max_count else 0
+        bar    = "█" * filled + "░" * (bar_width - filled)
+        print(f"| {year:<{col_w_year-1}}| {count:>{col_w_cnt-1},} | {bar} |")
+
+    print(sep)
+    print(f"| {'TOTAL':<{col_w_year-1}}| {sum(counts_):>{col_w_cnt-1},} | {'':<{col_w_bar-1}}|")
+    print(sep)
+
+
+# ---------------------------------------------------------------------------
+# Station-by-country progress chart
+# ---------------------------------------------------------------------------
+def print_station_country_chart(by_country: dict) -> None:
+    """Print a bar chart + table of new stations grouped by country."""
+    if not by_country:
+        print("\n[INFO] No new stations were added this run (all already existed).")
+        return
+
+    # Sort by count descending, then alphabetically for ties
+    sorted_items = sorted(by_country.items(), key=lambda x: (-x[1], x[0]))
+    countries    = [c for c, _ in sorted_items]
+    counts_      = [n for _, n in sorted_items]
+    max_count    = max(counts_)
+    bar_width    = 40
+    col_w_ctry   = max(16, max(len(c) for c in countries) + 2)
+    col_w_cnt    = 10
+    col_w_bar    = bar_width + 2
+
+    sep = "+" + "-" * col_w_ctry + "+" + "-" * col_w_cnt + "+" + "-" * col_w_bar + "+"
+
+    print("\n  New stations added — by country")
+    print(sep)
+    print(f"| {'Country':<{col_w_ctry-1}}| {'Count':>{col_w_cnt-1}} | {'Bar':<{col_w_bar-1}}|")
+    print(sep)
+
+    for country, count in zip(countries, counts_):
+        filled = round(count / max_count * bar_width) if max_count else 0
+        bar    = "█" * filled + "░" * (bar_width - filled)
+        print(f"| {country:<{col_w_ctry-1}}| {count:>{col_w_cnt-1},} | {bar} |")
+
+    print(sep)
+    print(f"| {'TOTAL':<{col_w_ctry-1}}| {sum(counts_):>{col_w_cnt-1},} | {'':<{col_w_bar-1}}|")
+    print(sep)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -463,6 +651,7 @@ def main() -> None:
     end     = parse_date(args.end)
 
     load_env(args.env)
+    load_admin_boundaries()  # load once into _ADMIN_FEATURES
 
     is_remote = is_url(source)
     conn      = None
@@ -497,7 +686,7 @@ def main() -> None:
         print(f"       Range: {start or 'beginning'} → {end or 'end'}")
 
     # ── Totals ──────────────────────────────────────────────────────────────
-    total = {"stations": 0, "sensors": 0, "readings": 0, "skipped_csv": 0}
+    total = {"stations": 0, "sensors": 0, "readings": 0, "skipped_csv": 0, "new_sensors_by_year": {}, "new_stations_by_country": {}}
 
     for date_folder in tqdm(date_folders, desc="Date folders", unit="day"):
         # Discover station folders
@@ -521,6 +710,10 @@ def main() -> None:
             total["sensors"]     += counts["sensors"]
             total["readings"]    += counts["readings"]
             total["skipped_csv"] += counts["skipped_csv"]
+            for yr, cnt in counts["new_sensors_by_year"].items():
+                total["new_sensors_by_year"][yr] = total["new_sensors_by_year"].get(yr, 0) + cnt
+            for ctry, cnt in counts["new_stations_by_country"].items():
+                total["new_stations_by_country"][ctry] = total["new_stations_by_country"].get(ctry, 0) + cnt
 
     # ── Dry-run output ──────────────────────────────────────────────────────
     if dry_run:
@@ -536,6 +729,9 @@ def main() -> None:
     print(f"  Readings inserted  : {total['readings']:>10,}")
     print(f"  CSVs not found     : {total['skipped_csv']:>10,}")
     print("=" * 50)
+
+    print_sensor_year_chart(total["new_sensors_by_year"])
+    print_station_country_chart(total["new_stations_by_country"])
 
     if conn:
         conn.close()

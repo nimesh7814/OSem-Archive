@@ -3,3 +3,4 @@ python-dotenv
 tqdm
 requests
 beautifulsoup4
+shapely
