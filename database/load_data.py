@@ -188,6 +188,17 @@ def get_db_connection():
 
 
 # ---------------------------------------------------------------------------
+# Database size helper
+# ---------------------------------------------------------------------------
+def get_db_size_mb(conn) -> float:
+    """Return the current total size of the database in MB."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT pg_database_size(current_database())")
+        size_bytes = cur.fetchone()[0]
+    return size_bytes / (1024 * 1024)
+
+
+# ---------------------------------------------------------------------------
 # Source abstraction — local or HTTP
 # ---------------------------------------------------------------------------
 def is_url(source: str) -> bool:
@@ -664,6 +675,8 @@ def main() -> None:
         dry_buffers = init_dry_run()
     else:
         conn = get_db_connection()
+        db_size_before_mb = get_db_size_mb(conn)
+        print(f"[INFO] Database size before load: {db_size_before_mb:.2f} MB")
 
     # ── Discover date folders ───────────────────────────────────────────────
     print(f"\n[INFO] Scanning source: {source}")
@@ -729,6 +742,14 @@ def main() -> None:
     print(f"  Readings inserted  : {total['readings']:>10,}")
     print(f"  CSVs not found     : {total['skipped_csv']:>10,}")
     print("=" * 50)
+
+    if conn:
+        db_size_after_mb = get_db_size_mb(conn)
+        db_size_added_mb = db_size_after_mb - db_size_before_mb
+        print(f"\n  Database size before : {db_size_before_mb:>10.2f} MB")
+        print(f"  Database size after  : {db_size_after_mb:>10.2f} MB")
+        print(f"  Data added           : {db_size_added_mb:>+10.2f} MB")
+        print("=" * 50)
 
     print_sensor_year_chart(total["new_sensors_by_year"])
     print_station_country_chart(total["new_stations_by_country"])
