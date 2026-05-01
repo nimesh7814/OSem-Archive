@@ -31,8 +31,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/pgdata                               # named volume (permissions fixed by db-init)
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql     # runs on first ever start
+      - postgres_data:/pgdata                                 # named volume (permissions fixed by db-init)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 15s
@@ -57,9 +56,26 @@ services:
     ports:
       - "${PGADMIN_PORT}:80"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin                      # named volume
-      - ./servers.json:/pgadmin4/servers.json:ro            # auto-register DB server
+      - pgadmin_data:/var/lib/pgadmin                        # named volume
+      - ./servers.json:/pgadmin4/servers.json:ro              # auto-register DB server
 
 volumes:
+  # -----------------------------------------------------------
+  # Named volumes with explicit fixed names.
+  # Docker Compose creates them automatically on first
+  # `docker compose up -d` if they do not already exist.
+  #
+  # Data is preserved when containers are stopped or removed:
+  #   docker compose down            ✅ volumes kept
+  #   docker compose down --volumes  ❌ volumes destroyed — avoid!
+  #   docker rm osem_timescaledb     ✅ volumes kept
+  #
+  # To wipe data intentionally:
+  #   docker volume rm osem_postgres_data osem_pgadmin_data
+  # -----------------------------------------------------------
   postgres_data:
+    name: osem_postgres_data    # fixed name — survives container removal & re-creation
+    driver: local
   pgadmin_data:
+    name: osem_pgadmin_data     # fixed name — survives container removal & re-creation
+    driver: local
