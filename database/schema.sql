@@ -1,6 +1,20 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS pg_cron;         
+-- Create pg_cron only if it's available on the server. Some PG setups
+-- don't provide the extension or expose the GUCs it requires (e.g.
+-- `cron.database_name`), which causes errors during installation.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
+        BEGIN
+            EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_cron';
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Skipping pg_cron creation: %', SQLERRM;
+        END;
+    ELSE
+        RAISE NOTICE 'pg_cron not available on this server; skipping pg_cron creation.';
+    END IF;
+END$$;
 
 
 CREATE TABLE IF NOT EXISTS stations (
@@ -125,16 +139,15 @@ CREATE TABLE IF NOT EXISTS downloads (
 );
 
 
-
 -- summary_table
 CREATE TABLE IF NOT EXISTS summary_table (
-    id          INT     GENERATED ALWAYS AS IDENTITY,
-    country     TEXT,
-    region      TEXT,
-    stations    BIGINT  NOT NULL DEFAULT 0,
-    sensors     BIGINT  NOT NULL DEFAULT 0,
-    readings    BIGINT  NOT NULL DEFAULT 0,
-    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    id           INT          GENERATED ALWAYS AS IDENTITY,
+    country      TEXT,
+    region       TEXT,
+    stations     BIGINT       NOT NULL DEFAULT 0,
+    sensors      BIGINT       NOT NULL DEFAULT 0,
+    readings     BIGINT       NOT NULL DEFAULT 0,
+    refreshed_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT pk_summary_table PRIMARY KEY (id),
     -- One row per (country, region) pair; NULLs treated as distinct buckets.

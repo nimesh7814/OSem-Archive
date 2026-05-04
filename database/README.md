@@ -6,7 +6,8 @@ PostgreSQL 16 + TimescaleDB + PostGIS + pgAdmin, fully containerized.
 
 | Service     | Image                           | Default Port |
 |-------------|---------------------------------|--------------|
-| TimescaleDB | `timescale/timescaledb-ha:pg16` | `5435`       |
+| TimescaleDB | `timescale/timescaledb-ha:pg16` | `5432`       |
+| PostgREST   | `postgrest/postgrest:v12.2.0`   | `3000`       |
 | pgAdmin     | `dpage/pgadmin4`                | `5050`       |
 
 ---
@@ -18,9 +19,11 @@ database/
 ├── docker-compose.yml
 ├── .env                  ← copy from .env.example and fill in
 ├── .env.example
-├── schema.sql            ← schema, runs automatically on first start
+├── schema.sql            ← database schema
+├── cron_jobs.sql         ← TimescaleDB cron schedules and continuous aggregate policies
+├── annon_role.sql        ← PostgREST web_anon role and grants
 ├── servers.json          ← pgAdmin auto-registration
-├── load_schema.py        ← manually run schema against DB
+├── load_sql.py           ← run any SQL file against the DB
 ├── load_data.py          ← load archive data into DB
 ├── requirements.txt      ← Python dependencies
 └── README.md
@@ -40,6 +43,10 @@ cp .env.example .env
 ```
 Edit `.env` and set your passwords.
 
+> **Port note:** `POSTGRES_PORT` in `.env` is the port exposed on your **host machine**.
+> Docker maps it to `5432` inside the container. The Python scripts connect via
+> `localhost:POSTGRES_PORT`, so keep `POSTGRES_HOST=localhost` in `.env`.
+
 ### 2. Install Python dependencies
 ```bash
 pip install -r requirements.txt
@@ -51,19 +58,33 @@ docker compose up -d
 ```
 
 On first start this will:
-1. Create named Docker volumes `osem_postgres_data` and `osem_pgadmin_data` automatically
-2. Run `db-init` to fix volume permissions (required for Windows/Docker Desktop)
-3. Start TimescaleDB
+1. Create named Docker volumes `postgres_data` and `pgadmin_data` automatically
+2. Start TimescaleDB
+3. Start PostgREST (waits for DB to be healthy)
 4. Start pgAdmin with `osem_db` pre-registered
 
-### 4. Load the schema manually
+### 4. Load the schema
 ```bash
-python load_schema.py
+python load_sql.py schema.sql
 ```
 
-### 5. Open pgAdmin
+### 5. Set up cron jobs and continuous aggregate policies
+```bash
+python load_sql.py cron_jobs.sql
+```
+
+### 6. Set up the PostgREST anonymous role
+```bash
+python load_sql.py annon_role.sql
+```
+
+### 7. Open pgAdmin
 Visit http://localhost:5050 and log in with your `.env` credentials.
 The `osem_db` server is pre-registered — enter the DB password when prompted.
+
+### 8. Test PostgREST
+Visit http://localhost:3000 to see the auto-generated OpenAPI spec.
+Example query: http://localhost:3000/stations
 
 ---
 
@@ -89,7 +110,7 @@ python load_data.py --source https://archive.example.com/osem/
 
 ### Manually reload schema (if needed)
 ```bash
-python load_schema.py
+python load_sql.py schema.sql
 ```
 
 ---
@@ -102,9 +123,9 @@ Data is stored in named Docker volumes and is **not lost** when containers are r
 |--------------------------------|----------------|
 | `docker compose down`          | ✅ Kept        |
 | `docker compose up -d`         | ✅ Kept        |
-| `docker rm osem_timescaledb`   | ✅ Kept        |
+| `docker rm osem_db`            | ✅ Kept        |
 | `docker compose down --volumes`| ❌ Destroyed   |
-| `docker volume rm osem_postgres_data` | ❌ Destroyed |
+| `docker volume rm postgres_data` | ❌ Destroyed |
 
 > ⚠️ Never run `docker compose down --volumes` unless you intentionally want to wipe all data.
 
@@ -114,14 +135,16 @@ Data is stored in named Docker volumes and is **not lost** when containers are r
 ```bash
 docker compose down --volumes
 docker compose up -d
-python load_schema.py
+python load_sql.py schema.sql
+python load_sql.py cron_jobs.sql
+python load_sql.py annon_role.sql
 ```
 
 ---
 
 ## Connect with psql
 ```bash
-docker exec -it osem_timescaledb psql -U osem_user -d osem_db
+docker exec -it osem_db psql -U osem_user -d osem_db
 ```
 
 ---

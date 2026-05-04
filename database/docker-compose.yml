@@ -1,81 +1,57 @@
 services:
-
-  # -----------------------------------------------------------
-  # Volume permission initializer
-  # Required for timescaledb-ha on Windows/Docker Desktop
-  # Runs once, sets correct ownership (UID 1000) on the volume
-  # -----------------------------------------------------------
-  db-init:
-    image: alpine:latest
-    container_name: osem_db_init
-    restart: "no"
-    volumes:
-      - postgres_data:/pgdata
-    command: sh -c "chown -R 1000:1000 /pgdata && chmod -R 700 /pgdata"
-
-  # -----------------------------------------------------------
-  # TimescaleDB HA (PostgreSQL 16 + TimescaleDB + PostGIS)
-  # -----------------------------------------------------------
-  timescaledb:
-    image: timescale/timescaledb-ha:pg16
-    container_name: osem_timescaledb
+  db:
+    image: timescale/timescaledb-ha:pg16-ts2.26
+    container_name: osem_db
     restart: unless-stopped
-    depends_on:
-      db-init:
-        condition: service_completed_successfully
     environment:
-      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB:       ${POSTGRES_DB}
-      PGDATA:            /pgdata
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: "timescaledb,pg_cron"
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/pgdata                                 # named volume (permissions fixed by db-init)
+      - db_data:/home/postgres/pgdata/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # -----------------------------------------------------------
-  # pgAdmin
-  # -----------------------------------------------------------
+  postgrest:
+    image: postgrest/postgrest:v12.2.0
+    container_name: osem_postgrest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: >-
+        postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      PGRST_DB_SCHEMA: "public"
+      PGRST_DB_ANON_ROLE: "web_anon"
+      PGRST_OPENAPI_MODE: "follow-privileges"
+      PGRST_DB_POOL: "10"
+      PGRST_DB_POOL_TIMEOUT: "10"
+    ports:
+      - "${POSTGREST_PORT:-3000}:3000"
+
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4
     container_name: osem_pgadmin
     restart: unless-stopped
     depends_on:
-      timescaledb:
+      db:
         condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
     ports:
-      - "${PGADMIN_PORT}:80"
+      - "${PGADMIN_PORT:-5050}:80"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin                        # named volume
-      - ./servers.json:/pgadmin4/servers.json:ro              # auto-register DB server
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
 
 volumes:
-  # -----------------------------------------------------------
-  # Named volumes with explicit fixed names.
-  # Docker Compose creates them automatically on first
-  # `docker compose up -d` if they do not already exist.
-  #
-  # Data is preserved when containers are stopped or removed:
-  #   docker compose down            ✅ volumes kept
-  #   docker compose down --volumes  ❌ volumes destroyed — avoid!
-  #   docker rm osem_timescaledb     ✅ volumes kept
-  #
-  # To wipe data intentionally:
-  #   docker volume rm osem_postgres_data osem_pgadmin_data
-  # -----------------------------------------------------------
-  postgres_data:
-    name: osem_postgres_data    # fixed name — survives container removal & re-creation
-    driver: local
+  db_data:
   pgadmin_data:
-    name: osem_pgadmin_data     # fixed name — survives container removal & re-creation
-    driver: local
