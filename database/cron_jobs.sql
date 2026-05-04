@@ -77,7 +77,6 @@ BEGIN
             $$
         );
 
-        -- Daily ensure compression policy exists for `readings` (idempotent)
         PERFORM cron.schedule(
             'ensure-compression-policy-readings',
             '0 4 * * *',
@@ -86,7 +85,6 @@ BEGIN
             $$
         );
 
-        -- Schedule the function to run daily at 04:05 to reconcile policies across the DB.
         PERFORM cron.schedule(
             'ensure-compression-policies-all',
             '5 4 * * *',
@@ -169,8 +167,6 @@ END$$;
 
 
 -- Ensure compression policies exist for all hypertables in the database.
--- This iterates over `timescaledb_information.hypertables` and applies a
--- sensible default compression policy when missing. It is idempotent.
 CREATE OR REPLACE FUNCTION ensure_compression_policies_for_all_hypertables()
 RETURNS void
 LANGUAGE plpgsql

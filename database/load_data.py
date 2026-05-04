@@ -95,6 +95,7 @@ SQL_DUMP_DIR        = Path("sql")          # all .sql dumps live here
 STATION_ID_LEN      = 24
 ADMIN_BOUNDARY_PATH = Path("data/admin_boundary.geojson")
 WORKER_THREADS      = 8   # parallel station folders per date folder
+PROGRESS_LOG        = Path("progress.log")  # resume checkpoint file
 
 # ---------------------------------------------------------------------------
 # Admin boundary spatial index (loaded once at startup)
@@ -153,6 +154,53 @@ def lookup_admin(lon: float, lat: float) -> tuple[Optional[str], Optional[str]]:
         if geom.contains(pt):
             return country, region
     return None, None
+
+
+# ---------------------------------------------------------------------------
+# Progress log -- resumable checkpoint tracking
+# ---------------------------------------------------------------------------
+def progress_log_path(source: str, start, end) -> Path:
+    """Return a unique progress log path per source+date-range so different
+    runs don't share the same log file."""
+    import hashlib
+    key = f"{source}|{start}|{end}"
+    slug = hashlib.md5(key.encode()).hexdigest()[:8]
+    start_s = str(start) if start else "begin"
+    end_s   = str(end)   if end   else "end"
+    return Path(f"progress_{start_s}_to_{end_s}_{slug}.log")
+
+
+def load_completed(log_path: Path) -> set:
+    """Return the set of 'date_folder/station_folder' keys already completed."""
+    if not log_path.exists():
+        return set()
+    completed = set()
+    with open(log_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                completed.add(line)
+    print(f"[RESUME] Progress log found: {log_path}")
+    print(f"[RESUME] Already completed : {len(completed):,} station-folders — these will be skipped.")
+    return completed
+
+
+def mark_completed(log_path: Path, date_folder: str, station_folder: str) -> None:
+    """Append a completed key to the progress log (one line per station-folder)."""
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(f"{date_folder}/{station_folder}\n")
+
+
+def init_progress_log(log_path: Path, source: str, start, end) -> None:
+    """Write a header comment if the log doesn't exist yet."""
+    if not log_path.exists():
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(f"# load_data.py progress log\n")
+            f.write(f"# source : {source}\n")
+            f.write(f"# range  : {start or 'beginning'} -> {end or 'end'}\n")
+            f.write(f"# started: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write(f"# Each line below is a completed date_folder/station_folder.\n")
+            f.write(f"# Delete this file to restart from scratch.\n")
 
 
 # ---------------------------------------------------------------------------
@@ -1196,6 +1244,11 @@ def main() -> None:
     if start or end:
         print(f"       Range: {start or 'beginning'} -> {end or 'end'}")
 
+    # -- Progress log (resume support) ---------------------------------------
+    log_path = progress_log_path(source, start, end)
+    init_progress_log(log_path, source, start, end)
+    completed = load_completed(log_path)
+
     # -- Totals --------------------------------------------------------------
     total = {
         "stations": 0,
@@ -1233,11 +1286,16 @@ def main() -> None:
                 unit="station",
                 leave=False,
             ):
+                key = f"{date_folder}/{station_folder}"
+                if key in completed:
+                    continue  # already done in a previous run -- skip
                 counts = process_station_folder(
                     source, date_folder, station_folder,
                     is_remote, conn, dry_buffers, sql_buffers,
                 )
                 _merge_counts(counts)
+                mark_completed(log_path, date_folder, station_folder)
+                completed.add(key)
         else:
             # Parallel path -- each station folder processed in its own thread.
             # DB connections are not thread-safe, so each worker gets its own
@@ -1245,6 +1303,16 @@ def main() -> None:
             # lock since multiple threads append to shared lists.
             import threading
             buf_lock = threading.Lock() if (dry_buffers is not None or sql_buffers is not None) else None
+            log_lock = threading.Lock()  # protect progress log writes
+
+            # Filter out already-completed station folders before dispatching
+            pending_stations = [
+                sf for sf in station_folders
+                if f"{date_folder}/{sf}" not in completed
+            ]
+            skipped_count = len(station_folders) - len(pending_stations)
+            if skipped_count:
+                tqdm.write(f"  [RESUME] {date_folder}: skipping {skipped_count} already-completed stations")
 
             def _worker(station_folder: str) -> dict:
                 if dry_buffers is not None or sql_buffers is not None:
@@ -1260,25 +1328,30 @@ def main() -> None:
                     with buf_lock:
                         for key in local_buf:
                             shared_buf[key].extend(local_buf[key])
+                    with log_lock:
+                        mark_completed(log_path, date_folder, station_folder)
                     return c
                 else:
                     # Each thread uses its own DB connection (silent -- no log spam)
                     thread_conn = get_db_connection(verbose=False)
                     try:
-                        return process_station_folder(
+                        result = process_station_folder(
                             source, date_folder, station_folder,
                             is_remote, thread_conn, None, None,
                         )
+                        with log_lock:
+                            mark_completed(log_path, date_folder, station_folder)
+                        return result
                     finally:
                         thread_conn.close()
 
             with ThreadPoolExecutor(max_workers=workers) as executor:
                 futures = {
                     executor.submit(_worker, sf): sf
-                    for sf in station_folders
+                    for sf in pending_stations
                 }
                 pbar = tqdm(
-                    total=len(station_folders),
+                    total=len(pending_stations),
                     desc=f"  {date_folder}",
                     unit="station",
                     leave=False,
@@ -1342,6 +1415,9 @@ def main() -> None:
 
     print_sensor_year_chart(total["new_sensors_by_year"])
     print_station_country_chart(total["new_stations_by_country"])
+
+    print(f"\n[RESUME] Progress log : {log_path}")
+    print(f"[RESUME] To restart from scratch, delete that file and re-run.")
 
 
 if __name__ == "__main__":

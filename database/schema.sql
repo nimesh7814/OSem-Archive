@@ -145,9 +145,9 @@ CREATE INDEX IF NOT EXISTS idx_summary_country_region
 -- Combined view: stations and sensors added per year, month, region, and country
 CREATE OR REPLACE VIEW count_year AS
 SELECT
-    COALESCE(st.year,    se.year)    AS year,
-    COALESCE(st.month,   se.month)   AS month,
-    COALESCE(st.region,  se.region)  AS region,
+    COALESCE(st.year, se.year)    AS year,
+    COALESCE(st.month, se.month)   AS month,
+    COALESCE(st.region, se.region)  AS region,
     COALESCE(st.country, se.country) AS country,
     COALESCE(st.station_count, 0)    AS st_count,
     COALESCE(se.sensor_count,  0)    AS se_count
