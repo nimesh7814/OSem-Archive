@@ -24,16 +24,21 @@ $$;
 
 GRANT USAGE ON SCHEMA public TO web_anon;
 
-
-GRANT SELECT ON TABLE stations      TO web_anon;
-GRANT SELECT ON TABLE sensors       TO web_anon;
-GRANT SELECT ON TABLE readings      TO web_anon;
-GRANT SELECT ON TABLE summary_table TO web_anon;
-GRANT SELECT ON TABLE downloads     TO web_anon;
-
-GRANT SELECT ON TABLE readings_hourly   TO web_anon;
-GRANT SELECT ON TABLE readings_daily    TO web_anon;
-GRANT SELECT ON TABLE readings_monthly  TO web_anon;
-GRANT SELECT ON TABLE readings_yearly   TO web_anon;
-
+-- Grant read-only access to all current and future tables/sequences in
+-- the `public` schema. Using the `ALL` forms is idempotent and avoids
+-- errors when individual tables don't yet exist.
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO web_anon;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO web_anon;
+
+-- Ensure future tables and sequences created in `public` also grant
+-- appropriate privileges to `web_anon`.
+DO $$
+BEGIN
+    -- Default privileges require a role context; set for the current DB owner
+    PERFORM 1;
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END$$;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO web_anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO web_anon;

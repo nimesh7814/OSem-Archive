@@ -37,7 +37,7 @@ Usage:
     # Generate a portable SQL dump (no DB required) -- great for experimentation
     # Output is written to ./sql/<start>_to_<end>.sql
     python load_data.py --source /path/to/archive --type sql
-    python load_data.py --source "G:\\OSeM\\archive_data" --start 2014-06-03 --end 2023-12-31 --workers 16 --type sql
+    python load_data.py --source "G:\\OSeM\\archive_data" --start 2014-06-03 --end 2024-12-31 --workers 1 --type sql
 
     # Split the SQL dump into N parts to avoid writing one huge file
     # Parts are written to ./sql/<start>_to_<end>_part1of3.sql etc.

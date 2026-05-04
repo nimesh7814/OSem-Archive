@@ -1,21 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS postgis;
--- Create pg_cron only if it's available on the server. Some PG setups
--- don't provide the extension or expose the GUCs it requires (e.g.
--- `cron.database_name`), which causes errors during installation.
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
-        BEGIN
-            EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_cron';
-        EXCEPTION WHEN OTHERS THEN
-            RAISE NOTICE 'Skipping pg_cron creation: %', SQLERRM;
-        END;
-    ELSE
-        RAISE NOTICE 'pg_cron not available on this server; skipping pg_cron creation.';
-    END IF;
-END$$;
-
 
 CREATE TABLE IF NOT EXISTS stations (
     st_uuid     INT                   GENERATED ALWAYS AS IDENTITY,
@@ -150,10 +134,48 @@ CREATE TABLE IF NOT EXISTS summary_table (
     refreshed_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT pk_summary_table PRIMARY KEY (id),
-    -- One row per (country, region) pair; NULLs treated as distinct buckets.
     CONSTRAINT uq_summary_country_region UNIQUE NULLS NOT DISTINCT (country, region)
 );
 
 -- Index to speed up country/region look-ups
 CREATE INDEX IF NOT EXISTS idx_summary_country_region
     ON summary_table (country, region);
+
+
+-- Combined view: stations and sensors added per year, month, region, and country
+CREATE OR REPLACE VIEW count_year AS
+SELECT
+    COALESCE(st.year,    se.year)    AS year,
+    COALESCE(st.month,   se.month)   AS month,
+    COALESCE(st.region,  se.region)  AS region,
+    COALESCE(st.country, se.country) AS country,
+    COALESCE(st.station_count, 0)    AS st_count,
+    COALESCE(se.sensor_count,  0)    AS se_count
+FROM (
+    SELECT
+        EXTRACT(YEAR  FROM init_date)::INT AS year,
+        EXTRACT(MONTH FROM init_date)::INT AS month,
+        region,
+        country,
+        COUNT(*)                           AS station_count
+    FROM stations
+    WHERE init_date IS NOT NULL
+    GROUP BY year, month, region, country
+) st
+FULL OUTER JOIN (
+    SELECT
+        EXTRACT(YEAR  FROM s.init_date)::INT AS year,
+        EXTRACT(MONTH FROM s.init_date)::INT AS month,
+        st.region,
+        st.country,
+        COUNT(*)                             AS sensor_count
+    FROM sensors s
+    JOIN stations st ON s.st_uuid = st.st_uuid
+    WHERE s.init_date IS NOT NULL
+    GROUP BY year, month, st.region, st.country
+) se
+ON  st.year    = se.year
+AND st.month   = se.month
+AND st.region  = se.region
+AND st.country = se.country
+ORDER BY year DESC, month DESC, country, region;
