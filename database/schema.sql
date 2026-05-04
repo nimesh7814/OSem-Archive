@@ -114,6 +114,37 @@ GROUP BY se_uuid, time_bucket('1 year', time)
 WITH NO DATA;
 
 
+-- Continuous aggregate refresh policies (one-time setup)
+-- TimescaleDB's background worker handles all future refreshes automatically.
+SELECT add_continuous_aggregate_policy('readings_hourly',
+    start_offset      => INTERVAL '2 hours',
+    end_offset        => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour',
+    if_not_exists     => TRUE
+);
+
+SELECT add_continuous_aggregate_policy('readings_daily',
+    start_offset      => INTERVAL '7 days',
+    end_offset        => INTERVAL '1 day',
+    schedule_interval => INTERVAL '1 day',
+    if_not_exists     => TRUE
+);
+
+SELECT add_continuous_aggregate_policy('readings_monthly',
+    start_offset      => INTERVAL '3 months',
+    end_offset        => INTERVAL '1 month',
+    schedule_interval => INTERVAL '1 month',
+    if_not_exists     => TRUE
+);
+
+SELECT add_continuous_aggregate_policy('readings_yearly',
+    start_offset      => INTERVAL '3 years',
+    end_offset        => INTERVAL '1 year',
+    schedule_interval => INTERVAL '1 year',
+    if_not_exists     => TRUE
+);
+
+
 CREATE TABLE IF NOT EXISTS downloads (
     dl_uuid     INT     GENERATED ALWAYS AS IDENTITY,
     type        TEXT    NOT NULL,
@@ -145,9 +176,9 @@ CREATE INDEX IF NOT EXISTS idx_summary_country_region
 -- Combined view: stations and sensors added per year, month, region, and country
 CREATE OR REPLACE VIEW count_year AS
 SELECT
-    COALESCE(st.year, se.year)    AS year,
-    COALESCE(st.month, se.month)   AS month,
-    COALESCE(st.region, se.region)  AS region,
+    COALESCE(st.year, se.year)       AS year,
+    COALESCE(st.month, se.month)     AS month,
+    COALESCE(st.region, se.region)   AS region,
     COALESCE(st.country, se.country) AS country,
     COALESCE(st.station_count, 0)    AS st_count,
     COALESCE(se.sensor_count,  0)    AS se_count
