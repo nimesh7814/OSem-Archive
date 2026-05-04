@@ -67,6 +67,9 @@ ALTER TABLE readings SET (
     timescaledb.compress_segmentby = 'se_uuid'
 );
 
+-- Register compression policy once at schema setup (compresses chunks older than 1 month)
+SELECT add_compression_policy('readings', compress_after => INTERVAL '1 month', if_not_exists => TRUE);
+
 
 -- Hourly summary
 CREATE MATERIALIZED VIEW IF NOT EXISTS readings_hourly

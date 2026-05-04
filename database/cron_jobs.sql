@@ -33,11 +33,8 @@ SELECT cron.schedule(
     'compress-readings',               
     '0 */12 * * *',                  
     $$
-        SELECT add_compression_policy(
-            'readings',
-            compress_after  => INTERVAL '1 month',
-            if_not_exists   => TRUE
-        );
+        SELECT compress_chunk(i, if_not_compressed => TRUE)
+        FROM show_chunks('readings', older_than => INTERVAL '1 month') i;
     $$
 );
 
