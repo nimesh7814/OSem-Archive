@@ -52,6 +52,26 @@ services:
       - pgadmin_data:/var/lib/pgadmin
       - ./servers.json:/pgadmin4/servers.json:ro
 
+  # One-shot initializer: waits for the `db` service to become healthy
+  # then applies the `annon_role.sql` script to create the `web_anon` role.
+  # This runs once when `docker compose up -d` is executed.
+  db-init:
+    image: postgres:16
+    container_name: osem_db_init
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./annon_role.sql:/sql/annon_role.sql:ro
+    command: >
+      sh -c "until pg_isready -h db -U $POSTGRES_USER -d $POSTGRES_DB; do sleep 1; done; \
+             psql -h db -U $POSTGRES_USER -d $POSTGRES_DB -f /sql/annon_role.sql || true"
+
 volumes:
   db_data:
   pgadmin_data:
