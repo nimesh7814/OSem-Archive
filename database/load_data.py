@@ -203,6 +203,58 @@ def init_progress_log(log_path: Path, source: str, start, end) -> None:
             f.write(f"# Delete this file to restart from scratch.\n")
 
 
+def error_log_path(source: str, start, end) -> Path:
+    """Return the companion error log path for the same source/date-range."""
+    base = progress_log_path(source, start, end)
+    return base.with_name(base.stem + "_errors.log")
+
+
+def init_error_log(log_path: Path, source: str, start, end) -> None:
+    """Write a header comment if the error log doesn't exist yet."""
+    if not log_path.exists():
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(f"# load_data.py station location error log\n")
+            f.write(f"# source : {source}\n")
+            f.write(f"# range  : {start or 'beginning'} -> {end or 'end'}\n")
+            f.write(f"# started: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write(f"# Each line below contains a skipped station and its location payload.\n")
+            f.write(f"# Delete this file to restart the log from scratch.\n")
+
+
+def mark_location_error(
+    log_path: Path,
+    date_folder: str,
+    station_folder: str,
+    station_folder_path: str,
+    station_id: str,
+    reason: str,
+    station_data: dict,
+) -> None:
+    """Append one station-location failure entry to the error log."""
+    location_snapshot = {
+        "loc": station_data.get("loc"),
+        "geometry": station_data.get("geometry"),
+        "coordinates": station_data.get("coordinates"),
+        "location": station_data.get("location"),
+        "position": station_data.get("position"),
+        "lat": station_data.get("lat"),
+        "lon": station_data.get("lon"),
+        "lng": station_data.get("lng"),
+        "latitude": station_data.get("latitude"),
+        "longitude": station_data.get("longitude"),
+    }
+    entry = {
+        "date_folder": date_folder,
+        "station_folder": station_folder,
+        "station_folder_path": station_folder_path,
+        "station_id": station_id,
+        "reason": reason,
+        "location": location_snapshot,
+    }
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -410,21 +462,116 @@ def parse_sensor_csv(raw: bytes) -> list[dict]:
     return rows
 
 
+def _as_lon_lat(value) -> tuple[Optional[float], Optional[float]]:
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        return value[0], value[1]
+    return None, None
+
+
+def station_location_info(station_data: dict) -> tuple[bool, Optional[float], Optional[float]]:
+    """Return (has_any_location_info, lon, lat) for a station payload."""
+    loc = station_data.get("loc")
+    if isinstance(loc, dict):
+        geometry = loc.get("geometry")
+        if isinstance(geometry, dict):
+            lon, lat = _as_lon_lat(geometry.get("coordinates"))
+            if lon is not None and lat is not None:
+                return True, lon, lat
+
+        lon, lat = _as_lon_lat(loc.get("coordinates"))
+        if lon is not None and lat is not None:
+            return True, lon, lat
+
+    for candidate in (
+        station_data.get("geometry"),
+        station_data.get("coordinates"),
+        station_data.get("location"),
+        station_data.get("position"),
+    ):
+        if isinstance(candidate, dict):
+            if candidate.get("coordinates"):
+                lon, lat = _as_lon_lat(candidate.get("coordinates"))
+            elif candidate.get("lon") is not None and candidate.get("lat") is not None:
+                lon, lat = candidate.get("lon"), candidate.get("lat")
+            elif candidate.get("lng") is not None and candidate.get("lat") is not None:
+                lon, lat = candidate.get("lng"), candidate.get("lat")
+            elif candidate.get("longitude") is not None and candidate.get("latitude") is not None:
+                lon, lat = candidate.get("longitude"), candidate.get("latitude")
+            else:
+                lon = lat = None
+        else:
+            lon, lat = _as_lon_lat(candidate)
+
+        if lon is not None and lat is not None:
+            return True, lon, lat
+
+    has_any_location_info = any(
+        value is not None and value != ""
+        for value in (
+            station_data.get("loc"),
+            station_data.get("geometry"),
+            station_data.get("coordinates"),
+            station_data.get("location"),
+            station_data.get("position"),
+            station_data.get("lat"),
+            station_data.get("lon"),
+            station_data.get("lng"),
+            station_data.get("latitude"),
+            station_data.get("longitude"),
+        )
+    )
+    return has_any_location_info, None, None
+
+
+def get_existing_station_location(cur, st_id: str) -> tuple[Optional[float], Optional[float], Optional[str], Optional[str]]:
+    """Return stored (lon, lat, country, region) for an existing station id."""
+    cur.execute(
+        """
+        SELECT
+            ST_X(geometry) AS lon,
+            ST_Y(geometry) AS lat,
+            country,
+            region
+        FROM stations
+        WHERE st_id = %s
+        """,
+        (st_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, None, None, None
+    return row[0], row[1], row[2], row[3]
+
+
 # ---------------------------------------------------------------------------
 # DB upsert helpers
 # ---------------------------------------------------------------------------
-def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str]]:
+def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str], Optional[str]]:
     """Insert or get st_uuid for a station.
 
     Returns (st_uuid, is_new, country) where is_new=True when freshly inserted.
     """
-    coords = data.get("loc", {}).get("geometry", {}).get("coordinates", [None, None])
-    lon, lat = coords[0], coords[1]
-    if lon is None or lat is None:
-        print(f"  [WARN] Station {data.get('id')} has no geometry, skipping")
-        return None, False, None
+    station_id = data.get("id")
+    has_location_info, lon, lat = station_location_info(data)
+    country = region = None
+    skip_reason = None
 
-    country, region = lookup_admin(lon, lat)
+    if lon is None or lat is None:
+        existing_lon, existing_lat, existing_country, existing_region = get_existing_station_location(cur, station_id)
+        if existing_lon is not None and existing_lat is not None:
+            lon, lat = existing_lon, existing_lat
+            country, region = existing_country, existing_region
+        else:
+            if has_location_info:
+                skip_reason = "location info but no usable coordinates"
+                print(f"  [WARN] Station {station_id} has location info but no usable coordinates, skipping")
+            else:
+                skip_reason = "no location information"
+                print(f"  [WARN] Station {station_id} has no location information, skipping")
+            return None, False, None, skip_reason
+
+    if country is None or region is None:
+        country, region = lookup_admin(lon, lat)
 
     cur.execute("""
         INSERT INTO stations (st_id, boxtype, exposure, model, geometry, region, country, init_date)
@@ -447,7 +594,7 @@ def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str]]
                 END
         RETURNING st_uuid, (xmax = 0) AS is_new, country
     """, (
-        data.get("id"),
+        station_id,
         data.get("boxType"),
         data.get("exposure"),
         data.get("model"),
@@ -460,7 +607,240 @@ def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str]]
     if not row:
         return None, False, None
     st_uuid, is_new, stored_country = row
-    return st_uuid, is_new, stored_country
+    return st_uuid, is_new, stored_country, None
+
+
+def classify_sensor(title: str, unit: str) -> str:
+    """Return a canonical sensor category for a given (title, unit) pair.
+
+    Rules are evaluated in order; the first match wins.
+    Falls back to "Other" when nothing matches.
+    """
+    t = (title or "").lower()
+    u = (unit  or "").lower()
+
+    # ------------------------------------------------------------------ #
+    # 1.  Temperature                                                      #
+    # ------------------------------------------------------------------ #
+    # Water-temperature titles are handled in the Water section (rule 13)
+    if any(kw in t for kw in (
+        "wassertemperatur", "water temperature", "wassertemp",
+        "temperatur wasser",
+    )):
+        return "Water"
+
+    if any(kw in t for kw in (
+        "temperatur", "temperature", "temp", "wärme", "thermometer",
+        "taupunkt", "dew point", "dewpoint", "heat index", "hitzeindex",
+        "windchill", "kühlgrenz", "gefühlte temperatur",
+    )) or u in ("°c", "c", "c°", "°c", "celsius", "celcius", "grad celsius",
+                "degree celcius", "deg. c", "degree c", "centigrade",
+                "k", "°f", "f", "˚c", "ºc", "*c", "oC"):
+        # Exclude humidity sensors whose title happens to contain "temp"
+        if not any(bad in t for bad in ("luftfeuchte", "humidity", "feuchte",
+                                         "feuchtigkeit", "moisture")):
+            return "Temperature"
+
+    # ------------------------------------------------------------------ #
+    # 2.  Humidity                                                         #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "luftfeuchte", "luftfeuchtigkeit", "feuchte", "feuchtigkeit",
+        "humidity", "humedad", "humidité", "hygrométrie", "moisture",
+        "wilgotność", "kosteus", "ilmankosteus", "umidità", "vochtigheid",
+        "humidade", "páratartalom", "ilmankosteus",
+    )) or u in ("%", "%rh", "% rh", "%rh", "rh", "rh%", "rel. h. %",
+                "rel.h.%", "percent", "percent rh", "%rel", "% rel. f.",
+                "relh", "rel. feuchte", "relative humidity",):
+        if "boden" not in t and "soil" not in t:   # soil moisture handled separately
+            return "Humidity"
+
+    # ------------------------------------------------------------------ #
+    # 3.  Air Pressure                                                     #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "luftdruck", "druck", "pressure", "pression", "pressione",
+        "ciśnienie", "давление", "barometric", "barometer", "atm",
+        "baro", "luchtdruk", "luftdruk", "lufdruck", "luftfdruck",
+        "luftdruck", "pression", "pressão",
+    )) or u in ("hpa", "pa", "mbar", "bar", "pascal", "millibar",
+                "hectopascal", "kpa", "mmhg", "inhg"):
+        return "Air Pressure"
+
+    # ------------------------------------------------------------------ #
+    # 9b. Gas (check BEFORE particulate matter so NO2 µg/m³ is Gas)       #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "no2", "stickoxid", "stickstoffdioxid", "nitrogen dioxide",
+        "nh3", "ammoniak", "ammonia",
+        "o3", "ozon", "ozone",
+        " co ", "kohlenmonoxid", "carbon monoxide",
+        "nox", "h2s", "ch4", "methan", "methane",
+        "ethanol", "c2h5oh", "c3h8", "c4h10", "lpg",
+    )) and not any(kw in t for kw in ("pm", "feinstaub", "dust", "particle")):
+        return "Gas"
+
+    # ------------------------------------------------------------------ #
+    # 4.  Particulate Matter / Fine Dust                                   #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "feinstaub", "feinstaubkonzentration", "particulate", "particle",
+        "partikel", "pm10", "pm2.5", "pm2,5", "pm 10", "pm 2.5",
+        "pm1", "pm4", "staub", "dust", "pył", "pienhiukkaset",
+        "polveri", "prахові", "частицы", "luftverschmutzung",
+        "sds", "sps30", "sds011", "sps 30",
+    )) or any(kw in u for kw in ("µg/m", "ug/m", "μg/m", "µg/m³",
+                                   "pcs/", "particles")):
+        return "Particulate Matter"
+
+    # ------------------------------------------------------------------ #
+    # 5.  UV Radiation                                                     #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "uv", "ultraviolet", "ultraviolett", "uv-intensität", "uv-index",
+        "uv-strahlung", "uv-licht", "uva", "uvb", "uvc",
+    )):
+        return "UV Radiation"
+
+    # ------------------------------------------------------------------ #
+    # 6.  Illuminance / Light                                              #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "beleuchtungsstärke", "beleuchtung", "helligkeit", "licht",
+        "illuminance", "illumination", "luminosity", "luminance",
+        "lichtintensität", "lux", "lichtstärke", "lichtstaerke",
+        "dämmerung", "sonnenstrahlung", "einstrahlung", "valaistusvoimakkuus",
+        "valaistuksen", "valoisuus", "light intensity", "ambient light",
+        "day light",
+    )) or u in ("lux", "lx", "klx"):
+        return "Illuminance"
+
+    # ------------------------------------------------------------------ #
+    # 7b. Signal Strength (check BEFORE noise so 'WiFi' isn't caught by dB)#
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "wifi", "wlan", "rssi", "signalstärke", "wi-fi",
+        "wifistärke", "wifi-stärke", "wifi signal", "signalstärke",
+        "signal strength",
+    )) or u in ("dbm", "rssi"):
+        return "Signal Strength"
+
+    # ------------------------------------------------------------------ #
+    # 7.  Noise / Sound                                                    #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "schall", "lärm", "lautstärke", "noise", "sound", "geräusch",
+        "umgebungslautstärke", "lämpötila", "laerm", "laerm", "akustisch",
+        "loudness", "lärmpegel", "geräuschpegel", "dnms",
+    )) or any(kw in u for kw in ("db", "dba", "dbc", "dbz", "schallpegel",
+                                    "dezibel", "pegel")):
+        return "Noise"
+
+    # ------------------------------------------------------------------ #
+    # 8.  Precipitation / Rain                                             #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "niederschlag", "regen", "precipitation", "rain", "pluie",
+        "pioggia", "opady", "regenrate", "regenintensität",
+        "niederschlagsmenge", "regensensor", "regenindikator",
+    )):
+        return "Precipitation"
+
+    # ------------------------------------------------------------------ #
+    # 9.  Wind                                                             #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "wind", "windgeschwindigkeit", "windrichtung", "windstärke",
+        "windböen", "böengeschwindigkeit", "windböe", "böe",
+        "windspeed", "winddirection", "windchill",
+    )):
+        return "Wind"
+
+    # ------------------------------------------------------------------ #
+    # 10. CO2 / Air Quality Gases                                          #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "co2", "co₂", "c02", "kohlendioxid", "kohlenstoffdioxid",
+        "carbon dioxide", "co2-konzentration",
+        "eco2", "co2eq", "co2äquivalent",
+    )):
+        return "CO2"
+
+    if any(kw in t for kw in (
+        "voc", "tvoc", "volatile organic", "luftqualität", "luftgüte",
+        "air quality", "air-quality", "airquality", "iaq",
+        "indoor air quality", "innenraumluftqualität",
+        "gas resistance", "luftwiderstand",
+    )):
+        return "Air Quality / VOC"
+
+    # ------------------------------------------------------------------ #
+    # 11. Soil                                                             #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "bodenfeuchte", "bodenfeuchtigkeit", "bodentemperatur",
+        "boden", "soil", "ground temperature", "soil moisture",
+        "soil temperature", "bodenfeucht",
+    )):
+        return "Soil"
+
+    # ------------------------------------------------------------------ #
+    # 12. Radiation / Radioactivity                                        #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "radioaktiv", "radioactiv", "radiation", "strahlung",
+        "gammastrahlung", "gamma", "strahlenbelastung",
+        "dosisleistung", "ortsdosisleistung", "ionizing",
+    )) or any(kw in u for kw in ("sv/h", "cpm", "μr/h", "µr/h",
+                                   "msv", "nsv", "usv")):
+        return "Radiation"
+
+    # ------------------------------------------------------------------ #
+    # 13. Water                                                            #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "wassertemperatur", "water temperature", "wasserstand",
+        "water level", "füllstand", "pegel",
+        "leitfähigkeit", "conductivity", "leitwert",
+        "trübung", "turbidity", "ph-wert", "ph wert",
+        "wasserpegel",
+    )):
+        return "Water"
+
+    # ------------------------------------------------------------------ #
+    # 14. Power / Energy / Solar                                           #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "spannung", "voltage", "batterie", "battery", "akku", "akkusp",
+        "solar", "leistung", "power", "energie", "energy",
+        "strom", "current", "ladestrom", "solarstrom",
+        "watt", "kwh", "pgn", "ugn", "pdc", "solarspannung",
+        "eingangsspannung", "versorgungsspannung",
+        "netz", "grid", "pv", "photovoltaic",
+    )) or u in ("v", "mv", "a", "ma", "w", "kw", "kwh", "wh", "volt",
+                "volts", "ampere"):
+        return "Power / Energy"
+
+    # ------------------------------------------------------------------ #
+    # 15. GPS / Location                                                   #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "gps", "latitude", "longitude", "altitude", "breite", "länge",
+        "breitengrad", "längengrad", "koordinaten", "höhe",
+    )):
+        return "GPS / Location"
+
+    # ------------------------------------------------------------------ #
+    # 16. People / Traffic Counting                                        #
+    # ------------------------------------------------------------------ #
+    if any(kw in t for kw in (
+        "personen", "personenanzahl", "people", "besucher", "besucherzahl",
+        "pax", "fahrzeug", "verkehr", "traffic", "cars", "fahrrad",
+        "number of people", "attendance", "presence",
+    )):
+        return "Counting"
+
+    return "Other"
 
 
 def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Optional[int], bool]:
@@ -473,6 +853,8 @@ def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Opti
     Returns (se_uuid, is_new) where is_new is True when the row was freshly
     inserted (xmax = 0 means INSERT path, not UPDATE path).
     """
+    sensor_type = classify_sensor(sensor.get("title", ""), sensor.get("unit", ""))
+
     cur.execute("""
         INSERT INTO sensors (se_id, st_uuid, title, unit, info, type, init_date)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -493,7 +875,7 @@ def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Opti
         sensor.get("title"),
         sensor.get("unit"),
         sensor.get("sensorType"),
-        sensor.get("sensorType"),  # type column
+        sensor_type,          # classified category replaces raw sensorType
         init_date,
     ))
     row = cur.fetchone()
@@ -862,9 +1244,6 @@ def import_sql_file(sql_path: Path, env_path: str) -> None:
     load_env(env_path)
     conn = get_db_connection()
 
-    db_size_before_mb = get_db_size_mb(conn)
-    print(f"[IMPORT] Database size before import: {db_size_before_mb:.2f} MB")
-
     # -- Resolve the list of files to import ---------------------------------
     if sql_path.is_dir():
         sql_files = sorted(sql_path.glob("*.sql"))
@@ -890,18 +1269,12 @@ def import_sql_file(sql_path: Path, env_path: str) -> None:
         total_statements    += stmts
         total_rows_affected += rows
 
-    db_size_after_mb = get_db_size_mb(conn)
-    db_size_added_mb = db_size_after_mb - db_size_before_mb
-
     print("\n" + "=" * 50)
     print("  Import complete")
     print("=" * 50)
     print(f"  Files imported      : {len(sql_files):>10,}")
     print(f"  Statements executed : {total_statements:>10,}")
     print(f"  Rows affected       : {total_rows_affected:>10,}")
-    print(f"  Database size before: {db_size_before_mb:>10.2f} MB")
-    print(f"  Database size after : {db_size_after_mb:>10.2f} MB")
-    print(f"  Data added          : {db_size_added_mb:>+10.2f} MB")
     print("=" * 50)
 
     conn.close()
@@ -918,6 +1291,8 @@ def process_station_folder(
     conn,
     dry_buffers: Optional[dict],
     sql_buffers: Optional[dict] = None,
+    location_error_log_path: Optional[Path] = None,
+    location_error_lock=None,
 ) -> dict:
     """Process one station folder. Returns counts.
 
@@ -930,6 +1305,8 @@ def process_station_folder(
         "sensors": 0,
         "readings": 0,
         "skipped_csv": 0,
+        "skipped_no_location": 0,
+        "skipped_bad_location": 0,
         "new_sensors_by_year": {},
         "new_stations_by_country": {},
     }
@@ -937,6 +1314,7 @@ def process_station_folder(
     # Locate the .json file
     if is_remote:
         base = urljoin(source.rstrip("/") + "/", f"{date_folder}/{station_folder}/")
+        station_folder_path = base
         listing_raw = read_url_file(base)
         if not listing_raw:
             return counts
@@ -945,6 +1323,7 @@ def process_station_folder(
                  if not a["href"].startswith(("?", "/", "."))]
     else:
         folder_path = Path(source) / date_folder / station_folder
+        station_folder_path = str(folder_path.resolve())
         files = [f.name for f in folder_path.iterdir() if f.is_file()]
 
     # Find the station JSON file (first 24 chars = station id, ends with .json)
@@ -967,8 +1346,39 @@ def process_station_folder(
     if not station_data:
         return counts
 
-    coords = station_data.get("loc", {}).get("geometry", {}).get("coordinates", [None, None])
-    lon, lat = coords[0], coords[1]
+    station_id = station_data.get("id", "")
+
+    has_location_info, lon, lat = station_location_info(station_data)
+
+    if lon is None or lat is None:
+        skip_reason = "location info but no usable coordinates" if has_location_info else "no location information"
+        if location_error_log_path is not None:
+            if location_error_lock is not None:
+                with location_error_lock:
+                    mark_location_error(
+                        location_error_log_path,
+                        date_folder,
+                        station_folder,
+                        station_folder_path,
+                        station_id,
+                        skip_reason,
+                        station_data,
+                    )
+            else:
+                mark_location_error(
+                    location_error_log_path,
+                    date_folder,
+                    station_folder,
+                    station_folder_path,
+                    station_id,
+                    skip_reason,
+                    station_data,
+                )
+        if has_location_info:
+            counts["skipped_bad_location"] += 1
+        else:
+            counts["skipped_no_location"] += 1
+        return counts
 
     # Inject the archive folder date as the station's init_date (first-seen date)
     folder_date = datetime.strptime(date_folder, "%Y-%m-%d").date()
@@ -977,14 +1387,9 @@ def process_station_folder(
     # -- DB or buffer: station -----------------------------------------------
     if dry_buffers is not None or sql_buffers is not None:
         active_buf = dry_buffers if dry_buffers is not None else sql_buffers
-        st_id = station_data.get("id", "")
-        country, region = (
-            lookup_admin(lon, lat)
-            if (lon is not None and lat is not None)
-            else (None, None)
-        )
+        country, region = lookup_admin(lon, lat)
         active_buf["stations"].append([
-            st_id,
+            station_id,
             station_data.get("boxType"),
             station_data.get("model"),
             lon, lat,
@@ -996,8 +1401,34 @@ def process_station_folder(
         # Open one cursor for the entire station (station + all sensors + all readings)
         # and commit once at the end -- vastly fewer round-trips vs. per-sensor commits.
         with conn.cursor() as cur:
-            st_uuid, is_new_station, station_country = upsert_station(cur, station_data)
+            st_uuid, is_new_station, station_country, skip_reason = upsert_station(cur, station_data)
             if st_uuid is None:
+                if skip_reason and location_error_log_path is not None:
+                    if location_error_lock is not None:
+                        with location_error_lock:
+                            mark_location_error(
+                                location_error_log_path,
+                                date_folder,
+                                station_folder,
+                                station_folder_path,
+                                station_id,
+                                skip_reason,
+                                station_data,
+                            )
+                    else:
+                        mark_location_error(
+                            location_error_log_path,
+                            date_folder,
+                            station_folder,
+                            station_folder_path,
+                            station_id,
+                            skip_reason,
+                            station_data,
+                        )
+                if skip_reason == "no location information":
+                    counts["skipped_no_location"] += 1
+                elif skip_reason == "location info but no usable coordinates":
+                    counts["skipped_bad_location"] += 1
                 conn.rollback()
                 return counts
             if is_new_station:
@@ -1093,7 +1524,7 @@ def process_station_folder(
             sensor.get("title"),
             sensor.get("unit"),
             sensor.get("sensorType"),
-            None,
+            classify_sensor(sensor.get("title", ""), sensor.get("unit", "")),
             sensor_init_date,
         ])
 
@@ -1220,8 +1651,6 @@ def main() -> None:
         dry_buffers = init_dry_run()
     else:
         conn = get_db_connection()
-        db_size_before_mb = get_db_size_mb(conn)
-        print(f"[INFO] Database size before load: {db_size_before_mb:.2f} MB")
 
     # -- Discover date folders -----------------------------------------------
     print(f"\n[INFO] Scanning source: {source}")
@@ -1248,6 +1677,8 @@ def main() -> None:
     log_path = progress_log_path(source, start, end)
     init_progress_log(log_path, source, start, end)
     completed = load_completed(log_path)
+    location_error_path = error_log_path(source, start, end)
+    init_error_log(location_error_path, source, start, end)
 
     # -- Totals --------------------------------------------------------------
     total = {
@@ -1255,6 +1686,8 @@ def main() -> None:
         "sensors": 0,
         "readings": 0,
         "skipped_csv": 0,
+        "skipped_no_location": 0,
+        "skipped_bad_location": 0,
         "new_sensors_by_year": {},
         "new_stations_by_country": {},
     }
@@ -1265,6 +1698,8 @@ def main() -> None:
         total["sensors"]     += counts["sensors"]
         total["readings"]    += counts["readings"]
         total["skipped_csv"] += counts["skipped_csv"]
+        total["skipped_no_location"] += counts["skipped_no_location"]
+        total["skipped_bad_location"] += counts["skipped_bad_location"]
         for yr, cnt in counts["new_sensors_by_year"].items():
             total["new_sensors_by_year"][yr] = total["new_sensors_by_year"].get(yr, 0) + cnt
         for ctry, cnt in counts["new_stations_by_country"].items():
@@ -1292,6 +1727,7 @@ def main() -> None:
                 counts = process_station_folder(
                     source, date_folder, station_folder,
                     is_remote, conn, dry_buffers, sql_buffers,
+                    location_error_path,
                 )
                 _merge_counts(counts)
                 mark_completed(log_path, date_folder, station_folder)
@@ -1323,6 +1759,8 @@ def main() -> None:
                     c = process_station_folder(
                         source, date_folder, station_folder,
                         is_remote, None, local_dry, local_sql,
+                        location_error_path,
+                        log_lock,
                     )
                     shared_buf = dry_buffers if dry_buffers is not None else sql_buffers
                     with buf_lock:
@@ -1338,6 +1776,8 @@ def main() -> None:
                         result = process_station_folder(
                             source, date_folder, station_folder,
                             is_remote, thread_conn, None, None,
+                            location_error_path,
+                            log_lock,
                         )
                         with log_lock:
                             mark_completed(log_path, date_folder, station_folder)
@@ -1384,34 +1824,17 @@ def main() -> None:
     print("\n" + "=" * 50)
     print("  Load complete")
     print("=" * 50)
-    print(f"  Stations processed : {total['stations']:>10,}")
-    print(f"  Sensors  processed : {total['sensors']:>10,}")
-    print(f"  Readings inserted  : {total['readings']:>10,}")
+    print(f"  Stations added     : {total['stations']:>10,}")
+    print(f"  Sensors added      : {total['sensors']:>10,}")
+    print(f"  Readings added     : {total['readings']:>10,}")
     print(f"  CSVs not found     : {total['skipped_csv']:>10,}")
+    print(f"  No location       : {total['skipped_no_location']:>10,}")
+    print(f"  Bad location      : {total['skipped_bad_location']:>10,}")
+    print(f"  Logged errors     : {location_error_path}")
     print("=" * 50)
 
     if conn:
-        db_size_after_mb = get_db_size_mb(conn)
-        db_size_added_mb = db_size_after_mb - db_size_before_mb
-        print(f"\n  Database size before : {db_size_before_mb:>10.2f} MB")
-        print(f"  Database size after  : {db_size_after_mb:>10.2f} MB")
-        print(f"  Data added           : {db_size_added_mb:>+10.2f} MB")
-        print("=" * 50)
         conn.close()
-    elif not dry_run and not sql_mode:
-        # Parallel mode: workers closed their own connections; open one just
-        # for the final DB size query.
-        try:
-            size_conn = get_db_connection(verbose=False)
-            db_size_after_mb = get_db_size_mb(size_conn)
-            db_size_added_mb = db_size_after_mb - db_size_before_mb
-            print(f"\n  Database size before : {db_size_before_mb:>10.2f} MB")
-            print(f"  Database size after  : {db_size_after_mb:>10.2f} MB")
-            print(f"  Data added           : {db_size_added_mb:>+10.2f} MB")
-            print("=" * 50)
-            size_conn.close()
-        except Exception:
-            pass  # non-fatal if DB size query fails at summary time
 
     print_sensor_year_chart(total["new_sensors_by_year"])
     print_station_country_chart(total["new_stations_by_country"])

@@ -1,0 +1,4589 @@
+title,unit
+UV-Intensität,μW/cm²
+Beleuchtungsstärke,lx
+Luftdruck,hPa
+rel. Luftfeuchte,%
+Temperatur,°C
+UV,UV-Index
+Luftdruck,Pa
+Helligkeit,Pegel
+Schall,Pegel
+Luftfeuchtigkeit,%
+Luftfeuchtigkeit,%RH
+SolarBattery,V
+SolarVolt,V
+SolarAmp,A
+SolarWatts,W
+Lautstärke,Schallpegel
+Temperatur,C
+Niederschlag,l/m²/h
+Wolkenbedeckung,%
+Wolkenbedeckung (ifgi),/ 8
+Bodenfeuchte,%
+UV-Intensität,µW/cm²
+Licht,lx
+Lärm,a.u.
+Schall,dB
+Anderer,m/s wind speed
+Licht,Lux
+Licht (digital),lux
+Wifi-Stärke,dBm
+Eingangsspannung,V
+Temperatur,%
+Temperatur,Celsius
+Licht (digital),lx
+UV-Intensität,UV-Index
+Licht (digital),Lux
+Schall,Schallpegel
+Luftdruck,mBar
+Feinstaub,pcs/cf
+UV-Intensität,UV-Index Skala
+Helligkeit,Lichtpegel
+Luftdruck,hppcf (PM2.5)
+UV,UV Index
+UV,mW/m^2
+Licht,lux
+Schall,db
+Temperatur,deg. C
+Temperatur,Celcius
+Luftdruck,hpa
+NH3,ppm
+CO,ppm
+NO2,μg/m³
+H2,ppm
+C2H5OH,ppm
+Luftfeuchtigkeit,rel. Feuchte
+Temperatur,Grad Celsius
+Wassertemperatur,C
+Luftdruck,PA
+Licht,Pegel
+University Wifi,boolean
+Schall,int
+Wind speed,km/h
+UV-Intensität,UV Index
+Anderer,Meldungen pro 10 Minuten
+Licht,/1024
+Luftfeuchtigkeit,Rh
+"H2, LPG, CH4, CO, Alcohol",ppm
+Feinstaub,pcs/m³
+Feinstaubkonzentration,pcs/0.01cf
+UV-Intensität,yW/m^2
+Licht,LUX
+Windgeschwindigkeit,m/s
+Anderer,G
+Anderer,m
+Anderer,d
+rel. Luftfeuchtigkeit,%
+Lautstärke,dB
+Wassertemperatur,°C
+UV-Licht,µW/cm²
+LuftdruckBME,hPa
+LuftfeuchtigkeitBME,%
+TemperaturBME,°C
+PM2.5,µg/m^3
+CO2-Konzentration,ppm
+Regen,mm
+Anderer,cm
+Dämmerung,lx
+Regen,mm /m² Tag
+Licht Sonne Ost,kLx
+Licht Sonne Süd,kLx
+Licht Sonne West,kLx
+Windrichtung,°
+TagesLeistung,Wh
+LeistungAktuell,W
+Testkanal,int
+Dust Sensor,pcs/0.01cf
+Luftfeuchtigkeit,Percent
+Luftdruck,mbar
+Wind speed,m/second square
+Wind,m/s
+UV-Intensität,mW/cm2
+Temperatur,ºC
+Dust_Concentration,pcs/0.01cfc
+CH4,ppm
+C4H10,ppm
+C3H8,ppm
+NO2,ppm
+Schall,V
+Temperatur,degree Celcius
+Humidity,%
+UV(A)-Intensität,μW / cm²
+Leitfähigkeit,µS
+CPU-Temp,°C
+Temperatur,C°
+Eingangsspannung,mV
+UV-Index,.
+UV-Intensität,uw/cm²
+Beleuchtungsstärke,Lux
+Luftdruck (Sealevel),hPa
+Luftfeuchte,%
+Windgeschwindigkeit,bft
+Windrichtung,˚
+Niederschlagsmenge,mm/min
+Regen,0/1
+Niederschlag,mm/min
+Regensensor,.
+Luftdruck,HPa
+Temp,C°
+Luftfeuchte,%RF
+Luftdruck auf Meereshöhe,HPa
+UV-Intensität,μW / cm²
+Beleuchtungsstärke,lux
+Air Temperature,°C
+Relative Humidity,%
+Air Preassure,hPa
+Illuminance,lx
+UV intensity,μW/cm²
+Anderer,µg/m^3 (PM2.5)
+Anderer,µg/m^3 (PM10)
+Temperatur in Box,°C
+rel. Luftfeuchte in Box,%
+Feinstaub PM2.5,µg/m³
+Feinstaub PM10,µg/m³
+Beleuchtungsstärke,Lx
+UV-Intensität,μW/cm2
+CPU-Temperatur,°C
+Radioaktivität,CPM
+WiFi-Stärke,dBm
+Temptest,°C
+Temperatur HDC1008,°C
+Temperatur BMP280,°C
+Feuchtigkeit,%rel
+Temperature and air pressure,C / bar
+Light,Lux
+Ostsee,°C
+PM2.5,µg
+PM10,µg
+Luftdruck,Pascal
+Beleuchtungsstärke des sichtbaren Lichts,lx
+Intensität der ultravioletten Strahlung,μW/cm2
+Regen,0/1 (0 = kein Regen / 1 = es Regnet)
+PM2.5,µg/m3
+PM10,µg/m3
+Air pressure,mbar
+Temperature,C
+Ozon-linear,bit
+Temperatur0,°C
+Temperatur1,°C
+Temperatur2,°C
+Temperatur3,°C
+PM10,µg/m^3
+Luftfeuchte in der Box,%RF
+Temperatur in der Box,C°
+Temperature,ºC
+UV,μW/cm2
+Temp,ºC
+UV,uW/Cm2
+PM10,µg/m³
+PM2.5,µg/m³
+WLAN,%
+Feuchte,%
+PartikelPM10,µg/m^3
+PartikelPM25,µg/m^3
+SDS_P1,µg/m^3
+SDS_P2,µg/m^3
+temperature,°C
+humidity,%
+Lämpötila,°C
+Kosteus,%
+Ilmanpaine,hPa
+Valonmäärä,lx
+UV-säteily,μW/cm²
+SDS_P1,µg/m³
+SDS_P2,µg/m³
+Rel. Luftfeuchte,%
+"PM2,5",µg/m³
+sds_p1,ug/m3
+Temperature,°C
+Rel. Humidity,%
+C02,ppm
+Temperatur - in Box,°C
+rel. Luftfeuchte - in Box,%
+UV Intensität,μW/cm2
+Temperatur Terrasse,°C
+rel. Luftfeuchte Terrasse,%
+Akkuspannung,V
+Temperatur Oben Geländer,°C
+Temperatur Unten Eingang,°C
+rel. Luftfeuchte Unten Eingang,%
+Temperatur TV,°C
+rel. Luftfeuchte TV,%
+Luftdruck TV,hPa
+Temperatur Schlafzimmer,°C
+rel. Luftfeuchte Schlafzimmer,%
+Akkuspannung Unten Eingang,V
+Akkuspannung Terrasse,V
+"Partikelmasse 2,5µm",µg/m³
+Partikelmasse 10µm,µg/m³
+Temperatur,K
+Batterie,%
+Temperatur(Waabe),°C
+Temperatur(Beute),°C
+Luftfeuchtigkeit(Beute),%
+Lautstärke(Volk),dB
+"Feinstaub PM2,5",µg/m³
+ilmanpaine,hPa
+Valomäärä,lx
+UV-Säteily,μW/cm²
+PM10,ug/m3
+PM2.5,ug/m3
+dust particles P10,ppm
+dust particles P2.5,ppm
+dust particles P10,µg/m³
+dust particles P2.5,µg/m³
+Air pressure,hPa
+battery charge,%
+Relative humidity,%
+Atmospheric pressure,hPa
+tmp,C
+charging,on/off
+monitorStatus,perceived
+filedData,abnormalData
+Ilmankosteus,%
+monitorStatus,abnormal perceived
+Luftdruck,hektoPascal
+Temperatur - Schatten,°C
+PM2.5,µg/cm³
+PM10,µg/cm³
+Helligkeit,lux
+PM10,μg/mᶟ
+PM2.5,μg/mᶟ
+Batteriespannung,V
+UV-Index,-
+UV-Intensität,µW/m³
+Regenintensität,X
+Regen Ja (1) / Nein (0),Ja / Nein
+Lufttemperatur,°C
+Helligkeit,Lux
+Farbtemperatur,K
+Feinstaub,ppm
+Signalstärke,%
+Temperatur(Balkon),°C
+dT,K
+Luftfeuchte(Balkon),%
+UV-Intensität,µm/cm²
+Temperatur,° C
+Pressure,hPa
+Number of people,Persons
+Temperatur Sakr.,°C
+Temperatur Apsis,°C
+Kellerluftdruck,Pa
+Signal,dB
+Windgeschwindigkeit,km/h
+Windböen,km/h
+Niederschlag,mm/m²
+Trübung (Durchlicht),AU
+Trübung (Streulicht),AU
+Leitwert,AU
+Sound,dB
+Attendance,Person(s)
+UV Strahlung,Watt weis ich
+Presence,Person(s)
+UV-A Strahlung,Watt weis ich
+UV-Strahlung,Einheit
+UV-Strahlung,µW/cm²
+Temperatur BME280,°C
+rel. Luftfeuchte BME280,%
+Luftdruck,hPA
+Wassertemperatur im Inn,°C
+Lufttemperatur am Inn,°C
+Lichtsstärke,Lux
+UV Index,mW/cm2
+Regen?    1=Ja/0=Nein,-
+Pressure,Pa
+Battery,V
+relative Luftfeuchte,%
+Signal,dBm
+Umgebungslautstärke,db
+UV,uW/cm²
+Temperatur DHT22,°C
+Bodentemperatur,°C
+Batterieladung,%
+Signalstärke,dBm
+Visible light,lux
+Infrared light,lux
+UV Index,(0-11)
+UV-A Strahlung,μW/cm²
+Feinstaub PM10,μg/cm³
+"Feinstaub PM2,5",μg/cm³
+Temperatur BMP180,°C
+Luftdruck BMP180,Pa
+rel. Luftfeuchtigkeit DHT22,%
+Feinstaubgehalt PM10,µg/m³
+Feinstaubgehalt PM2.5,µg/m³
+Temperature_in_1,°C
+Temperature_in_2,°C
+Temperature_out_1,°C
+Temperature_out_2,°C
+Luftfeuchtigkeit,% rel
+Feinstaub P2.5,uGr/m3
+Feuchtigkeit,%
+Luxmeter,LUX
+UVmeter,mg
+Feinstaub P10,ugr/m3
+CO2,PPM
+OZON,PPM
+Regenmänge,mm/min
+Batterie,V
+PM 10,µg/m³
+PM 2.5,µg/m³
+Wind speed,m/s
+Feinstaub P2.5,ugr/m3
+OZON,Analog eingang
+DS18B20_Probe01,°C
+DS18B20_Probe02,°C
+DS18B20_Probe03,°C
+DS18B20_Probe04,°C
+DS18B20_Probe05,°C
+Regenmenge,mm/min
+UV-Strahlung,µW/cm^2
+Lichtstaerke,lx
+Soil Humidity,%
+Lichtstärke,Lux
+UV  Indes,-
+IR,-
+UVmeter,l
+Temperatur (DHT22),°C
+Temperatur (BMP280),°C
+Temperature,Celsius
+Wind Speed,km/h
+Wind Gust,km/h
+Wind Direction,-
+Pressure,mbar
+Humidity,-
+Rain 1h,cm2
+Rain 24h,cm2
+Dew Point,Celsius
+Humidex,-
+Heat Index,-
+Feinstaub PM2.5,μg/cm³
+UV-Radioation,µW/cm²
+Intensity,lx
+UV Index,UV-I
+Höhe,m
+Temperatur Referenz,°C
+Temperatur Sonne,°C
+rel. Luftfeuchte DHT22,%
+Luftdruck BME280,Pa
+Luftdruck,Millibar
+UV - Strahlung,UV - Index
+Lichtsensor,LUX
+UV pro cm²,UV
+Taupunkt außen,°C
+Taupunkt innen,°C
+Lüftung,< >
+Versorgungsspannung,V
+PM 2.5,μg/m^3
+PM 10,μg/m^3
+PM2.5,μg/m^3
+PM10,μg/m^3
+ORP,mV
+Spannung,V
+Logik,Boolean
+Regensensor,-
+PM25,µg/m³
+Luftqualität,mg
+Druck,Pa
+Windgeschwindigkeit (mittel),km/h
+Windgeschwindigkeit (momentan),km/h
+Windrichtung,Grad
+UV-Radiation,µW/cm²
+Relative Luftfeuchte,%
+Luftdruck N.N.,mbar
+PM1.0,µg/m³
+PM1,µg/m³
+Luftqualität,Richtwert
+UV Index,/1
+UV Index,.
+Temperatur-DHT,°C
+rel. Luftfeuchte-DHT,%
+Luftfeuchtigkeit,hPa
+CO2 Temperatur,°C
+Regen heute,mm
+PM01,µg/m³
+Gewicht,g
+Taupunkt,°C
+rel. Luftfeuchte,°C
+Leitfähigkeit,?
+Leitfähigkeit,Analoger Wert
+Trübung,Analoger Wert
+PM2.5,μg/m3
+PM10,μg/m3
+Beleuchtungsstärke 2,lx
+Temperatur (Gerät),°C
+rel. Luftfeuchte (Gerät),%
+PM10,μ/m³
+Elektrische Leitfähigkeit,ms/cm
+PM2.5,μ/m³
+Radioaktivität,µSv/h
+Temperature,oC
+Status,Status
+Lautstärke,mV
+Relative Humidity,%Rh
+particulate matter PM10,µg/m³
+particulate matter PM2.5,µg/m³
+Temperatur HDC1010,°C
+Temperatur HDC1080,°C
+Temperatur SHT31-D,°C
+Temperatur DHT11,°C
+Luftfeuchtigkeit HDC1008,%RH
+Luftfeuchtigkeit HDC1010,%RH
+Luftfeuchtigkeit HDC1080,%RH
+Luftfeuchtigkeit SHT31-D,%RH
+Luftfeuchtigkeit DHT11,%RH
+Niederschlagsmenge,l/m²
+Luftdruck @0m Höhe,Pa
+Luftdruck abs.,hPa
+Luftdruck @ Meereshöhe,hPa
+Temperatur (DS18B20),°C
+WiFi RSSI,dBm
+Temperatur (BME280),°C
+Luftfeuchte (BME280),%
+Luftdruck abs. (BME280),hPa
+Luftdruck @ Meereshöhe (BME280),hPa
+Temperatur (SHT31),°C
+Luftfeuchte (SHT31),%
+Temperatur (MCP9808),°C
+Temperatur (Mittelwert),°C
+Taupunkt (BME280),°C
+Luftfeuchte abs. (BME280),g/m³
+Atm. Pressure,Pa
+DHT11_Temperatur,°C
+DHT11_Luftfeuchte,%
+Barometric pressure,Pa
+Luminosity,lux
+Rainfall (latest),mm
+Rainfall (past 3 hours),mm
+Rainfall (past 6 hours),mm
+Rainfall (past 12 hours),mm
+Rainfall (past 24 hours),mm
+Raining,bool
+WiFi,RSSI
+PM10,PPM
+PM25,PPM
+rel. Luftfeuchte (DHT22),%
+rel. Luftfeuchte (BME280),%
+Luftdruck (BME280),Pa
+Signalstärke WLAN,dBm
+Absoluter Luftdruck,Pa
+T06,°C
+test_data,1
+Druck,hPa
+Niederschlag,mm
+test,test
+Temperatur HDC,°C
+Luftdruck (auf ca. 62 m),Pa
+Temperatur_2,°C
+Temperatur im Nistkasten,°C
+Water level,cm
+Water temperature,°C
+Battery voltage,V
+Lichtintensität,cd
+Living room temperature,°C
+Floor 2 East room temperature,°C
+Floor 2 West room temperature,°C
+Power meter room heaters,kWh
+Ambient air temperature,°C
+Power meter hot water tank heater,kWh
+Clima floor 0 condenser pipe temperature,°C
+Taupunkt (SHT31),°C
+Luftfeuchte abs. (SHT31),g/m³
+Valoisuus,lx
+UV,μW/cm²
+relative Luftfeuchtigkeit,%
+Signal,db
+pressure,millibar
+Personen,Anzahl
+Personenanzahl,Personen
+Valaistuksen voimakkuus,lx
+Temperature T61,°C
+Temperature T62,°C
+Temperature T63,°C
+Temperature T64,°C
+Water flow F,l/h
+Heat power P,kW
+Fan,DI
+Power consumption,kW
+4-way valve,DI
+Power energy input,kWh
+Refrigerant liquid temperature T65,°C
+Heat energy output,kWh
+Room temperature,°C
+Operation mode,step
+Luftdruck (BME280),hPa
+Temperatur mit BMP180,°C
+Luftdruck  (BME280),hPa
+UV- säteily,μW/cm²
+Wind direction,°
+Global radiation,W/m2
+Temperatur (SI7051),°C
+Air pressure,Pa
+Temperatur (TSYS01),°C
+Temperatur (SHT35),°C
+Luftfeuchte (SHT35),%
+Spannung LiPo,V
+PM10,μg/ m³
+PM2.5,μg/ m³
+Temp,°C
+Niederschlag (letzte Stunde),mm
+Niederschlag (letzte 3 Stunden),mm
+Niederschlag (letzte 6 Stunden),mm
+Niederschlag (letzte 12 Stunden),mm
+Niederschlag (letzte 24 Stunden),mm
+Niederschlag (letzte 48 Stunden),mm
+Niederschlag (letzte 72 Stunden),mm
+Niederschlag (letzte 2 Minuten),mm
+WLAN Signalstärke,RSSI
+Temperature 1,°C
+rel. Luftfeuchte 1,%
+Temperature 2,°C
+rel. Luftfeuchte 2,%
+1,el
+2,2
+3,3
+4,4
+5,5
+6,6
+7,7
+8,8
+9,9
+10,10
+11,11
+12,12
+13,13
+14,14
+15,15
+16,16
+17,17
+18,18
+19,19
+20,20
+21,21
+22,22
+23,23
+24,24
+25,25
+26,26
+27,27
+28,28
+29,29
+30,30
+31,31
+32,32
+33,33
+VCC,V
+1,kWh
+5,°C
+6,°C
+7,°C
+8,°C
+9,°C
+10,°C
+11,°C
+27,°C
+28,°C
+29,°C
+30,°C
+31,°C
+32,°C
+Subcode,nul
+ghCode,.
+WIFI,RSSI
+1,kWh TP
+2,kw
+3,C
+8,°C  staia 2et
+9,°C  in kolektor 200
+10,°C out kolektor 200
+11,°C kolektor 150
+12,C kolektor 150
+13,C wanka
+14,C  in B150
+15,C B150l
+16,B200l
+17,B200l
+18,B200l in serpentina
+19,C out serpantina
+20,C
+21,hol 2et
+22,C
+23,C
+24,C
+25,C
+26,C TP + out
+27,°C TP -in
+28,°C KOTEL
+33,C
+Batt,V
+Humidity,rel%
+Temperatura,c
+Umidità,%
+Pressione,mbar
+Rain day,mm
+Rain /h,mm/h
+UV,Mikowatt/cm²
+"Dust, temperature & humidity",1
+rel.  Luftfeuchte,%
+rel. Luftfeuchte,%Rh
+Radioactivity,µSv/h
+Voltage,V
+RSSI,dBm
+GPS,°
+Iluminance,lux
+UV,uW/cm2
+PM10,ug/m³
+PM10 Stunde/Tag,ug/m³
+PM10 Gleitender MW 24h + MW,ug/m³
+PM10 geglättet,ug/m³
+PM10 Gleitender Mittelwert 24h,ug/m³
+GPS,"lat, long"
+Wind Direction,°
+Wind Speed,km / h
+Wind Gust,km / h
+Current Rain Rate,cm / h
+Rain Today,cm / h
+Air Pressure,Millibar
+Particulate Matter 2.5µm,µg/m³
+Particulate Matter 10µm,µg/m³
+Radiation,µSv/h
+Temperatur 1,°C
+Temperatur 2,°C
+co2 concentration,ppm
+Прахови частици PM10,µg/m³
+Прахови частици PM2.5,µg/m³
+Температура Temperatur,°C
+Влажност rel. Luftfeuchte,%
+Налягане Luftdruck,Pa
+Lautstärke,V
+pressure,Pa
+UV,Mikrowatt
+Temperatura,°C
+Außentemperatur,°C
+Helligkeit,lx
+Sonnensensor Referenz,°C
+Sonnensensor Sonne,°C
+Luftdruck,mmb
+rel.Luftfeuchte,%
+Feinstaub PM1,µg/m³
+Temperatur DHT,°C
+rel. Luftfeuchte DHT,%
+Umgebungsstrahlung CPM,CPM
+Umgebungsstrahlung,µSv/h
+pressure,hP
+SDS 011: PM10,µg/m³
+SDS 011: PM2.5,µg/m³
+DHT22: Temperatur,°C
+DHT22: rel. Luftfeuchte,%
+BME280: Temperatur,°C
+BME280: rel. Luftfeuchte,%
+BME280: Luftdruck,Pa
+Pegel,cm
+Volumen %,%
+UV,Lux
+Temp.,°C
+Luftdruck,1/100 mbar
+Temperatur 1,C°
+Temperatur 2,C°
+Temperatur 3,C°
+Temperatur 4,C°
+Current,A
+Pgn,W
+Ugn,V
+Pdc,W
+P101,W
+Wgn,Wh
+Wgt,Wh
+Pgn_p,W
+Electrical water heater temperature,°C
+Wassermelder,Alarm
+Temperatur [°C],°C
+rel. Luftfeuchte [%],%
+Luftdruck [Pa],Pa
+Beleuchtungsstärke [lx],lx
+UV-Intensität [µW/m²],μW/cm²
+Windgeschwindigkeit [m/s],m/s
+Regenmenge [mm/m²],mm/m²
+Windrichtung [°N],°N
+Geschwindigkeit,km/h
+UV,µW/cm^2
+Feinstaub,µg/m³
+Radioaktivität,cpm
+Noise,db
+TempAnalog1,°C
+TempAnalog2,°C
+Approx altitude,m
+PM01 (HOME),µg/m³
+PM2.5 (HOME),µg/m³
+PM10 (HOME),µg/m³
+Beleuchtungstärke,lx
+Air Pressure,hPa
+Wind Speed,m/s
+Wind Direction,->
+Rainfall,mm
+Illuminance,lux
+UV-light Intensity,μW/cm²
+Audio Noise Level,dB
+Gamma Dose Rate,nSv/h
+Air Dust Particles PM10,µg/m³
+Air Dust Particles PM2.5,µg/m³
+Feuchtigkeit,%H
+Feinstaub PME10,µg/m³
+PM2.5 (SDS011),µg/m³
+PM10 (SDS011),µg/m³
+PM01 (PMS7003),µg/m³
+PM2.5 (PMS7003),µg/m³
+PM10 (PMS7003),µg/m³
+UVA-Strahlung,µW/cm²
+UV,uv
+Lautstärke,dBA
+PM01 (PMS7003M),µg/m³
+PM2.5 (PMS7003M),µg/m³
+PM10 (PMS7003M),µg/m³
+Bodenfeuchtigkeit,%
+"PM2,5",μg/m³
+PM10,μg/m³
+Temperature,*C
+Wind direction,Degrees
+Rain amount,mm/h
+Lautstärke,Pegel
+Infrarot Licht,?
+UV Index,UV
+Rainfall 5min,mm
+Rainfall 1h,mm
+Rainfall 24h,mm
+Temperature of the sky (IR),°C
+spare,-
+PM01 (PMS 3003),µg/m³
+PM2.5 (PMS 3003),µg/m³
+PM10 (PMS 3003),µg/m³
+Noise,ddec
+pm10,µg/m3
+pm2.5,µg/m3
+altitude,meter
+speed,mps
+sound,level
+PM01 (PMS 7003M),µg/m³
+PM2.5 (PMS 7003M),µg/m³
+PM10 (PMS 7003M),µg/m³
+Luftdruck - BME280,Pa
+Temperatur - BME280,°C
+rel. Luftfeuchtigkeit - BME280,%
+Speed,km/h
+UV-Licht,µW/km²
+Luftdruck,pa
+Feinstaub<2.5µm,µg/m³
+Feinstaub<10µm,µg/m³
+UV,µW/m2
+Lautstärke,pegel
+Feinstaub,µg/m3
+PM10 (max 10 Mikrometer),µg/m³
+"PM2.5 (weniger als 2,5 Mikrometer)",µg/m³
+Luftwiderstand,Ohm
+WiFi Signal,dBm
+WiFi Quality,%
+Luftdruck Meereshöhe,hPa
+test1,no
+UVA,μW/cm²
+UVB,μW/cm²
+uint8,uint8
+rel. Luftfeutigkeit,%
+UV-Index,UVI
+Battery,%
+Test,Test
+Niederschlag,ml/m2
+Luftfeuchtigkeit,%rH
+Batteriespannung,Volt
+Dust (PM2.5),ug/m³
+Dust (PM10),ug/m³
+GPS Höhe,m
+Temperatuur,°C
+Luchtvochtigheid,%
+Luchtdruk,Pa
+Regensensor,gibt unser Messgerät aus
+Regendaten,| 0 = Trocken; 1 = starker Regen
+Feinstaub pm10,µg/m^3
+"Feinstaub pm2,5",µg/m^3
+WasserTemperatur,°C
+Regensensor,0...1023
+Regenindikator,0 trocken; 1 Regen
+Sauerstoffkonzentration,%
+abs. Luftdruck,Pa
+Hitzeindex,°C
+BatterieVoltage,V
+Rain_Sensor,Yes/No
+Rainfall / in test mode,mm/h
+Temperature,deg C
+level / test mode,undefined
+Lichtintensität,Lux
+SolarPanelVoltage,V
+Regen,"[0=Nein, 1=Ja]"
+Temperatur / Temperature,°C
+rel. Luftfeuchte / Humidity,%
+Luftdruck / Air pressure,hPa
+Beleuchtungsstärke / Illuminance,lx
+UV-Intensität / UV intensity,μW/cm²
+Luftverschmutzung / Air polution - PM10,µg/m³
+Luftverschmutzung / Air polution - PM2.5,µg/m³
+Lautstärke / Loudness,dB
+Batteriespannung / Battery voltage,V
+Regensensor / Rain sensor,1 = Yes / 0 = No
+Solarmodul spannung / Solar panel voltage,V
+Temperatur,Grad
+Suhteellinen kosteus,%
+Valaistusvoimakkuus,lx
+UV-Intensiteetti,μW/cm²
+Pienhiukkaset PM10,µg/m³
+Pienhiukkaset PM2.5,µg/m³
+PM2.5,μg/m³
+Windstärke,m/s
+Regenmenge,mm/m²
+wifi-stations,sta
+leasecount,leases
+traffic-tx,MB
+traffic-rx,MB
+freemem,MB
+freehdd,KB
+royhome,roy
+rel.Luftfeuchtigkeit,%
+PM_2.5,µg/m³
+sichtbares Licht,Lux
+Temperatur,°c
+bme280 temperature C,C
+scd31 co2 ppm,ppm
+sht31 humidity percent,percent
+scd30 co2 ppm,ppm
+bme pressure hPa,hPa
+Temperatur,0.001 °C
+bme280 humidity percent,%
+bme280 pressure hPa,hPa
+scd30 temperature c,°C
+temp,st C
+wilg,%
+temperatur,°C
+luftfeuchte,%
+bme280 temperature c,°C
+PM10 -Sensor SDS011,µg/m³
+PM2.5 -Sensor SDS011,µg/m³
+Temperatur -Sensor BME280,°C
+rel. Luftfeuchte -Sensor BME280,%
+Luftdruck -Sensor BME280,Pa
+Temperatur -Sensor DHT22,°C
+rel. Luftfeuchte -Sensor DHT22,%
+Q,Q
+Resistance,kOhm
+Humidity factor,%
+Gas factor,%
+Quality factor,%
+Temperatur,*C
+Humidity,RH%
+pressure,hPa
+Wilgotność,%
+Pressure,kPa
+Rainfall,mm (/5min)
+Groundtemperature,°C
+UV-index,-
+Luftqualität,ppm
+Windrichtung,Richtung
+Wind Geschwindigkeit,m/s
+Niederschlagsmenge,ml/cm
+vbat,V
+Alarmanlage ausgelöst,"1 -> ausgelöst, 0 -> nicht ausgelöst"
+freeram,bytes
+co2,ppm
+Regensensor / Rain sensor,1 = Dry / 0 = Wet
+Air temperature,°C
+Air humidity,%
+Visible light intensity,lux
+Soil temperature,°C
+Soil moisture - Dan's plant,%
+Soil moisture - middle plant,%
+Soil moisture - Gaetan's plant,%
+Percipitation,mm
+Luftfdruck,Pa
+UV Intensität,µW/cm²
+UV-Strahlung,blabla
+Soil moisture - Dan's plant,ADC val
+Soil moisture - middle plant,ADC val
+Soil moisture - Gaetan's plant,ADC val
+Abstand,m
+Stickoxid,ppb
+NO2 AE,mV
+NO2 WE,mV
+Ozon,ppb
+O3 AE,mV
+O3 WE,mV
+NO2,ppb
+O3,ppb
+Stickoxid,ppm
+Stickoxid µg/m³,µg/m³
+O3 µg/m³,µg/m³
+temperature,celsius
+pressure,mBar
+temperature2,celsius
+temperature_bmp,celsius
+temperature_hdc,celsius
+humidity,percent
+Light,Raw
+temperature_scd,celsius
+humidity_scd,percent
+Pył zawieszony PM10,µg/m³
+Pył zawieszony PM2.5,µg/m³
+TEMPERATURE,°C
+HUMIDITY,%
+PRESSURE,hPa x 100 (QFE)
+Saugspannung (Boden),mbar
+temp,°c
+Temperatur,8
+Luftdruck,8
+radiation,cpm
+Strahlung,nSv
+Wind,km/h
+PM10,µm/m3
+Percipitation,cm
+Temperature BME,°C
+Humidity BME,%
+PM2.5,PM
+PM10,PM
+wwww,%
+RH,%
+Luchtdruk,hPa
+Luftdruck QNH,Pa
+H1 temperature,°C
+B1 temperature,°C
+Ext temperature,°C
+B1 humidity,%
+Ext humidity,%
+B1 pressure,hP
+Ext pressure,hP
+R1 temperature,°C
+R2 temperature,°C
+R1 humidity,%
+R2 humidity,%
+R1 CO2,ppm
+R2 CO2,ppm
+R1 PM10,µg/m³
+R1 PM2.5,µg/m³
+spare1,tbd
+spare2,tbd
+spare3,tbd
+spare4,tbd
+spare5,tbd
+local dose rate,nSv/h
+Rain,mm
+Ground Temperature,°C
+Luftfeuche,%
+Luftdruk,hPa
+Feinstaub,PM2.5
+Feinstaub,PM10
+Temperatur,Temperatur
+Luftfeuchte,rel. Luftfeuchte
+Niederschlag,l/m2
+Besuche,x
+Tuerschlaege,x
+rel. Luftfeuchtigkeitn,%
+Loft druk,Pa
+PM1,µg/m3
+Windgeschwindigkeit,kmh
+Temperatur DS18b20,°C
+Signal,dBM
+Gammastrahlung,µSv/h
+Temperatur (Temperatura),°C
+rel. Luftfeuchte (Wilgotność względna),%
+Luftdruck (Ciśnienie),Pa
+Temperatur (Temperatura HECA),°C
+rel. Luftfeuchte (Wilgotność HECA),%
+Temperatur ( Temperatura Powietrza ),°C
+rel. Luftfeuchte ( Wilgotnosć Powietrza ),%
+Luftdruck ( Ciśnienie ),Pa
+rel. Luftfeuchte ( Wilgotnosć HECA ),%
+TemperaturSHT85,°C
+rel. LuftfeuchtigkeitSHT85,%
+Temperatur (HDC1080),°C
+rel. Luftfeuchte (HDC1080),%
+Temperature (SHT85),°C
+rel. Luftfeuchte (SHT85),%
+Temperature HDC,°C
+Humidity HDC,%
+Temperature SHT,°C
+Humidity SHT,%
+Phenomenon: Temperatur,Unit: °C
+Phenomenon: rel. Luftfeuchte,%
+PM10,mug/m3
+PM2.5,mug/m3
+Light,raw
+Precipitation,cm
+Luftdruck,kPa
+Feinstaub 2.5,µg/m3
+Feinstaub 10.0,µg/m3
+Regensensor,l/m2
+Windrichtung,N-S-W-O
+Rain,mm/m²
+Temperatur intern,°C
+temp,°C
+light,lux
+temperature,°c
+pressure,%
+air pressure,Pa
+Temperatur,c
+AirPressure,hPa
+UV,µW/m^2
+Humidity for dust sensor,%
+Luftfeuchte,%rel.
+Regenmenge,mm
+UV-Intensität,µW/cm2
+Feinstaub,PM 10
+Feinstaub,"PM 2,5"
+Bodenfeuchte,Pegel
+rel. Luftfeuchte (Sensor 2),%
+Temperatur (Sensor 2),°C
+Windstärke,km/h
+Windrichtung,N-S-O-W
+Niederschlag,l/m²
+Latitude,lat
+Longtitude,lon
+Temperatue,°C
+Wind speed,Km/u
+Wind direction,->
+Rain fall,mm
+Air Dust Particles,PM2.5
+Air Dust Particles,PM10
+Niederschlag,l/m°
+Ethanol C2H6OH,ppm
+Vögel pro Minute,Vögel
+Temperature dust sensor,°C
+Humidity dust sensor,%
+[SDS011] PM10,µg/m³
+[SDS011] PM2.5,µg/m³
+[BME280] Temperatura,°C
+[BME280] Wilgotnosc pow. (rel. Luftfeuchte),%
+[BME280] Cisnienie atm. (Luftdruck),Pa
+PM2.5,μ/m3
+PM10,μ/m3
+Gammastrahlung,nSv/h
+PM10 average 24h,µg/m3
+PM2.5 average 24h,µg/m3
+BrainTicks (Thinkrate),ticks
+Outdoor Temperature,°C
+Outdoor Humidity,%
+Cat,Inches
+Local Pressure,hPa x 100
+Temp HECA,°C
+UV-Strahlung,mw/cm^2
+Pressure,hPa x 100
+Humidity HECA,%
+Niederschlagsmenge,mm/m²
+Luftfeuchtigkeit,% rel.
+gefühlte Temperatur,°C
+Wolkenuntergrenze,m
+rel. Luftfeuchte / Wilgotność HECA,%
+Temperatur  / Temperatura HECA,°C
+Windchill,°C
+Wolkenbasis,m
+CO2 emission,g/s
+Vent,km/h
+Température,°C
+Humidité,%
+Pression,hpa
+Pluie,mm
+rel. Luftfeuchtigkeit2,%
+Durchschnitt Umgebungslautstärke,dbavg
+Minimum Umgebungslautstärke,dbmin
+PM 1,ug/m3
+PM 2.5,ug/m3
+PM 10,ug/m3
+Temperatur / Temperatura HECA,°C
+Battery Voltage,V
+Luftdruck,P
+PM2.5,uG/M3
+PM10,uG/M3
+PM1.0,Ug/M3
+Durchschnitt Umgebungslautstärke,DbAvg
+Minimal Umgebungslautstärke,dbMin
+Durchschnitt Umgebungslautstärke,dbAvg
+Airpressure,hPa
+Dust PM2.5,µg/m³
+Dust PM10,µg/m³
+Windspeed,km/h
+Winddirection,°
+Rain,l/m²
+rel. Luftfeuchte_2,%
+Niederschlag gesamt,l/m2
+VOC,ppb
+CO2,ppm
+CO2 concentration,ppm
+Wilgotnosc,%
+PM2.5,µG/m3
+PM1.0,µG/m3
+PM10,µG/m3
+voltage,V
+rel. Luftfeuchte?,%
+Luftdruck QFF,Pa
+20 SHT85 1,°C
+20 SHT85 2,%
+Hengitettävät hiukkaset PM10,µg/m³
+24 Temperature HDC,°C
+24 Humidity HDC,%
+24 Temperature SHT85 1,°C
+24 Humidity SHT85 1,%
+24 Temperature SHT85 2,°C
+24 Humidity SHT85 2,%
+Temperature 6 SHT85.1,°C
+Humidity 6 SHT85.1,%
+Temperature 6 HDC1080.1,°C
+Humidity 6 HDC1080.1,%
+Light,lux
+7 Temperature SHT85 1,°C
+7 Humidity SHT85  1,%
+7 Temperature SHT31 flex,°C
+7 Humidity SHT31 flex,%
+7 Temperature HDC 1080,°C
+7 Humidity HDC 1080,%
+11 Temperatur HDC1080,°C
+11 rel. Luftfeuchte HDC1080,%
+11 rel. Luftfeuchte SHT85,%
+11 Temperatur SHT85,°C
+25 Temperatur,°C
+25 rel. Luftfeuchte,%
+25 Temperature,°C
+25 rel. Luftfeuchtigkeit,%
+21 Temperature HDC1080,°C
+21 Humidity HDC1080,%
+21 Differential Pressure,hPa
+2 PM10 SDS 011,µg/m³
+2 PM2.5 SDS 011,µg/m³
+2 Temperature HDC1080,°C
+2 Humidity HDC1080,%
+2 VOC SVM30,ppb
+2 Temperature SVM30,°C
+2 Humidity SVM30,%
+2 PM10 SPS30,µg/m³
+2 PM2.5 SPS30,µg/m³
+2 Temperature SHT85,°C
+2 Humidity SHT85,%
+2 CO2 SCD30,ppm
+2 Temperature SCD30,°C
+2 Humidity SCD30,%
+2 CO2eq SVM30,ppm
+soil moisture,m3/m3
+01 GPS(CSM-M8Q),longitude
+01 Feuchte(SVM30),%
+01 Feuchte(HDC1080),%
+01 Feinstaub(SDS011),PM10
+01 Feinstaub(SPS30),PM25
+01 CO2(SCD30),ppm
+01 Feuchte(SHT85),%
+01 Temperature(SVM30),°C
+01 Temperature(HDC1080),°C
+01 Feuchte(SCD30),%
+01 Temperatur(SCD30),°C
+01 Temperatur(SHT85),°C
+01 Nanopartikel(SDS011),PM10
+01 GPS(CSM-M8Q),latitude
+01 VOC(SVM30),ppb
+Differential Pressure,Pa
+GPS Lat,°N
+GPS Lon,°E
+GSP Time,s
+GSP Satellites,Satellite
+Pi-Temperatur,°C
+Pression Atmosphérique,hPa
+Humidité Relative,%
+Gesamt Niederschlag,l/m2
+"Feinstaub 2,5",µg/m³
+Feinstaub 10,µg/m³
+Temperatur,C*
+Ciśnienie,Pa
+Temperatur (HECA),°C
+rel. Luftfeuchte (HECA),%
+Rain amount,l/t
+PM2.5,#
+PM10,#
+Wilgotność względna,%
+Temperature HDC1080,°C
+Humidity HDC1080,%
+Temperature SHT85,°C
+Humidity SHT85,%
+10 HDC1080 Temperatur,°C
+10 SHT85 Temperatur,°C
+Temperature,K
+Illumination,lx
+Luftdruck abs.,Pa
+Temperature SHT31,°C
+Humidity SHT31,%
+Temperature SHT31f,°C
+Humidity SHT31f,%
+GPS Lat,°
+GPS Lon,°
+GPS Satellites,#
+GPS Altitude,m
+GPS Altitude MSL,m
+Light VIS,Lux
+Light UV A,μW/cm²
+20 SHT85_1,°C
+20 SHT85_1,%
+20 HDC1080_1,°C
+20 HDC1080_1,%
+20 SHT31_1,°C
+20 SHT31_1,%
+20 SHT85_2,°C
+20 SHT85_2,%
+20 SHT85_3,°C
+20 SHT85_3,%
+20 SHT85_4,°C
+20 SHT85_4,%
+20 SHT85_5,°C
+20 SHT85_5,%
+20 SHT85_6,°C
+20 SHT85_6,%
+24 Temperature SHT85 3,°C
+24 Humidity SHT85 3,%
+24 Temperature SHT85 4,°C
+24 Humidity SHT85 4,%
+7 Temperature SHT85 2,°C
+7 Humidity SHT85 2,%
+7 Temperature SHT85 3,°C
+7 Humidity SHT85 3,%
+7 Temperature SHT85 4,°C
+7 Humidity SHT85 4,%
+7 Temperature SHT85 5,°C
+7 Humidity SHT85 5,%
+11 rel. Luftfeuchte SHT85 1,%
+11 Temperatur SHT85 1,°C
+11 rel. Luftfeuchte SHT85 2,%
+11 Temperatur SHT85 2,°C
+11 rel. Luftfeuchte SHT85 3,%
+11 Temperatur SHT85 3,°C
+11 rel. Luftfeuchte SHT85 4,%
+11 Temperatur SHT85 4,°C
+10 HDC1080 Feuchtigkeit,%
+10 SHT85 Temperatur2,°C
+10 SHT85 Temperatur3,°C
+10 SHT85 Temperatur4,°C
+10 SHT85 Feuchtigkeit,%
+10 SHT85 Feuchtigkeit2,%
+10 SHT85 Feuchtigkeit3,%
+10 SHT85 Feuchtigkeit4,%
+25 Temperature SHT_1,°C
+25 rel. Luftfeuchtigkeit SHT_1,%
+25 Temperature SHT_2,°C
+25 rel. Luftfeuchtigkeit SHT_2,%
+25 Temperature SHT_3,°C
+25 rel. Luftfeuchtigkeit SHT_3,%
+25 Temperature SHT_4,°C
+25 rel. Luftfeuchtigkeit SHT_4,%
+17 LF Atlas Scientific K1.0,1
+17 LF Vernier,1
+17 LF Remond,1
+2 PM0.5 SPS30,ppm
+01 Feinstaub (PM2.5) (Sensor SPS30),mug/m3 (PM2.5)
+01 Nanopartikel(SDS011),PM25
+VOC(SVM30),ppb
+CO2 (SVM30),ppm
+01 Feinstaub (PM10) (Sensor SPS30),mug/m3 (PM10)
+01 Feinstaub (PM0.5) (Sensor SPS30),mug/m3 (PM0.5)
+,
+Phenomenon: Particulate matter 2.5,µg*m^-3
+Phenomenon: Phenomenon: Particulate matter 10,µg*m^-3
+Temperatur HTU21D,°C
+rel. Luftfeuchte HTU21D,%
+Particulate matter 2.5,µg*m^-3
+Particulate matter 10,µg*m^-3
+0 Temperature HDC1080,°C
+0 Humidity HDC1080,%
+0 GPS Lat,°
+0 GPS Lon,°
+0 GPS Time,°
+TemperaturSHT,°C
+HumiditySHT,%
+HumiditySCD,%
+CO2_VOC,ppm
+TVOC,ppb
+Air Pressure,N/m2
+Temperatur in der senseBox,°C
+Light,-
+Solar delta,W
+Breite,°
+Länge,°
+Time,h
+Wind direction,dir
+Pressure,mBar
+Reserve 1a,°C
+Reserve 1b,%
+Reserve 2a,°C
+Reserve 2b,%
+Time WiFi,-
+Time GPS,-
+Regen,Niederschlag
+20 GPS_long,Grad
+20 GPS_lat,Grad
+20 VEML6070,Lumen
+20 GPS_alt,Grad
+Sonnenaufgang,Uhr
+Sonnenuntergang,Uhr
+24 InternetTime,t
+latitude,°
+longitude,°
+altitude,m_AMSL
+7 Temperature SHT85 6,°C
+7 Humidity SHT85 6,%
+7 Light,Lux
+7 GPS Lat,°
+7 GPS Lon,°
+7 GPS Time,°
+7 GPS amsl,MASL
+7 UV,UVI
+GPS lat 25,°
+GPS long 25,°
+TimeFromInternet 25,Date
+RawTimeGPS,Date
+RawTimeInternet,Date
+6 Temperature SHT85.1,°C
+6 Humidity SHT85.1,%
+6 Temperature HDC1080.1,°C
+6 Humidity HDC1080.1,%
+6 Light,lux
+6 Wind Speed,m/s
+6 Wind Direction,°
+6 Temperature SHT85.2,°C
+6 Humidity SHT85.2,%
+6 Temperature SHT85.3,°C
+6 Humidity SHT85.3,%
+6 Temperature SHT85.4,°C
+6 Humidity SHT85.4,%
+6 Temperature SHT85.5,°C
+6 Humidity SHT85.5,%
+6 Temperature SHT85.6,°C
+6 Humidity SHT85.6,%
+GPS 6 Lat,°
+6 GPS Lon,°
+6 UV,UV-I
+6 GPS Time,sec
+6 Internet Time,sec
+6 Temperature SHT31.1 FPCB,°C
+6 Humidity SHT31.1 FPCB,%
+6 Temperature SHT31.2 B1E,°C
+6 Humidity SHT31.2 B1E,%
+2 Longitude GPS,°
+2 Latitude GPS,°
+2 Time GPS,s
+21 Wind Speed Davis,m/s
+21 Wind Direction Davis,?
+Differential Pressure 3,Pa
+Differential Pressure 1,Pa
+Differential Pressure 2,Pa
+Davis-Anemometer wind direction,°
+Davis-Anemometer wind speed,m/s
+Davis Anemometer,m/sec
+Davis Anemometerdirection,Grad
+Leitfähigkeit,raw
+Feinstaub,PM
+Latitude (GPS),number
+01 Longitude (GPS,number
+22 Temperatur,°C
+22 rel. Luftfeuchte,%
+22 Luftdruck,hPa
+22 Davis Anemometer,m/sec
+22 Davis Anemometerdirection,Grad
+Wind,kmh
+Barometer,hPa
+Elektroniktemperatur,°C
+Temperatur (Luftdrucksensor),°C
+21 Wind Direction Davis,°
+time,time
+Rain,10th mm
+GPS,bg
+GPS,lg
+GPS,NN
+Leitfähigkeit_Vernier,raw
+Leitfähigkeit_NoBrand,raw
+Leitfähigkeit_Atlas,raw
+Rain,Wrong Values
+voltage,v
+23 Temperature HDC1080,°C
+23 rel. Humidity HDC1080,%
+23 Temperature SHT85,°C
+23 rel. Humidity SHT85,%
+23 Differential Pressure 3,Pa
+23 GPS Latitude,°N
+23 GPS Longitude,°E
+23 GSP Time,s
+23 GSP Satellites,Satellite
+23 Differential Pressure 1,Pa
+23 Differential Pressure 2,Pa
+23 Davis-Anemometer Wind Direction,°
+23 Davis-Anemometer Wind Speed,m/s
+UVA,mW/m²
+UVB,mW/m²
+Regensensor,_
+20 VEML6070_UV,UVI
+20 VEML6070_Illuminance,Lux
+2 PM1.0 SPS30,µg/m³
+GPS,Zeit
+WifiSignalStrength,dBm
+Test-Temp,°C
+Test-Luftfeuchte,%
+H2S,ppb
+H2S RAW,n/a
+Humidity,% RH
+CO2,ppm(parts per Million)
+Regen aktuell,0=kein Regen / 4095=Wolkenbruch
+Pressure,GPa
+Air quality,Ohm
+24 GPS longitude,longitude
+24 GPS latitude,latitude
+RainSensor,mm/s
+7 Temperature SHT 31 flex,°
+7 Humidity SHT 31 flex,%
+7 Wind Direction Davis,°
+7 Winds Speed Davis,km/h
+7 Niederschlag Davis,mm
+6 Rain,mm/h
+17 LF Vernier2,1
+17 LF Vernier3,1
+17 LF Atlas Scientific2 K1.0,1
+Temerature,°C
+Regensensor,(analog: trocken ≙ 0% -> 100% ≙ naß)
+Bodenfeuchtesensor,(analog: trocken ≙ 0% -> 100% ≙ naß)
+Gerätetemperatur (im Gehäuse),°C
+UV-Index,(UV-Index)
+20 Davis_Anemometer_wind_angle,Grad
+20 Davis_Anemometer_wind_speed,Km/h
+20 Davis_Niederschlagssensor,mm/h
+Regen aktuell,(0=kein Regen / 4095=Wolkenbruch)
+2 WindSensor WindSpeedInMetersPerSecond,m/s
+2 WindSensor WindAngle,°
+H2S,ppm
+wind speed,km/h
+Wind direction,richting
+temperature,C
+Pressure,PHa
+Regen,ja/nein
+eCO2,ppm
+rel. Luftfeuchte BME680,%
+Gas Resistance BME680,kOhm
+Altiude BME680,m
+Vsys,mV
+Ibat,mA
+Vbus,mV
+Temperatur,'C
+Dust,mg/m3
+Alarmanlage ausgelöst,1 = ausgelöst
+Rel. Luftfeuchte DHT22,%
+Luftdruck MPL3115A2,Pa
+Temperatur Am2320,°C
+Rel. Luftfeuchtigkeit Am2320,%
+Niederschlag,Ja
+M.ü.M MPL3115A2,Meter
+Temperatur MPL3115A2,°C
+Satellites,Satellites
+24 Temperature DHT11 1,°C
+24 Humidity DHT11 1,%
+24 Temperature DHT11 2,°C
+24 Humidity DHT11 2,%
+24 Temperature DHT22 1,°C
+24 Humidity DHT22 1,%
+24 Temperature DHT22 2,°C
+24 Humidity DHT22 2,%
+Humidity,%H
+Windrichtung,° (90°=Piste->Hütte / 270°=Hütte->Piste)
+RainSensor Tippings,amount
+Niederschlagsmenge,MM
+Niederschlagsmenge,mm/h
+Windchill,°C gefühlte Temperatur
+Regen aktuell,(0=kein Regen / 4095=starker Regen)
+24 Temperature SHT31 1 (thin),°C
+24 Humidity SHT31 1 (thin),%
+24 Temperature SHT31 2 (thin),°C
+24 Humidity SHT31 2 (thin),%
+24 Temperature SHT31 3 (thick),°C
+24 Humidity SHT31 3 (thick),%
+24 Temperature SHT31 4 (thick),°C
+24 Humidity SHT31 4 (thick),%
+24 Temperature AM2320,°C
+24 Humidity AM2320,%
+Windrichtung,° (90°=Piste->Hütte // 270°=Hütte->Piste // 0°/360°= Windsack->Piste // 180°=Wald->Piste)
+NO2 AE,mv
+Niederschlag,L/m² / 5 min
+PM10,mg/m3
+PM2.5,mg/m3
+PM10 SDS 011,µg/m³
+PM2.5 SDS 011,µg/m³
+Temperatur DHT 22,°C
+rel. Luftfeuchte DHT 22,%
+Temperatur BMP 180,°C
+Luftdruck BMP 180,Pa
+Velocity of CO2 Flow,m/s
+Höhe über NN,m
+UV Light,mW/cm2
+Umidità Relativa,%
+Vento,Km/h
+UV,UVIndex
+Fine Dust,ug/Kubikmeter
+Wind direction,Grad
+Rain,mm/h
+Phenomenon: Temperatur - Temperatura HECA,°C
+Phenomenon: rel. Luftfeuchte - Wilgotność HECA,Unit: %
+lat,°
+lon,°
+height,m
+Zeit,h
+Batterie Wassersensor,V
+Batterie Luftsensor,V
+air temperature,°C
+relative humidity,%
+barometric pressure,hPa
+Humidity,%RH
+Windgeschwindigkeit Av,m/s
+Windgeschwindigkeit max,m/s
+Windrichtung,.
+Windgeschwindigkeit Av,km/h
+Windgeschwindigkeit Max,km/h
+Regenmenge Vortag,mm
+Regensensor / Rain sensor,Dry = 5 / Wet = 0
+Windgeschwindigkeit Max,m/s
+Background Radiation,μSv/h
+Lux,lux
+Feldstärke 801kHz,mV
+Strahlung,uSv/h
+Windrichtung,/16 of 360° from North clockwise
+Niederschlag,": 0=nein, 1=ja"
+Temperatur_BMP280,°C
+volt_sweep_oc,V
+rel- Luftfeuchte,%
+PM 1.0,ug/m3
+PM 10.0,ug/m3
+Temperatur [outdoor],°C
+rel. Luftfeuchte [outdoor],%
+Temperatur [indoor],°C
+rel. Luftfeuchte [indoor],%
+VOC [indoor],IAQ
+UV-Strahlung,mw/m^2
+Analog In,Volt
+barometric pressure,mbar
+PM10,ppm
+PM2.5,ppm
+UV,mW/m²
+UV-Index,Index
+Lux,Lux
+Ladung,%
+Battery percentage,%
+Battery temperature,°C
+Temperature,°c
+Humidity,°c
+rel. Luftfeuchte BME,%
+Beleuchtungsstärke / Illuminance,lux
+WiFi: RSSI,dBm
+WiFi: SSID (wie viele / how much),Menge / Quantity
+VOC (Volatile Organic Compounds),kOhm
+Altitude,m
+eCO2,?
+eTVOC,?
+Pressure_RAW,hPa
+HDC1008 Temperatur / Temperature,°C
+HDC1008 rel. Luftfeuchte / Humidity,%
+BMP280 Luftdruck / Air pressure,hPa
+TSL45315 Beleuchtungsstärke / Illuminance,lux
+VEML6070 UV-Intensität / UV intensity,μW/cm²
+SDS 011 Luftverschmutzung / Air polution - PM10,µg/m³
+SDS 011 Luftverschmutzung / Air polution - PM2.5,µg/m³
+BMP280 Temperatur / Temperature,°C
+BME680 Temperatur / Temperature,°C
+BME680 Luftdruck / Air pressure,hPa
+BME680 rel. Luftfeuchte / Humidity,%
+BME680 Altitude,m
+CCS811 eCO2,?
+CCS811 eTVOC,?
+AS3935 Lightning detected / Blitz detektiert,0/1
+AS3935 Aprox. away / Ungef. entfernt,km
+AS3935 Disturber / Störung,0/1
+AS3935 Noise,0/1
+LSM6DS3 Temperatur / Temperature,°C
+LSM6DS3 G-Force / G-Kraft,g
+Bodenfeuchte Sensor 1,%
+Bodenfeuchte Sensor 2,%
+Temperatur ESP32,°C
+Batterie ESP32,V
+Windrichtung,° from North clockwise
+Humidity,relH
+Light Intensity,Lux
+PM1.0,uL/m^3
+PM2.5,uL/m^3
+PM10,uL/m^3
+PM1.0 env,uL/m^3
+PM2.5 env,uL/m^3
+PM10 env,uL/m^3
+UV Index,-
+Radiation,uSv/h
+Gewicht Wage I,Kg
+Gewicht Wage II,Kg
+Niederschlag,L/m²
+Temperatur des Feinstaubsensor,C°
+Temperatur in der Sensebox,C°
+Grundwasserstand,cm
+signal,dBm
+Energy photo-voltaic inverter,kWh
+Net power,relay
+BME280-Temperatur,°C
+BME280-rel. Luftfeuchte,%
+BME280-Luftdruck,Pa
+Strahlenbelastung,µSv/h
+atm. Luftdruck,Pa
+Temperature,Celcius
+Luftdruck,hPa*100
+Temperatur 5cm,°C
+Bodentemperatur -5cm,°C
+Bodentemperatur -25cm,°C
+Temperature (HECA),°C
+Durchschnitt Umgebungslautstärke,db
+Minimum Umgebungslautstärke,db
+PM4,µg/m³
+Noise,dB(A)
+Radioactivity dose rate,μSv/h
+Windstärke,Bft
+Air-Quality,kOhm
+Niederschlag,mm/h
+P4,µg/m³
+NC10,#/cm³
+rel. Luftdruck,hPa
+Sonnenstrahlung,W/m²
+UV,Index
+Rain,liter/last hour
+Частицы PM10,≤ 50 µg/m³
+Частицы PM2.5,≤ 30 µg/m³
+Teмnepaтypa,°C
+Humidity Влажность,%
+Oxygen,%
+UV-Intensität,---
+Wassertemperatur Quelle,°C
+Wassertemperatur Bach,°C
+Wassertemperatur Teich,°C
+Luft-Qualität,ppm
+Staub,pcs/0.01cf
+pH-Wert,pH
+Niederschlag,Boolean
+UV,µW/cm²
+UVA,UVA
+UVB,UVB
+Ladung,Volt
+temperatura,°C
+Radioactivity,CPM
+Wind direction,GRAD
+Luftfeuchte,rel.%
+CPU Temperatur,°C
+Solare Globalstrahlung,W/m^2
+Niederschlag (Stunde),mm
+Niederschlag (Tag),mm
+Luftdruck,hP
+Battery,Volt
+Measuring interval,minutes
+rel. Humidity,%
+Barometric Pressure,Pa
+Air Pressure (Measured),hPa
+Air Pressure (Reduction to Sea Level),hPa
+Humidity / rel. Luftfeuchte,%
+"Temperature, DHT22",°C
+"Humidity / Luftfeuchte, DHT22",%
+"Temperature, BME280",°C
+"Humidity / Luftfeuchte, BME280",%
+"Air pressure / Luftdruck, BME280",Pa
+"Temperature, HTU21D",°C
+"Humidity / Luftfeuchte, HTU21D",%
+"Temperature, BMP180",°C
+"Air pressure / Luftdruck,  BMP180",Pa
+Red,lm
+Orange,lm
+Yellow,lm
+Green,lm
+Blue,lm
+Violet,lm
+Gas VOC,kΩ
+Lumen,lm
+UltraVioletIndex,UV
+UltraVioletA,UVA
+UltraVioletB,UVB
+Oxidised,kΩ
+Reduced,kΩ
+nh3,kΩ
+"Temperature, HECA (preheating chamber)",°C
+"Humidity / Luftfeuchte, HECA (preheating chamber)",%
+BME680 - Temperature,°C
+BME680 - Humidity,%
+BME680 - Air pressure,hPa
+BME680 - Altitude,m
+BME680 - VOC Volatile Organic Compounds,kOhm
+SCD30 - CO2 - Carbon dioxide,ppm
+SCD30 - Temperature,°C
+SCD30 - Humidity,%
+SDS011 - PM2.5,μg/m3
+SDS011 - PM10.0,μg/m3
+Grove - Gas Sensor(O₂) - Oxygen,%
+MiCS6814 - NH3 - Ammonia,ppm
+MiCS6814 - CO - Carbon monoxide,ppm
+MiCS6814 - NO2 - Nitrogen dioxide,ppm
+MiCS6814 - C3H8 - Propane,ppm
+MiCS6814 - C4H10 - Butane,ppm
+MiCS6814 - CH4 - Methane,ppm
+MiCS6814 - H2 - Hydrogene,ppm
+MiCS6814 - C2H5OH - Ethanol,ppm
+TSL25911 - Infra red,-
+TSL25911 - Full light,-
+TSL25911 - Visible light,-
+TSL25911 - lux,lux
+VEML6075 - UVA,uW/cm^2
+VEML6075 - UVB,uW/cm^2
+VEML6075 - UVI,-
+Radiation - Count,-
+Radiation - cpm - count per minute,-
+Radiation - µSv/h - Micro sievert / hour,μSv
+Radiation - µSv/h - Error of micro sievert / hour,-
+AS3935 - Lightning Counter,Lightnings / Transmit
+AS3935 - Lightnings distance (avarage),-
+AS3935 -  Disturber,-
+AS3935 - Noise,-
+Rain,mm / Transmit
+Loudness,-
+WiFi - RSSI,dBm
+WiFi - SSID´s,-
+Battery voltage (Arduino),V
+Battery voltage (Solar charger),V
+Solar panel,V
+System - Started / Restarted,-
+System - Computer via USB connected,-
+IAQ,-
+Bodenfeuchte,VW
+Luftdruk,Pa
+PM10,μm / m³
+PM2.5,μm / m³
+Luftdruck (Sealevel),hPA
+abs. Luftfeuchte,g/m³
+Taupunktdifferenz (Spread),°C
+Temperature,BME280
+Pressure,BME280
+Niederschlag,L / min
+Akku Spannung,V
+Bodenfeuchte 2,%
+Bodentemperatur 2,°C
+Temperatur (HECA) komora,°C
+rel. Luftfeuchte (HECA) komora,%
+Humidity,%rH
+Barometric Pressure,hPa
+atm. Luftdruck,hPa
+VOC,kOhm
+UV-Index,­
+Geräuschpegel,dB(A)
+Temperatur Vorratsraum,°C
+Temperatur Kraftraum,°C
+Temperatur Umkleide,°C
+RainDaily,mm
+WindSpeed,km/h
+WindDirection,°
+Wind speed avg,km/h
+Wind speed max.,km/h
+Tau Punkt / Dew Point,°C
+Solar Temperatur 1,°C
+Solar Temperatur 2,°C
+Rain bin fill level,%
+Thunderstorm Distance,km
+Thunderstorm Energie,-
+Solar-Power,mW
+Reserve,_
+Tensio,_
+Batterie,V/10
+Reserve,#
+Füllstand,mm WS
+Temperatura,C
+Umidità,% RH
+livello batteria,v
+PM0.1,µg/m³
+rel. Luftfeuchte (Wilgotność wzgl.),%
+Temperatura czujnika,°C
+rel. Luftfeuchte (Wilgotność czujnika),%
+Regen,mm/m² = ltr/m² (0:00-24:00 Uhr)
+Solarpanel,V
+PM10 Hourly Average,µg/m³
+PM2.5 Hourly Average,µg/m³
+Light Intensity,lux
+Wifi Signal,dBm
+FAN speed,↑↓
+CO2 Konzentration,ppm
+WiFi RSSI,dB
+Temperature,° C
+Staub 2.5µm,ppm
+Staub 10µm,ppm
+Gamma,uSv/h
+"Feinstaub PM 2,5",µg/m³
+Feinstaub PM 10,µg/m³
+PAX,Geräte
+Batterie,Volt
+absolute Luftfeuchtigkeit,g/m³
+Laufzeit,Stunden
+Absolute Luftfeuchte,g/m³
+5e90d07cdf8258001b2fb430,CO2
+Windgeschwindigkeit,(m/s)
+Airquality,VOC
+Betriebsspannung,V
+UV Intensität,μW / cm²
+UV Index,[ - ]
+air pressure,hPa
+UV-Strahlung,mW/cm2
+Luftfeutigkeit,%
+Feuchtigkeit absolut,g/m3
+Luftdruck gemessen,hPa
+Luftfeuchte DHT22,%
+Luftfeuchte BME280,%
+TemperatureBME280,°C
+температура\temperature\Temperatur,°C
+відн. Вологість\rel. Humidity\rel. Luftfeuchte,%
+Тиск повітря\Air pressure\Luftdruck,Pa
+Radiazioni Beta & Gamma Conteggi per Minuto,CPM
+Radiazioni Beta & Gamma uSV/h,uSV/h
+AtmLuftdruck,hPa
+VOC,voc
+Temperatura (Temperatur),°C
+Wilgotność (rel. Luftfeuchte),%
+CH2O,μg/m3
+NH3,μg/m3
+NO2,μg/m3
+CO,μg/m3
+Ortsdosisleistung,nSv/h
+WLAN-Feldstärke,db
+Feldstärkeindikator Sender 801kHz,mV
+Messung Nr.,seit Neustart
+Gas NH3,kΩ
+Gas Oxidising,kΩ
+Gas Reducing,kΩ
+UV-Index,--
+Regenmenge pro Tag,mm
+Ladestrom,mA
+rel. Luftfeuchte (Humidity),%
+Luftdruck (abs. Pressure),Pa
+NO,ppm
+TVOC,unit
+Temperature-HECA,°C
+Humidity-HECA,%
+Radiation gamma,uSv
+Oxidation,kΩ
+Reducing,kΩ
+NH3,kΩ
+UV-Index,von 12
+UV-Intensität,µW/m²
+Latitude,Längengrad
+Longitude,Breitengrad
+Altitude,Meereshöhe
+GPS-Time,Datum
+NTC-Time,Datum
+TEMP-SI7021,°C
+HUM-SI7021,%
+TEMP-DS18b20,°C
+Lautstärke,dB (A)
+UV Index,UVI
+"Feinstaub PM 2,5",µm/m³
+"Feinstaub PM 10,0",µm/m³
+Hitzeindex (rel. gefühlte Temperatur),°C
+Bestrahlungsstärke,W/m²
+Battery Voltage,mV
+rel. Luftfeuchte,rel. %
+Radiation,CPM
+Battery Voltage,Volt
+Temperatur Pi,°C
+TempDS18B20,°C
+Radioaktivität,mSv/a
+LuftDruck,Pa
+Bodentemperatur_1,°C
+Bodenfeuchte_1,%
+Bodentemperatur_2,°C
+Bodenfeuchte_2,%
+Bodentemperatur_3,°C
+Bodenfeuchte_3,%
+Wind Direction,degree
+Average Wind Speed (One Minute),m/s
+Max Wind Speed (Five Minutes),m/s
+Rain Fall (One Hour),mm
+Rain Fall (24 Hour),mm
+Raw Temperature,°C
+Raw Humidity,%
+Gas Resistance,Ω
+IAQ Accuracy,-
+Static IAQ,-
+CO2 Equivalent,-
+Breath VOC Equivalent,-
+Cisnienie,Pa
+Soil,%
+Lärm,db
+Regen,Ja = 0 / Nein = 1
+humidity,RH
+Ciśnienie,hPa
+PV Voltage,V
+PV Current,A
+PV Power,W
+Battery Charging Current,A
+Battery Charging Power,W
+Battery Capacity,%
+Battery Temperature,°C
+Load Voltage,V
+Load Current,A
+Load Power,W
+Consumed Energy Today,kWh
+Generated Energy Today,kWh
+Total Consumed Energy,kWh
+Total Generated Energy,kWh
+Strahlung,μSv/h
+Radioactivity dose rate,µSv/h
+CO2,.
+tVOC,.
+Luftdruck relativ,hPa
+Luftdruck absolut,hPa
+Regenrate,mm/h
+Compost temperature,°C
+Temperature / Lufttemperatur,°C
+Humidity / Luftfeuchte,%
+Luftfeuchte,%H
+Testwer1,n.N.
+Testwert2,n.N.
+Staub 10 µm,ppm
+CO₂,ppm
+relative Luftfeuchtigkeit,% rLF
+Air Temperature,C
+Temperature SCD30,°C
+rel. Luftfeuchte SCD30,%
+Lichtintensität,arb. units
+Temperatura,Gradi C
+Pressione,%
+Luftdruck,hPa in 405 m Höhe
+Kohlenmonoxid,ppm
+Stickstoffdioxid,ppm
+Ammoniak,ppm
+Temperatur | Temperatura,°C
+rel. Luftfeuchte | Wilgotność Powietrza,%
+Luftdruck | Ciśnienie atmosferyczne,Pa
+Temperatur (HECA) temp. wlot czujnika,°C
+rel. Luftfeuchte (HECA) Wilgotność powietrza wlot do czujnika,%
+TVOC(Total Volatile Organic Compounds),ppb
+"VOCs (HCHO,toluene, benzene, alcohol)",ppm
+Dust PM1.0,ug/m3
+Temperture,C°
+Atmospheric Pressure,mbar
+Minimum Umgebungslautstärke (LAmin),dB
+Maximum Umgebungslautstärke (LAmax),dB
+Äquivalenter Dauerschallpegel (LAeq),dB
+Pressure,hpa
+Temperature Outdoor (DS18B20),°C
+Humidity Outdoor (SHT31-D),%
+Barometer Pressure (BME280),hPa
+PM 2.5 (SDS011),µg/m³
+PM 10 (SDS011),µg/m³
+UV Index (S12SD),µW/lm
+Temperature Indoor (DS18B20),°C
+Gas usage Today (Natural),M³
+Realtime Electric Current usage,Watt
+Temperature (3.4°C offset),°C
+Pressure,BMP280
+Ciśnienie atmosferyczne,Pa
+Temperatura w szklarni,°C
+Wilgotność względna w szklarni,%
+Windgeschwindigkeit (Avg/min),km/h
+Rain (mm/min),mm
+Luftdruck,mb
+Chillfaktor,°C
+Temperatur (temperatura),C°
+rel. Luftfeuchte (umidità),%
+Luftdruck (pressione),Pa
+PM10 (polveri),µg/m³
+PM2.5 (polveri),µg/m³
+Luftdruck 1,hPa
+Temperatur I,°C
+Temperatur II,°C
+PM2.5,µm
+PM10,µm
+rel. Luftfeuchte,%RH
+Air Pressure,Pa
+Infrarotstrahlung,lux
+UV-Index,E
+PM 2.5,µg/m3
+PM 10,µg/m3
+Ciśnienie,HPa
+Air Pressure,mb
+Temperatur - Messfühler,°C
+Temperatur (intern),°C
+Gefahr,Gefahr
+Signalstärke am Gateway (RSSI),dBm
+Temperatur (HECA),Temperatur (HECA)
+Helligkeit,LUX
+RSSI,%
+Akkuspannung,Volt
+Luftfeuchtigjkeit,%
+Netz,V
+PM1,ugm
+PM2.5,ugm
+PM10,ugm
+abolute Feuchtigkeit,g/m³
+Temperatur Gewaechshaus,°C
+rel. Luftfeuchte Gewaechshaus,%
+Solar Radiation,W/m²
+Air Pressure,mBar
+Test Temperature,°C
+Temperature,°F
+Barametric Pressure,inHg
+Dew Point,°F
+Radiation,W/m²
+Ultraviolet,index
+Rain Rate,in/hr
+Wind Speed,miles per hour
+Wind Gust Speed,miles per hour
+Wind Direction,degrees
+Temperature,F
+UV-Index,ohne Einheit
+Temperatur DS18B20,°C
+Temperatur BMP085,°C
+Pressure BMP085,hPa
+Voltage Battery,V
+Day light,lux
+Wind Speed,mph
+Temperatur 2m,°C
+rel. Luftdruck (QFF),hPa
+Grünlandtemperatursumme,Kd
+-🏭- PM10,µg/m³
+-🏭- PM2.5,µg/m³
+-🌡- Temperature,°C
+-💧- Humidity,%
+-🕛-Pressure,Pa
+-⚛- Radioactivity,μR/h
+Umgebungshelligkeit,Lux
+WIFI Qualität,%
+Regen-Rate,mm/h
+Lutfdruck,Pa
+Radioactivity,μR/h
+Helligkeit - West,Lux
+Helligkeit - Süd,Lux
+Helligkeit - Ost,Lux
+Brightness,Arbitrary
+Pressure (absolute),hPa
+Pressure (relative),hPa
+Solar Irradiance,W/m2
+UV,index
+Particulate Matter <2.5µm concentration,µg/m³
+Particulate Matter <10.0µm concentration,µg/m³
+Niederschlagsmenge heute,mm
+Hellikeit,lux
+rel. Luftfeuchte BMP280,%
+Luftdruck BMP280,hPa
+rel. Luftfeuchte HDC,%
+Pression,hPa
+VOC,kΩ
+luminosity,lx
+UV-Radiation,μW/cm²
+Dew Point,°C
+Particles 2.5 µg/m³,µg/m³
+Particles 10 µg/m³,µg/m³
+Light (East),lx
+Light (South),lx
+Light (West),lx
+Windspeed,m/s
+Windspeed,Bft
+Rainfall,mm/uur
+UV index,UVindex
+Vtronix VH400 01,%
+Vtronix VH400 02,%
+Vtronix VH400 03,%
+Vtronix VH400 04,%
+Lichtpegel,UV
+UV-Index,Index von 12
+Windgeschwindigkeit max.,km/h
+maximale Windböengeschwindigkeit,km/h
+Regen letzte Stunde,mm
+Regen diese Woche,mm
+Regen dieser Monat,mm
+Cell-Voltage,mV
+Solar-Voltage,mV
+Amount of rain,mm
+WindBoe,Km/h
+Wind,Km/h
+WindDir,°
+Blattnässe,%
+SNR,dB
+"Spr,Fakt.",--
+Frequenz,Hz
+Bodentemperatur (10cm Tiefe),°C
+Bodenfeuchte (10cm Tiefe),%
+UVA-Strahlung,--
+UVB-Strahlung,--
+Batteriestand,V
+Bodenfeuchte,mbar
+Wasserstand,mm
+Fehler,D
+IAQ,Index
+Outbox temperature,°C
+Inbox temperature,°C
+WiFi,dBm
+Ground temperature (-10 cm below ground),°C
+Wind (3min average),a.u.
+Wind gusts (10 s average),a.u.
+Grid frequency,Hz
+Brightness,a.u.
+Lautstärke,db
+PM 1.0,µg/m³
+PM 4.0,µg/m³
+Taupunkt,�C
+gef�hlte Temperatur,�C
+Sonnenstrahlung,W/m�
+Windrichtung,�
+Regen Tag,mm
+Regen Woche,mm
+Regen Monat,mm
+Regen Jahr,mm
+Temperatur Wetterhütte,°C
+Temperatur Box,°C
+relative Feuchte,%RF
+UV-Index,ind
+Regen letzte 24h,l/qm
+Temperatur/Luft,°C
+Temperatur/Boden,°C
+Temperature,C°
+Pressure,HpA
+Luminosity,Lux
+Temperatur (wew),°C
+Luftdruck (wew),Pa
+rel. Luftfeuchte (zew),%
+Temperatur (zew),°C
+air pressure,hPA
+rel. Luftfeuchte (SHT3x),%
+Temperatur,�C
+Abstand nach links,cm
+Abstand nach rechts,cm
+Feinstaub PM10,�g/m�
+Feinstaub PM25,�g/m�
+Beschleunigung X-Achse,g
+Beschleunigung Y-Achse,g
+Beschleunigung Z-Achse,g
+relativer Luftdruck bei NN,mBar
+Pm2.5,µg/m³
+Pm10,µg/m³
+Spannung,Volt
+Luftfeuchte,rel %
+Batterie Status,.
+Lufdruck,hPa
+PM2.5,μg / m³
+PM10,μg / m³
+Temperatur (aussen),°C
+rel. Feuchtigkeit (aussen),%
+Luftdruck,hPa (=mBar)
+Solarstrahlungssensor,W/m2
+BF_5,%
+BF_40,%
+Bodenfeuchte1,mbar
+Bodenfeuchte2,D
+Wasserstand,%
+Kohlendioxyd,ppm
+Temperatur (SHT3x),°C
+Temperatur(HECA),oC
+motion,unit
+battery,mV
+fCnt,unit
+pm1,µg/m3
+pm25,µg/m3
+dewpoint,°C
+Innentemperatur,°C
+"Temperatur, BME280",°C
+"rel. Luftfeuchte, BME280",%
+"rel. Luftdruck bei NN, BME280",mbar
+PM2.5,µg/m
+PM10,µg/m
+Humidity,%rel
+Illuminance,Lux
+PM10,microgramm pro kubikmeter
+PM2.5,microgramm pro kubikmeter
+"PM10/2,5",µg/m³
+Wiatr,m/s
+Opady,mm/5min
+PM2.5,%
+PM10,%
+Luftfeuchte BME,%
+Lufttemperatur BME,°C
+atm. Luftdruck2 BME,hPa
+CO₂ SCD3,hPa
+Lufttemperatur SCD4,°C
+Luftfeuchte SCD4,%
+CO2 SCD4,ppm
+Lufttemperatur SCD3,°C
+Bluetooth Geräte,Geräte
+WIFI Geräte,Geräte
+pax,uints
+Windrichtungsbreite,°
+Regen,[0;1]
+rel. Helligkeit,[0..100000]
+Temperatur Sensor,°C
+PM10,ug/mm3
+PM2.5,ug/mm3
+Energy import,w
+Energy production,w
+Solar production,%
+rssi,dB
+rel-. Luftfeuchte,%
+Pegel,mm
+AkkuTemperatur,°C
+AkkuProzent,%
+AkkuVolt,Volt
+NBIoTEmpfangProzent,%
+NBIoTEmpfang,dBm
+LadenAktiv,bool
+SolarPowerOK,bool
+Battery Voltage,Volts
+WindGust,Km/h
+Humidity,%rf
+Pressure,pa
+Windspeed,kmh
+W-LAN,%
+Particulate matter PM2.5,µg/m³
+Particulate matter PM10,µg/m³
+Tensio,mbar
+Kapazitiv,D
+Niveau,mm
+PM01,ug/m3
+CO2 Konzentration 418793,ppm
+CO2 level,ppm
+Global Radiation,W/m2
+Rain (1h),mm
+UV-A Radiation,W/m2
+UV-B Radiation,W/m2
+rel. humidity,%
+fine particle matter PM2.5,µg/m³
+fine particle matter PM10.0,µg/m³
+radioactivety,µS/h
+Bodenfeuchte 30 cm,%
+Bodentemperatur 30 cm,°C
+Bodenfeuchte 60 cm,%
+Bodentemperatur 60 cm,°C
+Bodenfeuchte 90 cm,%
+Bodentemperatur 90 cm,°C
+humidity,%H
+PM2.5,ug/m^3
+PM10,ug/m^3
+"Temperature, ext",°C
+"Temperature, int",°C
+"Humidity, ext",%
+"Humidity, int",%
+Pressure,mmHg
+Rain,lt
+Power,KWh
+Voltage,Volt
+Heating,minutes
+Extra2,u
+Temperatura,ºC
+Rain,l
+PM01,µg/m3
+Atmospheric pressure,mBar
+Presion,hPa
+Humedad,%
+Temperatura1,ºC
+Humedad1,%
+TAMP3,ºC
+PM100,µg/m³
+Einstrahlung,lx
+Wägezelle_01,Kg
+Wägezelle_02,Kg
+Wägezelle_03,Kg
+Wägezelle_04,Kg
+Gesamt Gewicht,Kg
+Befehl,Dezimal
+Wert,Dezimal
+HECA temperature,°C
+HECA humidity,%
+WiFi signal,dB
+Wind Direction,N
+"Particle 2,5",ppm
+Particle 10,ppm
+PM1,ppm
+Tagesniederschlag,l/m²
+Sonneneinstrahlung,W/m²
+UV-Index,UV Index
+Dosisleistung,µSv/h
+Feinstaubkonzentration <10µm,µg/m3
+"Feinstaubkonzentration <2,5µm",µg/m3
+Windböe,km/h
+Bodentemperatur 5cm,°C
+Bodentemperatur 10cm,°C
+Bodentemperatur 20cm,°C
+Bodentemperatur 50cm,°C
+Bodentemperatur 100cm,°C
+Radioactivity,µR/h
+PM2.5,μm/m3
+PM10,μm/m3
+Luftqualität,IAQ
+Presure,hPa
+Radioactivity,uSv/h
+Pressione dell'aria,Pa
+UV,uW/m2
+Höhe (barometisch),m
+rel.Feuchte,%
+UV-Intensität,uW/m2
+Akkusp.,V
+rel. Feuchtigkeit,%
+"Temperatur (Luft, HDC1080)",°C
+Temperatur (senseBox MCU),°C
+UV-A Intensität,μW/cm²
+Beleuchtungsstärke,klx
+Temp_BME680,°C
+Hum_BME680,%
+Pressure_BME680,mbar
+Air-Quality_BME680,kOhm
+Temp_SCD30,°C
+Hum_SCD30,°C
+CO2_SCD30,ppm
+Temp_SCD40,°C
+Hum_SCD40,%
+CO2_SCD40,ppm
+SDS011_P10,ug/m3
+SDS011_P2.5,ug/m3
+SPS30_P10,ug/kg
+SPS30_P2.5,ug/kg
+Temp_SHT31,°C
+Hum_SHT31,%
+Time,s
+presure,hPa
+MP10,µg/m³
+MP2.5,µg/m³
+Air pollution PM 2.5,µg/m³
+Air pollution PM 10,µg/m³
+Particles >0.3 µm,n/0.1 l
+Particles >0.5,n/0.1 l
+Particles >10 µm,n/0.1 l
+Particles >25 µm,n/0.1 l
+Particles >50 µm,n/0.1 l
+Particles >100 µm,n/0.1 l
+Air pollution PM 1.0,µg/m³
+Energy Production,W
+UV Strahlung,μW/cm²
+Feinstaub PM25,µg/m³
+Müll,cm
+PM2_5,µg/m³
+UBatt,V
+Innenfeuchtigkeit,%
+PM1.0,ug/m³
+PM2.5,ug/m³
+Ozon,O3
+Rain,// 0 no rain // 100 heavy rain
+Fassadentemperatur,°C
+Absolute Luftfeuchtigkeit,g/m³
+Feinstaub PM10,μg/m³
+"Feinstaub PM2,5",μg/m³
+Pegel,m
+Helligkeit,?
+Luftqualität PM2.5,ppm
+Relative Luftfeuchtigkeit,%
+Luftqualität PM10,ppm
+Ozon,ppm
+Feinstaub,µg/m^3
+Beleuchtung sichtbar,Lux
+UV-Intensität,µW/cm^2
+CO2Aequivalent,CO2A
+AtemluftVO2Aequiv,Atemluft
+CO2_00,Grenzwert eingehalten
+CO2_01,Grenzwert eingehalten
+CO2_02,Grenzwert eingehalten
+CO2_03,Grenzwert eingehalten
+CO2_04,Grenzwert eingehalten
+CO2_05,Grenzwert eingehalten
+CO2_06,Grenzwert eingehalten
+CO2_07,Grenzwert eingehalten
+CO2_08,Grenzwert eingehalten
+CO2_09,Grenzwert eingehalten
+CO2_10,Grenzwert eingehalten
+CO2_11,Grenzwert eingehalten
+CO2_12,Grenzwert eingehalten
+CO2_13,Grenzwert eingehalten
+CO2_14,Grenzwert eingehalten
+CO2_15,Grenzwert eingehalten
+CO2_16,Grenzwert eingehalten
+CO2_17,Grenzwert eingehalten
+CO2_18,Grenzwert eingehalten
+CO2_19,Grenzwert eingehalten
+CO2_20,Grenzwert eingehalten
+CO2_21,Grenzwert eingehalten
+CO2_22,Grenzwert eingehalten
+CO2_23,Grenzwert eingehalten
+CO2_24,Grenzwert eingehalten
+CO2_25,Grenzwert eingehalten
+CO2_26,Grenzwert eingehalten
+CO2_27,Grenzwert eingehalten
+CO2_28,Grenzwert eingehalten
+CO2_29,Grenzwert eingehalten
+CO2_30,Grenzwert eingehalten
+CO2_31,Grenzwert eingehalten
+CO2_32,Grenzwert eingehalten
+CO2_33,Grenzwert eingehalten
+CO2_34,Grenzwert eingehalten
+CO2_Prototyp,ppm
+CO2_Prototyp,Grenzwert eingehalten
+CO2_35,Grenzwert eingehalten
+CO2_36,Grenzwert eingehalten
+CO2_37,Grenzwert eingehalten
+CO2_38,Grenzwert eingehalten
+CO2_39,Grenzwert eingehalten
+UV-Intensität,μm/cm²
+temperature1,°C
+temperature2,°C
+temperature3,°C
+Bodenfeuchte 1,%
+Bodenfeuchte 3,%
+Geschwindkeit,km/h
+Bodenfeuchte A,%
+Bodenfeuchte B,%
+Regen,-
+battery,/10 V
+temperature1,*10 °C
+N/A,N/A
+Roter Temperaturfühler,*10 °C
+Weißer Temperaturfühler,*10 °C
+Schwarzer Temperaturfühler,*10 °C
+Bodenfeuchte 10cm,%
+Bodenfeuchte 20cm,°C
+Bodenfeuchte 30cm,°C
+Carbon monoxide - CO,ppm
+Hydrogen - H2,ppm
+Ammonia - NH3,ppm
+Nitrogen dioxide - NO2,ppm
+Propane - C3H8,ppm
+Iso-butane - C4H10,ppm
+Methane - CH4,ppm
+Ethanol - C2H5OH,ppm
+Test_Sensemap_API,-
+Bodentemperatur - 20 cm,°C
+Bodenfeuchtigkeit - 20 cm,%
+Bodentemperatur - 50 cm,°C
+Bodenfeuchtigkeit - 50 cm,%
+Lichtintensität,arb. unit
+Luftqualität,IQA
+Höhe (barometrisch),m
+PM1,ug/m3
+Cars per Day,-
+Bodentemperatur 1,°C
+Bodentemperatur 3,°C
+Spannung Batterie,V
+Light Intensität,Lux
+Bodenfeuchte-10cm,mm
+Bodenfeuchte-20cm,mm
+Bodenfeuchte-30cm,mm
+Bodenfeuchte-40cm,mm
+Bodenfeuchte-60cm,mm
+Bodenfeuchte-80cm,mm
+Bodenfeuchte-100cm,mm
+Methan,ppm
+Alkohol,ppm
+Licht Intensität,Lux
+Kühlgrenztemperatur (Wet Bulb),°C
+Luftdruck,Ph
+Temperatur (Balkon 1),°C
+Temperatur (Balkon 2),°C
+rel. Luftfeuchte (Balkon),%
+Druck,mbar
+Gas,kOhm
+Rainfall,Bool
+Humidity,% rel. F.
+Brightness East,Lux
+Brightness South,Lux
+Brightness West,Lux
+Atmosphere pressure,Pa
+Atmosphere,Pa
+WIND VELOCITY,m/s
+WIND DIRECTION,°
+REL. HUMIDITY,%
+AIR PRESSURE,hPa
+RADIATION,W/m²
+PRECIPITATION,mm
+Auto/h,Auto/h
+Spread (Taupunktdifferenz),°C
+background,ppm
+raw,.
+Sensortemperatur,°C
+Temp_01,°C
+Temp_02,°C
+Temp_03,°C
+Temp_04,°C
+Temperatur Feinstaubsensor- Sonnig,C°
+Innentemperatur Sensebox,C°
+Visibility,m
+Lufttemperatur,Grad
+Bodenfeuchte 30cm,%
+Bodenfeuchte 50cm,%
+Bodentemperatur 10cm,Grad
+Bodentemperatur 30cm,Grad
+Bodentemperatur 60cm,Grad
+Energie,A
+Bodenfeuchte mit Mulch,%
+Bodenfeuchte ohne Mulch,%
+Siła wifi,%
+Temperatura_0,°C
+Co2,PPM
+Bool Input,bool
+rel. Luftfeuchte (BME 280),%
+s,v
+Umwelt,Ohm
+pax,units
+Rel. Luftfeuchtigkeit,%
+Böengeschwindigkeit,m/s
+Regenmenge in den letzten 15min,l/m²
+PM2.5,uSv
+Temperatur (DPS310),°C
+Radiations,uSv
+CO² Gehalt,kΩ
+Helligkeit,lm/m²
+Temperatur4,°C
+Temperatur5,°C
+Temperatur6,°C
+Temperatur7,°C
+Temperatur8,°C
+Temperatur9,°C
+Temperatur10,°C
+Batterie,mAh
+Gewicht,kg
+Lagerstand,Stück
+Húmidade Relativa,%
+Pressão Atmosférica,hPa
+Luminosidade,lx
+Intensidade UV,μW/cm²
+Particulas de Poeira - PM10,µg/m³
+Particulas de Poeira - PM2.5,µg/m³
+NC1.0,μm/cm3
+NC2.5,μm/cm3
+NC4.0,μm/cm3
+NC10,μm/cm3
+relative Feuchtigkeit,%
+IAQ (indoor air quality),IAQ
+Temperatur intern Sensor,°C
+%rF,%
+Temperatur (am CO2 Sensor),°C
+relative Luftfeuchtigkeit (am CO2 Sensor),%
+Raumtemperatur,°C
+relative Feuchte im Raum,%
+absolute Luftfeuchtigkeit,g/cm³
+Woonkamer,°C
+Zolder,°C
+PM25,pm
+PM10,pm
+Luftfeuchtigkeit,% rH
+W-Lan,%
+Bodenfeuchte 20cm,%
+PM01,μg/m³
+PM10,µ/m3
+PM25,µ/m3
+PM01,µ/m3
+luftdruck,bar
+UV Strahlung,UV
+CO2eq,ppm
+Kalibrierungswert,-
+Temperatur SCD30,°C
+Luftfeuchte,Prozent rH
+WiFi,Prozent
+Kein Wert,LUX
+UV,Unknown
+Fake Sensor3,Fakes
+LAeq,dB(A)
+nc0.5,#/cm³
+nc1.0,#/cm³
+nc2.5,#/cm³
+nc4.0,#/cm³
+pm0.5,µg/m³
+TPS,µm
+signal,dB
+n05,#/cm³
+n1,#/cm³
+n2.5,#/cm³
+n4,#/cm³
+n10,#/cm³
+Luftfeuchtigkeit,%rel
+Bodenfeuchtigkeit im Blumentopf,%rel
+UV-Einstrahlung,uW/cm²
+WiFi Qualität,%
+Beleuchtungsstärke,LUX
+Bodentemperatur A,°C
+Bodentemperatur B,°C
+particulate matter sensor,PM2.5
+particulate matter sensor,PM10
+Noise,DBa
+Durchschnitt Umgebunslautstärke,dbavg
+temperatur,° Celcius
+Temperatur,Gradc°Celsius
+Luftdruck,HecktoPascal
+Luftfeuchtigkeit,Prozent
+Bodenfeuchtigkeit,Prozent
+W-LAN,Prozent
+LA min,dB(A)
+LA max,dB(A)
+particle PM10,μg/m³
+particle PM2.5,μg/m³
+particle PM100,μg/m³
+Bodentemperatur 30cm,°C
+Rain per hour,mm
+Rain per day,mm
+left nozzle,°C
+right nozzle,°C
+heatbed temperature,°C
+fan speed,%
+print progress,%
+time_left:,min
+Breitengrad,°
+Längengrad,°
+HöheNN,m
+Laengengrad,°
+Hoehe,m
+Radioactivity,cpm
+PM01,μg/m3
+Altitude,M
+Battery,mah
+Feinstaub 2.5,µm
+sensor1,value
+sensor2,units
+sensor3,units
+sensor4,units
+sensor5,units
+sensor6,units
+bauteile,einheiten
+sensor8,units
+sensor9,units
+sensor10,units
+Fahrzeuge,Anz
+Bodenfeuchte 60cm,%
+Bodentemperatur 60cm,°C
+VOC,%
+Temp,C
+NOx,%
+Co2,ppm
+Akku,Volt
+Lautstärke,anyValue
+PM 1,μg/m3
+PM 2.5,μg/m3
+PM 4,μg/m3
+PM 10,μg/m3
+VOC,μg/m3
+VOC Index,%
+NOx Index,%
+PM1.0,ug/m3
+PM4.0,ug/m3
+Power Supply,V
+temperature inside box,°C
+SealevelPressure,hPa
+Temperatur (HECA),C
+Gas,Ohm
+AirQuality,%
+Durchschnitt Lärmpegel,dB(A)
+Minimalster Lärmpegel (2.5 Minuten),dB(A)
+Maximaler Lärmpegel (2.5 Minuten),dB(A)
+PM4.0,µg/m³
+NOx Index,ppm
+VOC Index,ppm
+Feinstaub PM1.0,µg/m³
+Solarstrom,Volt
+luftdruck,Pa
+rel. luftfeuchte,%
+pm2.5,µg/m³
+pm10,µg/m³
+Luftdruck Meereshöhe,Pa
+Böe,km/h
+Lichtstärke,lx
+Feinstaub PM2.5,ug/m3
+Feinstaub PM10,ug/m3
+Wind aus,Grad
+Regen,l/m²
+Gehäusetemperatur,°C
+Dense PM 1.0,µg/m³
+Dense PM 4.0,µg/m³
+Dense PM 10,µg/m³
+Dense PM 2.5,µg/m³
+Particals PM 0.5,particals/cm³
+Particals PM 1.0,particals/cm³
+Particals PM 2.5,particals/cm³
+Particals PM 4.0,particals/cm³
+Particals PM10,particals/cm³
+asd,°C
+Temp 1,°C
+Humid 1,%
+Temp 2,°C
+Humid 2,%
+Temp 3,°C
+Humid 3,%
+Wind aus,‎ °
+UV- Index,‎
+UV- Intensität,W/m²
+CO - Carbon Monoxide,ppm
+NH3 - Ammonia,ppm
+NO2 - Nitrogen Dioxide,ppm
+Rain,mm/min
+Ambient Light,lux
+O3 - Ozon,ppm
+rel. Luftfeuchte (Wilgotonosc),%
+Luftdruck (Cisnienie),Pa
+rel. Luftfeuchte (Wilgotnosc HECA),%
+Temperatur (HECA) temp. wlot czujnika,C
+rel. Luftfeuchte (HECA) wilg. wlot czujnika,%
+PM10 pył zawieszony,µg/m³
+PM2.5 pył zawieszony,µg/m³
+Temperatur / Temperatura,°C
+rel. Luftfeuchte / Wilgotność,%
+Luftdruck / Ciśnienie,Pa
+CO2,hPa
+PMS1,µg/m³
+PMS2.5,µg/m³
+PMS10,µg/m³
+NOx Index,index
+VOC Index,index
+pH-Wert,mol/l
+Gesamthärte,°dH
+Eisen,mg/L
+Nitrat,mg/L
+Nitrit,mg/L
+Gesamthärte 2,°dH
+Kupfer C,mg/L
+Kupfer D,mg/L
+Kupfer1,mg/L
+GesamthaerteLabor,°dH
+Kupfer2,mg/L
+Blei,mg/L
+WiFi-Status,.
+pm 2.5,ug/cm3
+Höhen,NN
+UV Strahlung,uW
+feuchtigkeit,%
+Temperatur_DHT22,°C
+Feinstaub pm 10,µg/m³
+Feinstaub pm 2.5,µg/m³
+rel. Luftfeuchte_DHT22,%
+NOx,Index sensor
+VOC,Index sensor
+Voc,kOhm
+absoluter Luftdruck,hPa
+relativer Luftdruck,hPa
+abs. Luftdruck,hPa
+luftdruck,hPa
+Temperatur Luft,°C
+Temperatur in Messstation,°C
+Luft Qualität,mOhm
+"Feinstaub(PM2,5)",µg/m³
+Feinstaub(PM10),µg/m³
+Niederschlag Aktuelle Stunde,l/m²
+Niederschlag letzte Stunde,l/m²
+Niederschlag Heute,l/m²
+Niederschlag Gestern,l/m²
+Niederschlag Detector,-
+Windgeschwindigkeit,Km/h
+Sturmstärke,Beaufort
+UV Strahlung,Index
+Humi,%
+PM25,ug/m3
+accX,m3
+accZ,m3
+accY,m3
+Abstand,cm
+light intensity,Lux
+Ultraschall,cm
+abs. Luftfeuchte,%
+abs. Lutdruck,hPa
+rel. Lutdruck,hPa
+Akku,V
+CSQ,units
+PM4,µg/m
+Batterie,raw
+Temperatur 1 (G),°C
+Temperatur 2 (G),°C
+Temperatur 4 (A),°C
+Temperatur 3 (G),°C
+Feinstaub,µm
+Regen,%
+particulate matter,PM2.5
+particulate matter,PM10
+Luftdruck (lokal),hPa
+NOx,Index
+VOC,Index
+Stand,m
+Heizung,On/Off
+Temperature,Centigrade
+CO₂,PPM
+IAQ,.
+Temperature,℃
+---,_
+---,#
+SoilHumidity,%
+asd,asd
+no phenom,no unit
+Time,Index
+Soil humidity,%
+Operate,Index
+Beschleunigung auf der X-Achse,m/s²
+Beschleunigung auf der Y-Achse,m/s²
+Beschleunigung auf der Z-Achse,m/s²
+rel. Luftfeuchte_DHT22_vermtl.-defekt,%
+rel. Luftfeuchte_DHT22_defekt,%
+CO2,%
+Luftdruck bmp280,hPa
+Temperatur bmp280,°C
+Temperatur bme680,°C
+Luftfeuchtigkeit bme680,%
+Luftdruck bme680,hPa
+Luftqualität bme680,--
+CO2 Äquivalent,ppm
+Atemluftqualität,--
+Luftfeuchte,%rF
+Regenmenge,l/m2
+Windböen,m/s
+Luftfeuchtigkeit HDC1080,%
+VOC bme680,kOhm
+Luftfeutigkeit %RH,%RH
+Fahrzeugzähler,Anz/min
+Power Generation,W
+Cumulative Energy Production,kWh
+leute,st
+NOx,ppm
+VOC,ppm
+Estimated Savings,€
+VOC,index
+Temperatur SCD030,°C
+Humidity SCD030,%
+Wind Speed,Km/h
+Direction,°
+Dust PM 2.5,µg/m³
+Dust PM 10,µg/m³
+Verkehrsdichte,Fz/min
+Luftdruck2,hPa
+rel. Luftfeuchte2,%
+Tensiokontrolle,D
+Трудности с дыханием,баллов
+Температура,°C
+Влажность,%
+Давление,Па/мм
+Tensiometer,mbar
+Направление ветра,градусов
+Скорость ветра,м/с
+Давление,Па
+Sonnenstrahlung,-
+Umidity,%
+Temperatursensor,C
+Sonnenstrahlung (0-1023),-
+Направление ветра,°
+Particulate Matter PM10 SPS30,µg/m^3
+Particulate Matter PM2.5 SPS30,µg/m^3
+Typical Particle Size SPS30,µm
+CO2 SCD41,ppm
+Temperature SCD41,°C
+Humidity SCD41,%
+Particulate Matter PM10 SDS011,µg/m^3
+Particulate Matter PM2.5 SDS011,µg/m^3
+CO2 SCD30,ppm
+Humidity SCD30,%
+HCHO SFA30,???
+VOC SVM30,???
+CO2eq SVM30,???
+13B Humidity BME680,%
+13B Temperature BME680,°C
+13B Pressure BME680,hPa
+13B Temperature SHT 31,°C
+13B Humidity SHT31,%
+"Feinstaub, mass concentrations",ug/kg
+"Feinstaub, number concentrations",particles per cm3
+CO2,g/l
+C02,g/l
+Feinstaub,particles per cm3
+UV Index,µW/cm^2
+03 Beleuchtungsstärke TSL45315,lx
+03 UV-Intensität VEML6070,μW/cm²
+03 Luftfeuchte BME680,%
+03 Lufttemperatur BME680,°C
+03 atm. Luftdruck BME680,hPa
+03 Tempsensor SHT85 0,°C
+03 Tempsensor SHT85 1,°C
+03 Tempsensor SHT85 2,°C
+03 Tempsensor SHT85 3,°C
+03 Feuchtesensor SHT85 4,%
+03 Feuchtesensor SHT85 5,%
+03 Feuchtesensor SHT85 6,%
+03 Feuchtesensor SHT85 7,%
+03 Feuchtesensor SHT31-DIS-B FPCD 0,%
+03 Feuchtesensor SHT31-DIS-B FPCD 1,%
+03 Tempsensor SHT31-DIS-B FPCD 2,°C
+03 Tempsensor SHT31-DIS-B FPCD 3,°C
+11 Temperature BME680,°C
+11 Humidity BME680,%
+11 Pressure BME680,hPa
+11 Temperature SHT31,°C
+11 Humidity SHT31,%
+"Luftfeuchte, BME680",%
+"Lufttemperatur, BME680",°C
+"atm. Luftdruck, BME680",hPa
+"VOC, BME680",kOhm
+"Lufttemperatur, SHT31",°C
+"Luftfeuchte, SHT31",%
+Koordinaten,°
+"CO2, SCD41",ppm
+"Lufttemperatur, SCD41",°C
+"Luftfeuchte, SCD41",%
+"CO2, SCD30",ppm
+"Luftfeuchte, SCD30",%
+"Lufttemperatur, SCD30",°C
+"Luftfeinstaubkonzentration, SPS30",ppm
+"Multi-Gas, SVM30",ppm
+"Luftfeuchte, SVM30",%
+"Lufttemperatur, SVM30",°C
+"Feinstaub, SDS011",ug/kg
+09 Temperature SHT31,°C
+09 Humidity SHT31,%
+09 CO2 SCD30,ppm
+09 Temperature SCD30,°C
+Трудности с дыханием,балла
+"PM2,5",µg/m²
+006.B Pressure BME680,hPa
+006.B Temperature SHT31,°C
+006.B Humidity SHT31,%
+Mean temperature 006,°C
+Mean Humidity 006,%
+006 Temperature BME680_B,°C
+006 Humidity BME680_B,%
+006 Pressure BME680_B,hPa
+006  Temperature SHT31_B,°C
+006 Humidity SHT31_B,%
+13B CO2 SCD30,?
+13B Temperature SCD30,°C
+13B Humidity SCD30,%
+13B CO2 SVM30,ppm
+13B TVOC SVM30,ppb
+13B H2 SVM30,?
+13B Ethanol SVM30,?
+2 rel. Luftfeuchte BME680,%
+2 Beleuchtungsstärke TSL45315,lx
+2 UV-Intensität,μW/cm²
+2 Temperatur BME680,°C
+2 Feuchtigkeit SHT85Pin-Typ,%
+2 Temperatur SHT85Pin-Typ,°C
+2 Feuchtigkeit SHT31-DIS-B FPCB,%
+2 Temperatur SHT31-DIS-B FPCB,°C
+2 Windgeschwindigkeit Davis,m/s
+Niederschlag Davis,mm
+2 Luftdruck BME680,bar
+11B Temperature BME680,°C
+11B Humidity BME680,%
+11B Pressure BME680,hPa
+11B Particulate Matter PM10 SDS011,µg/m³
+11B Particulate Matter PM2.5 SDS011,µg/m³
+11B Particulate Matter PM10 SPS30,µg/m³
+11B Particulate Matter PM2.5 SPS30,µg/m³
+11B Typical Particle Size SPS30,µm
+11B CO2 SCD30,ppm
+11B Temperature SCD30,°C
+11B Humidity SCD30,%
+11B HCHO SFA30,ppm
+11B Temperature SFA30,°C
+11B Humidity SFA30,%
+11B CO2 SCD41,ppm
+11B Temperature SCD41,°C
+11B Humidity SCD41,%
+11B VOC SVM30,µg/m³
+11B CO2eq SVM30,ppm
+11B Temperature SVM30,°C
+11B Humidity SVM30,%
+11B  Temperature SHT31,°C
+11B Humidity SHT31,%
+11B Particulate Matter PM10 SPS30,particles/cm3
+11B Particulate Matter PM2.5 SPS30,particles/cm3
+006 CO2 SCD30_B,ppm *
+006 TVOC SGP30_B,ppm *
+006 PM10 SDS011_B,ppm
+006 PM2.5 SDS011_B,ppm
+006 CO2 SGP30_B,ppm
+PM0,µg/m³
+Luftdruck,%
+Luftfeuchte BME680,%
+Lufttemperatur BME680,°C
+atm. Luftdruck BME680,hPa
+Temperatur SHT31,°C
+Luftfeuchtigkeit SHT31,%
+Luftfeuchtigkeit SHT85_0,%
+Temperatur SHT85_0,°C
+Wind Direction Davis,Grad
+Wind Speed Davis,km/h
+Niederschlag Davis,mm/min
+Temperatur SHT85_1,°C
+Temperatur SHT85_2,°C
+Temperatur SHT85_3,°C
+Temperatur SHT85_4,°C
+Luftfeuchtigkeit SHT85_1,%
+Luftfeuchtigkeit SHT85_2,%
+Luftfeuchtigkeit SHT85_3,%
+Luftfeuchtigkeit SHT85_4,%
+"08 Luftfeuchte, BME680",%
+"08 Lufttemperatur, BME680",°C
+"08 atm. Luftdruck, BME680",hPa
+"08 VOC, BME680",kOhm
+"08 Lufttemperatur, SHT31",°C
+"08 Luftfeuchte, SHT31",%
+08 Koordinaten,°
+"08 CO2, SCD41",ppm
+"08 Lufttemperatur, SCD41",°C
+"08 Luftfeuchte, SCD41",%
+"08 CO2, SCD30",ppm
+"08 Luftfeuchte, SCD30",%
+"08 Lufttemperatur, SCD30",°C
+"08 Luftfeinstaubkonzentration, SPS30",ppm
+"08 Multi-Gas, SVM30",ppm
+"08 Luftfeuchte, SVM30",%
+"08 Lufttemperatur, SVM30",°C
+"08 Feinstaub, SDS011",ug/kg
+006 PM10 SDS011_B,ug / m3
+006 PM2.5 SDS011_B,ug /m3
+006 Pressure BME680_B,Pa
+NC0.5,#/cm³
+NC4,#/cm³
+NC1.0,#/cm³
+NC2.5,#/cm³
+Particulate meter PM2.5,ug/m3
+Particulate meter PM10,ug/m3
+Power,W
+Electrical Capacity,Ah
+Consumed Energy Today,Ah
+Generated Energy Today,Ah
+Total Consumed Energy,Ah
+Total Generated Energy,Ah
+01 Temperatur SHT85_0,°C
+01 Temperatur SHT85_1,°C
+01 Temperatur SHT85_2,°C
+01 Temperatur SHT85_3,°C
+01 Temperatur SHT31_4,°C
+01 Temperatur SHT31_5,°C
+01 Temperatur SHT31_6,°C
+01 Temperatur SHT31_7,°C
+Humidity SHT85_0,%
+Humidity SHT85_1,%
+Humidity SHT85_2,%
+Humidity SHT85_3,%
+Humidity SHT31_4,%
+Humidity SHT31_5,%
+Humidity SHT31_6,%
+Humidity SHT31_7,%
+13B CO2 SVM30,ppm?
+13B TVOC SVM30,ppm?
+13B H2 SVM30,ppm?
+13B Ethanol SVM30,ppm?
+13B CO2 SCD41,ppm?
+13B Particulate Matter PM10 SPS30,ug/kg
+13B Particulate Matter PM2.5 SPS30,ug/kg
+13B Particulate Matter PM10 SDS011,ug/kg
+13B Particulate Matter PM2.5 SDS011,ug/kg
+13B HCHO SFA30,ppm?
+13B Typical Particle Size SPS30,um
+13B Temperature SCD41,°C
+13B Temperature SVM30,°C
+13B Temperature SFA30,°C
+Particulate meter PM2.5,μg/m3
+Particulate meter PM10,μg/m3
+Tenperature,°C
+Co2 - Carbon Dioxide ppm,ppm
+Co2 - Carbon Dioxide ppb,ppb
+Co2 - Carbon Dioxide Temp,°C
+11 p10 SDS011,µg/m³
+11 p25 SDS011,µg/m³
+11 CO2 SCD30,ppm
+11 Temperature SCD30,°C
+11 Humidity SCD30,%
+11 CO2 SCD41,ppm
+11 Temperature SCD41,°C
+11 Humidity SCD41,%
+11 HCHO SFA30,ppm
+11 Temperature SFA30,°C
+11 Humidity SFA30,%
+11 CO2 SGP30,ppm
+11 TVOC SGP30,ppm
+11 H2 SGP30,ppm
+11 Temperature SHTC1,°C
+11 Humidity SHTC1,%
+11 Ethanol SGP30,ppm
+03 Feuchtesensor SHT31-DIS-B FPCD 4,%
+03 Feuchtesensor SHT31-DIS-B FPCD 5,%
+03 Tempsensor SHT31-DIS-B FPCD 6,°C
+03 Tempsensor SHT31-DIS-B FPCD 7,°C
+03 Niederschlag Davis,mm/min
+03 Anemometer Davis Windgeschwindigkeit,km/h
+03 Anemometer Davis Windrichtung,°
+Temperatur SHT31_0,°C
+Luftfeuchtigkeit SHT31_0,%
+Temperatur SHT31_1,°C
+Luftfeuchtigkeit SHT31_1,%
+Illuminance TSL,LUX
+UV Intensity TSL,µW/cm^2
+Temperatur SHT31_2,°C
+Luftfeuchtigkeit SHT31_2,%
+Temperatur SHT31_3,°C
+Luftfeuchtigkeit SHT31_3,%
+006 Pressure BME680_A,hPa
+006 Temperature SHT31_A,°C
+006 Humidity SHT31_A,%
+006 Temperature BME680_A,°C
+006 Humidity BME680_A,%
+006 CO2 SGP30_A,PPM
+006 PM10 SDS011_A,PPM
+006 PM2.5 SDS011_A,PPM
+13B H2 SVM30,ppm
+13B Ethanol SVM30,ppm
+13B CO2 SCD41,ppm
+13B Particulate Matter PM10 SDS011,ug/m^3
+13B Particulate Matter PM2.5 SDS011,ug/m^3
+13B HCHO SFA30,ppb
+13A Humidity BME680,%
+13A Temperature BME680,°C
+13A Pressure BME680,hPa
+13A Temperature SHT31,°C
+13A Humidity SHT31,%
+13A CO2 SVM30,ppm?
+13A TVOC SVM30,ppm?
+13A H2 SVM30,ppm?
+13A Ethanol SVM30,ppm?
+13A CO2 SCD41,ppm?
+13A Particulate Matter PM10 SPS30,ug/kg
+13A Particulate Matter PM2.5 SPS30,ug/kg
+13A Particulate Matter PM10 SDS011,ug/kg
+13A Particulate Matter PM2.5 SDS011,ug/kg
+13A HCHO SFA30,ppm?
+13A Typical Particle Size SPS30,um
+13A Temperature SCD41,°C
+13A Temperature SVM30,°C
+13A Temperature SFA30,°C
+13A CO2 SCD30,ppm?
+13A Luftfeuchtigkeit SCD30,%
+13A Temperatur SCS30,°C
+14 Pressure BME680,hPa
+14 Humidity BME680,%
+14 Temperature BME680,°C
+14 Particulate Matter PM10 SDS011,µg/m³
+14 Particulate Matter PM25 SDS011,µg/m³
+14 Temperature SCD41 1,°C
+14 Temperature SCD41 2,°C
+14 Humidity SCD41 2,%
+14 Humidity SCD41 1,%
+14 CO2 SCD41 2,ppm
+14 CO2 SCD41 1,ppm
+14 Temperature SHT31 1,°C
+14 Temperature SHT31 2,°C
+14 Humidity SHT31 1,%
+14 Humidity SHT31 2,%
+14 Temperature SFA30,°C
+14 Humidity SFA30,%
+14 HCHO SFA30,ppb
+14 Particulate Matter PM10 SPS30,µg/m³
+14 Particulate Matter PM2.5 SPS30,µg/m³
+14 Typical Particle Size SPS30,µm
+14 VOC SVM30,ppm
+14 CO2eq SVM30,ppm
+14 Temperature SVM30,°C
+14 Humidity SVM30,%
+14b Humidity SCD30,ppm
+14b Temperature SCD30,ppm
+14b CO₂ SCD30,ppm
+14b Temperature BME680,°C
+14b Humidity BME680,%
+14b Airpressure BME680,hPa
+14b Particulate Matter PM10 SPS30,ppm
+14b Typical Particle Size SPS30,um
+14b Particulate Matter PM2.5 SPS30,ppm
+14b Humidity SFA30,%
+14b Temperature SFA30,°C
+14b HCHO SFA30,ppb
+14b Temperature SHT31 1,°C
+14b Humidity SHT31 1,%
+14b Temperature SHT31 2,°C
+14b Humidity SHT31 2,%
+14b Temperature SCD41 1,°C
+14b Temperature SCD41 2,°C
+14b Humidity SCD41 1,%
+14b Humidity SCD41 2,%
+14b CO2 SCD41 1,ppm
+14b CO2 SCD41 2,ppm
+14b VOC SVM30,ppm
+14b Temperature SVM30,°C
+14b Humidity SVM30,%
+14b CO2eq SVM30,ppm
+VOC,parts per billion
+09 Humidity SCD30,%
+13A Temperatur SCD30,°C
+13A Luftfeuchtigkeit SVM30,%
+13A Humdity SFA30,%
+13A Humidity SCD41,%
+Temperatur (BME680),°C
+Luftfeuchte (BME680),%
+CO2 (SCD30),ppm
+C02 (SCD41),ppm
+Feinstaub (number concentrations),particles per cm3
+Feinstaub (mass concentrations),µg/kg
+Feinstaub (typical particle size),µg
+13A CO2 SVM30,ppm
+13A TVOC SVM30,ppb
+13A H2 SVM30,ppm
+13A Ethanol SVM30,ppm
+13A CO2 SCD41,ppm
+13A HCHO SFA30,ppb
+13A CO2 SCD30,ppm
+PM10,µ³
+Phenomenon: Luftfeuchte,%
+Phenomenon: Lufttemperatur,°C
+HCHO SFA30,ppm
+VOC SVM30,µg/m^3
+CO2eq SVM30,ppm
+14b Humidity SCD30,%
+14b Temperature SCD30,°C
+G4-temp-2m-A,°C
+G4-L-2m-A,%
+G4-Beleuchtungsstärke,lx
+G4-UV-Intensität,μW/cm²
+G4-atm. Luftdruck,hPa
+G4-Bodenfeuchte,%
+G4-Bodentemperatur,°C
+G4-temp-2m-B,°C
+G4-temp-1m-A,°C
+G4-temp-1m-B,°C
+G4-temp-0.5m-A,°C
+G4-temp-0.5m-B,°C
+G4-temp-0m-A,°C
+G4-temp-0m-B,°C
+G4-L-2m-B,%
+G4-L-1m-A,%
+G4-L-1m-B,%
+G4-L-0.5m-A,%
+G4-L-0.5m-B,%
+G4-L-0m-A,%
+G4-L-0m-B,%
+09 CO2 SCD41,ppm
+09 Temperature SCD41,°C
+09 Humidity SCD41,%
+09 VOC SVM30,ppm
+09 CO2eq SVM30,ppm
+09 Temperature SVM30,°C
+09 Humidity SVM30,%
+09 Particulate Matter PM10 SPS30,um/kg
+09 Particulate Matter PM2.5 SPS30,um/kg
+09 Typical Particle Size SPS30,um
+09 Particulate Matter PM10 SDS011,um/kg
+09 Particulate Matter PM2.5 SDS011,um/kg
+09 Temperature BME680,°C
+09 Humidity BME680,%
+09 Pressure BME680,hPa
+09 H2 SVM30,???
+09 Ethanol SVM30,???
+Niederschlag_Davis,mm/min
+Wind Speed_Davis,km/h
+Wind Direction_Davis,Grad
+offset,cm
+13A H2 SVM30,ppb
+13A Ethanol SVM30,ppb
+PM2.5 (SPS30),µg/m³
+PM10 (SPS30),µg/m³
+"08 PM2.5 , SPS30",ug/m^3
+"08 PM10, SPS30",ug/m^3
+"08 PM0.5, SPS30",particles/cm^3
+13B Humidity SCD41,%
+13B Humidity SVM30,%
+13B Humidity SFA30,%
+2 Feuchtigkeit SHT85Pin-Typ 1,%
+2 Temperatur SHT85Pin-Typ 1,°C
+2 Feuchtigkeit SHT31-DIS-B FPCB 1,%
+2 Temperatur SHT31-DIS-B FPCB 1,°C
+2 Feuchtigkeit SHT85Pin-Typ 2,%
+2 Feuchtigkeit SHT85Pin-Typ 3,%
+2 Feuchtigkeit SHT85Pin-Typ 4,%
+2 Temperatur SHT85Pin-Typ 2,°C
+2 Temperatur SHT85Pin-Typ 3,°C
+2 Temperatur SHT85Pin-Typ 4,°C
+2 Feuchtigkeit SHT31-DIS-B FPCB 2,%
+2 Feuchtigkeit SHT31-DIS-B FPCB 3,%
+2 Feuchtigkeit SHT31-DIS-B FPCB 4,%
+2 Temperatur SHT31-DIS-B FPCB 2,°C
+2 Temperatur SHT31-DIS-B FPCB 3,°C
+2 Temperatur SHT31-DIS-B FPCB 4,°C
+"Luftfeinstaubkonzentration, SPS30 (PM2.5)",ug/m^3
+"Luftfeinstaubkonzentration, SPS30 (PM10)",ug/m^3
+"Luftfeinstaubkonzentration, SPS30 (PM0.5)",particles/cm^3
+SPS30_P2,ug/m3 PM2.5
+SPS30_P1,ug/m3 PM10
+Regenmenge,l/m²
+rel. Luftfeuchte1,%
+Luftdruck1,hPa
+N0.5,#/cm³
+N1.0,#/cm³
+N2.5,#/cm³
+N4,#/cm³
+N10,#/cm³
+Wind Angle Davis,°
+006 CO2 SCD41 A,PPM
+13B CO2 eq. SVM30,ppm
+09 Particulate Matter PM10 SPS30,μg/m³
+09 Particulate Matter PM2.5 SPS30,μg/m³
+09 Particulate Matter PM10 SDS011,µg/m³
+09 Particulate Matter PM2.5 SDS011,µg/m³
+09 H2 SVM30,ppm
+09 Ethanol SVM30,ppm
+"Luftfeinstaubkonzentration, SDS011 (PM2.5)",ug/m^3
+"Luftfeinstaubkonzentration, SDS011 (PM10)",ug/m^3
+006 CO2 S41_B,ppm
+006 PM? SP30_B,ug/kg
+Rain,a.u.
+"08 PM2.5, SDS011",ug/m^3
+"08 PM10,SDS011",ug/m^3
+Bodentemperatur 30cm (coming soon),°C
+Bodentemperatur 60cm (coming soon),°C
+Bodenfeuchte 30cm (coming soon),%
+Bodenfeuchte 60cm (coming soon),%
+006 PM10 SP30_B,ug/kg
+006 PM2.5 SPS30_B,ug/kg
+Bodentemperatur 30cm (bald verfügbar),°C
+Bodentemperatur 60cm (bald verfügbar),°C
+Bodenfeuchte 30cm (bald verfügbar),%
+Bodenfeuchte 60cm (bald verfügbar),%
+VOC A,ppb
+Bodenfeuchte,ADC-Rohdaten
+Pumpe/Kontroll LED,( 0 = rot = trocken  1 = grün = feucht )
+006 PM10 SPS30_A,ug/kg
+006 PM2.5 SPS30_A,ug/kg
+Radiation,µSv
+Feinstaub: PM2.5,µg/m³
+co2,PPM
+Humidity,ref %
+UV-index,UVI
+Battery Level,V
+NC4.0,#/cm³
+NC1,#/cm³
+NC1.0,#/cm3
+NC0.5,#/cm3
+NC2.5,#/cm3
+NC4.0,#/cm3
+NC10,#/cm3
+Трудности с дыханием,балл
+Fahrrad,Gesamtanzahl
+Temp. Luft,C°
+Temp. Boden,C°
+PM10 30min. Mittelwert,µg/m³
+PM2.5 30 min. Mittelwert,µg/m³
+PM10 Momentanwert,µg/m³
+PM2.5 Momentanwert,µg/m³
+Temperatur 1.5m,°C
+Bodentemperatur1,°C
+Bodenfeuchte1,%
+IAQ1,IAQ
+Höhe über NN in m,NN
+006 Pressure BME680_A,Pa
+006 PM10 SDS011_A,ug/m3
+006 PM2.5 SDS011_A,ug/m3
+006 CO2 SCD30_B,ppm
+006 TVOC SGP30_B,ppb
+006 PM10 SDS011_B,ug/m3
+006 PM2.5 SDS011_B,ug/m3
+rel. Luftfeuchtigkeit,r%
+abs. Luftfeuchtigkeit,g/m³
+Temperatur (Hochbeet),°C
+Feuchtigkeit (Hochbeet),% nFK
+pH-Wert (Hochbeet),pH
+Leitfähigkeit (Hochbeet),EC (mS)
+UV-Index,‎
+UV-Intensität,W/m²
+Power Output,W
+Leitfähigkeit,ADC
+PM10_defekt,µg/m³
+PM2.5_defekt,µg/m³
+Gesendet:,Mal
+Bodenfeuchte 90cm,%
+Bodentemperatur 90cm,°C
+Bodenfeuchte(Capatzitiv),ADC
+Bodenfeuchte(Leitfähigkeit),ADC
+Atmosphere pressure,hPa
+SCD30_T,C
+SCD30_H,%
+SCD30_CO2,ppm
+SCD41A_T,C
+SCD41A_H,%
+SCD41A_CO2,ppm
+SCD41B_T,C
+SCD41B_H,%
+SCD41B_CO2,ppm
+DS18B20_ho4,°C
+Testdata,1
+BMP280_temperature,°C
+BMP280_pressure,hPa
+SPS30_P0,µg/m³
+SPS30_P2,µg/m³
+SPS30_P4,µg/m³
+SPS30_P1,µg/m³
+SPS30_N05,#/cm³
+SPS30_N1,#/cm³
+SPS30_N25,#/cm³
+SPS30_N4,#/cm³
+SPS30_N10,#/cm³
+Solar Power,W
+Carbon Dioxide,ppm
+Volatile Organic Components,ppb
+Air Quality Index,IAQ
+Radiation Exposure,μSv/h
+Radiationtube Discharges,CPM
+relative Luftfeuchtichkeit,%
+Temperatur DPS,°C
+Lichtintensität,lx
+Batterie Spannung,V
+Batterie Level,/4
+Fahrzeugzähler,Anz
+Druck,%
+pH-Wert,-
+EisenLabor,mg/L
+Luftvolumen,m³/kg
+Durchflussmenge,L/Min
+WiFi,%
+Durchflussmenge,l/Min
+Temp 1 (HDC),°C
+rel. Luftfeuchte1 (HDC),%
+UV-Intensität (VEML6070),μW/cm²
+Temperatur2 (DPS310),°C
+Luftdruck2 (DPS310),hPa
+Helligkeit (VEML6070),Lux
+Pooltemperatur,°C
+Solartemperatur,°C
+Boardtemperatur,°C
+Humidity,Percent
+Pressure,Pascal
+Vorlauftemperatur,°C
+Differenztemperatur,°C
+Leistung,Watt
+Panelleistung,kW
+Temperaturdifferenz,K
+smoke,ppm
+Niederschlag Aktuelle Stunde,l/m³
+Door open,bool
+window,bool
+Batterie01,V
+Batterie02,V
+Batterie03,V
+Batterie04,V
+Batterie05,V
+Temparatur,C°
+Lichtstärke,lux
+Temperatur / Hőmérséklet,°C
+rel. Luftfeuchte / Páratartalom,%
+Luftdruck / Légnyomás,Pa
+Fahrzeugdichte,Anz/min
+Beschleunigung X-Achse,m/s²
+Beschleunigung Y-Achse,m/s²
+Beschleunigung Z-Achse,m/s²
+Distanz nach Links,cm
+Soil temperature,° C
+Soil moisture,%
+Distance,cm
+test,unit
+lichtsensor,unit
+Hygrométrie,%
+Zähler01,Counts
+Zähler02,Counts
+Zähler03,Counts
+Zähler04,Counts
+Zähler06,Counts
+TempF,°F
+Icon,txt
+WindSpeed,m/s
+Druck,PA
+VOC,X
+NOx,X
+Supply Voltage,V
+Power,V
+Solar Spannung,V
+UV,µW/m²
+Air temperature,° C
+Air humidity,° C
+Zähler05,Counts
+"pm01, pm0, p1.0, p0",µg/m³
+"pm2.5, pm25, p2.5, p25, p2",µg/m³
+"pm4, p4",µg/m³
+"pm10, p10, p1",µg/m³
+"nc0.5, n0.5, nc05, n05",#/cm³
+"nc1.0, nc1, n1.0, n1",#/cm³
+"nc2.5, n2.5",#/cm³
+"nc4.0, n4.0, nc4, n4",#/cm³
+"nc10, n10",#/cm³
+"rel. luftfeuchte, luftfeuchtigkeit, luftfeuchte",%
+"luftdruck, druck",hPa
+Solar Power,KWh
+UV-Sensor,µW/cm²
+Luftdruck1 (DPS310),hPa
+Feinstaubsensor,PM 2.5
+Feinstaubsensor,PM 10
+Batterieladung,V
+Luftfeuchte,rF
+Regenmenge,l/min
+Solarspannung,V
+Batterielevel,/4
+Bodenfeuchte 4,%
+Bodentemperatur 4,°C
+Temperatur Tagesmittelwert,°C
+Feinstaubsensor PM2.5,PM 2.5
+Feinstaubsensor PM10,PM 10
+Regenrate (10 min Mittelw.),l/h
+PM4,µg/m3
+luftfeuchtigkeit,%
+UV-Light,µW/cm^2
+Windrichtung (Mittel),Grd
+Windrichtung (Böen),Grd
+Active Solar Power,Watt
+illuminance,lux
+color_temperature,K
+Solar Power Efficiency,%
+Daily Yield,Kwh
+Feinstaub,pm2.5
+UV Index (UVM30A),µW/lm
+Temperatur (Kräutergarten),°C
+Feuchtigkeit (Kräutergarten),% nFK
+Leitfähigkeit,EL (µS/cm)
+Power,mV
+Leitfähigkeit,EL (mS/cm)
+Kabelfühler,°C
+DNMS,dBA
+dust sensor,µg/m³
+Bodenfeuchte (jetzt),%
+Bodenfeuchte (30-sec),%
+Wind Direction,Direction
+Temperatur BME680,°C
+Luftdruck BME680,hPa/mbar
+VOC BME680,kΩ
+CO²-Äquivalent,.
+Bodenfeuchte (bewässert),%
+pressure,nPa
+co2_ppm,ppm
+Ciśnienie,mmHg
+Rain Today,mm
+Intensity,mm/h
+Intensity Liquid,mm/h
+Intensity Solid,mm/h
+Luftqualität,nn
+Waldbrandwarnstufe,Stufe
+Latitude,°N
+Longitude,°O
+Rain Intensity,mm/h
+Ozon,ug/m3
+Regen,L/m²
+Heat Index,°C
+Dewpoint,°C
+Lightning Distance,KM
+Lux,LUX
+Relative Feuchtigkeit,%
+Absolute Luftdruck,hPa
+P1,ticks
+P2,kwh
+P3,kW
+Rssi,%
+Feinstaub PM2.5,μg/m³
+Mitelwert Windgeschwinigkeit,m/s
+Dust PM2.5,μg / m³
+Dust PM10,μg / m³
+Mittelwert Windgeschwindigkeit,m/s
+Mittelwert Windrichtung,°
+Gehäuseinnentemperatur,°C
+Akustische Temperatur,°C
+Lufttemperatur unkorrigiert,°C
+Rel. Feuchte,%
+Taupunkttemperatur,°C
+Absoluter Luftdruck,hPa
+relativer Luftdruck bezogen auf Meereshöhe,hPa
+Helligkeit Nord (feste Gerätezuordnung),kLux
+Helligkeit Ost (feste Gerätezuordnung),kLux
+Helligkeit Süd (feste Gerätezuordnung),kLux
+Helligkeit West (feste Gerätezuordnung),kLux
+Richtung der Helligkeit,°
+"Helligkeit, größter Wert der 4 Einzelsensoren",kLux
+Niederschlagsereignis,"0=kein Niederschlag, 1=Niederschlag"
+Niederschlagsintensität,mm/h
+Niederschlagsart,Synop Code
+Sonnenstand Elevation,°
+Sonnenstand Azimut,°
+Sensorversorgung,V
+Maximalwert der Wind- geschwindigkeit (Böe),m/s
+Windrichtung der Böe,°
+Absolute Feuchte,g/m³
+Rel. Feuchte unkorrigiert,%
+Magnetkompass Differenzwinkel Geräte- Nordmarkierung zum magnetischen Nordpol,°
+"Helligkeit, vektorielle Summe",Lux
+Windchill Temperatur Gültig wenn Lufttemperatur <10°C,°C
+Hitze Index Temperatur Gültig wenn Lufttemperatur >26°C und rel.Feuchte >40%,°C
+Niederschlagsmenge absolut,mm
+Globalstrahlung,W/m²
+Pitch vom Magnetkompass Winkel zwischen Nord- Süd zur Horizontalen,°
+Roll vom Magnetkompass Winkel zwischen West- Ost zur Horizontalen,°
+PM25,μg/m³
+LAmin,dB(A)
+LAmax,dB(A)
+Current,mA
+Atemluft,VOC
+Innenraumluftqualitaet,IAQ
+Boen,km/h
+Temperatur (im Gebäude ohne unmittelbare Sonneneinstrahlung),°C
+Feinstaub [PM10],µg/m³
+Feinstaub [PM2.5],µg/m³
+Bodenfeuchte1 mit Pflanzenkohle,%
+Bodenfeuchte2 mit Pflanzenkohle,%
+Bodenfeuchte3 mit Pflanzenkohle,%
+Bodentemperatur2,°C
+Bodentemperatur3,°C
+Bodenfeuchte1 ohne Pflanzenkohle,%
+Bodenfeuchte2 ohne Pflanzenkohle,%
+Bodenfeuchte3 ohne Pflanzenkohle,%
+nPosts,Posts
+Belechtungsstärke,lx
+UV-Intensität,uW/cm²
+Feinstaub PM10,ug/m³
+Feinstaub PM2.5,ug/m³
+Voltage,mV
+BodenfeuchteA,%
+BodenfeuchteB,%
+Bodenfeuchte C,%
+rel. Luftfeuchte (HDC),%
+Luftdruck (DPS310),hPa
+particulate matter 2.5,µg/m³
+particulate matter 10,µg/m³
+DNMS_Noise_LAeq,dB(A)
+SPS30_TS,µm
+DNMS_Noise_LAmax,dB(A)
+DNMS_Noise_LAmin,dB(A)
+Fahrzeugdichte,Anz/h
+Device Temperature,°C
+AmbientLight,lx
+pm2.5,ug/m^3
+battery voltage,V
+LPG (Autogas),%
+CO,%
+Rauch,%
+"Feinstaub 2,5",µg/m3
+Feinstaub 10,µg/m3
+Luftqualitätsindex,KOhm
+LPG (Autogas),ppm
+CO (Kohlenstoffmonoxid),ppm
+Rauch,ppm
+Temperatur (HECA) temperatura,°C
+rel. Luftfeuchte (HECA) wilgotność,%
+Umgebungslicht,Lux
+Beläuchtungsstärke,lux
+Temparatur,°C
+Active Solar Power,kW
+Daily Yield,kWh
+Humdity,%
+T,°C
+rF,%
+p,hPa
+Luftdruck,HP
+Wassertemperatur,C°
+Distanz,cm
+Distanz(zur Wasseroberfläche),cm
+Personenanzahl,P
+pressure,pa
+Beschleunigung X,m/s²
+Beschleunigung Y,m/s²
+Beschleunigung Z,m/s²
+Distance L,cm
+Umidade,%
+Pressão do Ar,hPa
+. Helligkeit,lx
+. Spannung,mV
+Magnifik,Gauß
+Wasserpegel,mm
+Sonneneinstrahlung,Watt / m²
+IoT1,1
+IoT2,1
+IoT3,1
+IoT4,1
+IoT5,1
+LA.avg,dBA
+Feldstärke,mH
+LA.min,dBA
+LA.max,dBA
+LC.avg,dBC
+LC.min,dBC
+LC.max,dBC
+LZ.avg,dBZ
+LZ.min,dBZ
+LZ.max,dBZ
+Niederschlag heute,l/m²
+Niederschlag akt. Stunde,l/m²
+Niederschlag im Monat,l/m²
+Distanz Links,cm
+Bodenfeuchte 80cm,%
+Bodenfeuchte 80cm,°C
+Helligkeit,qW/cm²
+Temperatur DHT11,C°
+Feuchte DHT11,%
+Gesendet:,mal
+Wlan Status,no
+Wlan RSSI,dBm
+Cyclecount,cycles
+Füllstand,Voll
+"T0, probe 0 temperature",°C
+"T1, probe 1 temperature",°C
+Inside box temperature,°C
+Inside box humidity,%
+Battery,12bit
+Device status,8bit
+Active probes,#
+Bodentemperatur 80cm,°C
+Device status,(8bits)
+Laerm,dBA
+CO2,-
+Pressure,mb
+Zeit,-
+light visible,lux
+Ladezustand,%
+SHT3X_temperature,°C
+Radioaktivität,µSv
+Volume,dba
+Humidity (DHT11),%
+Temperature (DHT11),°C
+Temperatur (1),°C
+rel. Luftfeuchte (1),%
+PM10 (1),µg/m³
+PM2.5 (1),µg/m³
+Lautstärke (1),dB (A)
+CO2 (1),ppm
+Temperatur (2),°C
+rel. Luftfeuchte (2),%
+PM10 (2),µg/m³
+PM2.5 (2),µg/m³
+CO2 (2),ppm
+Temperatur (3),°C
+rel. Luftfeuchte (3),%
+PM10 (3),µg/m³
+PM2.5 (3),µg/m³
+CO2 (3),ppm
+Behälterinhalt,%
+Umgebungslärm,dB(A)
+Prozessortemperatur,°C
+Lichtstärke,Lx
+Versorgungspannung,V
+Soil moisture (30-sec average),%
+Soil moisture (now),%
+UV,- (Intensity)
+Temperatur (6),°C
+rel. Luftfeuchte (6),%
+PM10 (6),µg/m³
+PM2.5 (6),µg/m³
+CO₂ (6),ppm
+Temperatur (4),°C
+rel. Luftfeuchte (4),%
+PM10 (4),µg/m³
+PM2.5 (4),µg/m³
+Lautstärke (4),dB (A)
+CO₂ (4),ppm
+Temperatur Wasser,°C
+Temperatur Device,°C
+Licht,_
+Belüftung,_
+Füllstand Tank,%
+Zirkulatinspumpe,_
+Hauptpumpe Ebbe Flut System,_
+Kugelventil 1,_
+Kugelventil 2,_
+Kugelventil 3,_
+Wasser Kühlung/Heizer,_
+Batteriespannung1,V
+Batteriespannung2,V
+Batteriespannung3,V
+Batteriespannung4,V
+Batteriespannung5,V
+Batteriestrom1,A
+Batteriestrom2,A
+Batteriestrom3,A
+Batteriestrom4,A
+Batteriestrom5,A
+Füllstand,Voll (Prozent)
+Moisture,%
+1istOK,F
+Temperatur BOX2,C°
+Feuchte BOX2,%
+Temperatur DHT11 BOX3,C°
+Feuchte DHT11 BOX3,%
+Temperatur DHT11 BOX4,C
+Feuchte DHT11 BOX4,%
+Luftfeuchte (Sensor 2),%
+PM10Color,Text
+PM2.5Color,Text
+mainColor,Text
+DateTime,Time
+var10,Text
+var11,Text
+Tensio 2,mbar
+Transmitter00,dB
+Transmitter01,dB
+Receiver02,dB
+Tensio1,mbar
+Luftfeuchtigkeit,%H
+Sound_dummy 1,dBa
+Sound_dummy 2,dBa
+Sound_dummy 3,dBa
+Motorstrom,A
+Parkplatz,Frei
+Temp,Metric
+Temp,Imperial
+RealFeelC,DegC
+RealFeelF,DegF
+RelHumidity,Percent
+SpareVar01,Number
+SpareVar02,Text
+SpareVar03,Text
+VOC,mg
+Power supply,V
+RSSI (Empfangsstärke am Gateway),dBm
+Umgebungstemperatur,°C
+T obj (?),°C
+Infrarot,Gute Frage
+BF1,D
+BF2,mbar
+Ozon,µg/m3
+Ionizing radiation,uSv/h
+Temperature,˚C
+Rain switch,state
+Box2 soil temperature,˚C
+Box3 soil temperature,˚C
+Box4 soil temperature,˚C
+Box5 soil temperature,˚C
+BF1,mbar
+BF2,D
+BF3,D
+BF4,D
+BF5,D
+BF6,D
+Zähler,Counts
+Temp,Grd-C
+BF1,V
+Lautstärkesensor,dBA
+Temperatur(ohne Windeinfluss),°C
+Temperatur(mit Windeinfluss),°C
+Füllstand,Prozent
+Akkuladung,Prozent
+UV index,index
+Air pressure on sea level,Pa
+Energie Solarzelle,W
+Akkustand,%
+AusrichtungVertikal,°
+AusrichtungHorizontal,°
+NOx index,%
+VOC index,%
+supply voltage,V
+Ionizing radiation,µSv/h
+Raindrops,%
+MainColor,Text
+RealFeel,°C
+Var10,Text
+Var11,Text
+Batteriestand,Prozent
+kWh,kWh
+Grid voltage,V
+Akkustand (scheinbar kaputt),Prozent
+LZ.max,dbZ
+IAQ,Points
+Breathe VOC Equivalent,Points
+CO2 Equivalent,points
+dd,22
+PM1.0,µg/m3
+PM4.0,µg/m3
+NOx index,ppm
+VOC index,ppm
+realtive humidity,%
+power supply,V
+CPU_temp,°C
+HDD1_temp,°C
+HDD2_temp,°C
+Taupunkt,°
+Sonneneinstrahlung,W/㎡
+Bodentemperatur,°
+des,s
+Air Quality (PM10),µg/m3
+AQI,Index
+Northeast roof shingles temperature,˚C
+Southeast roof shingles temperature,˚C
+Southwest roof shingles temperature,˚C
+Northwest roof shingles temperature,˚C
+Box16 soil temperature,˚C
+Box17 soil temperature,˚C
+kWh_HZ,kWh
+Plantbox2 soil temperature,˚C
+Plantbox3 soil temperature,˚C
+Plantbox4 soil temperature,˚C
+Plantbox5 soil temperature,˚C
+PM10 24h average,µg/m³
+Plantbox16 soil temperature,˚C
+Plantbox17 soil temperature,˚C
+Helligkeit,Lx
+Temperatur Chill,°C
+Wind average Speed,km/h
+Wind gust Speed,km/h
+Illumination,lux
+UV,UV-light
+LV+UV,Lux
+Füllstand,%
+atm. Luftdruck,mbar
+SQM,mag/arcsec2
+Bewölkungsgrad,%
+"Himmelstemperatur (grober, nicht korrigierter Wert)",°C
+Infrarot,nm
+Regenwahrscheinlichkeit,%
+Licht-Stärke,lux
+CPU_temp1,°C
+CPU_temp2,°C
+CPU_temp3,°C
+CPU_temp4,°C
+Lärm,LAeq
+Lärm,LAmin
+Lärm,LAmax
+Lichtintesität,Lux
+Feinstaub PM4.0,µg/m³
+Niederschlag (letztes Event),mm
+Niederschlag (letztes Event Akkumuliert),mm
+Niederschlag (total),mm
+HDD_temp1,°C
+Lärm,LA_min
+Lärm,LA_max
+Bodenfeuchtigkeit 1,%
+Bodenfeuchtigkeit 2,%
+12_Temperatur_SHT,°C
+12_Temperatur,°C
+12_rel. Luftfeuchte,%
+12_Luftdruck,hPa
+12_rel. Luftfeuchte_SHT,%
+lux,lx
+UV,uve
+8A Temperatur2,°C
+01 Temperatur,°C
+01 rel. Luftfeuchte,%
+01 Luftdruck,hPa
+01 Temperatur BME680_2,°C
+01 rel. Luftfeuchte BME680_2,%
+01 Temperature SHT31_1,Celcius
+01 Humidity SHT31_1,%
+01 Illuminance,lux
+01 UV Intensity,mikroW/cm^2
+14 Luftdruck BME680,hPa
+14 rel. Luftfeuchte BME680,%
+14 Temperatur BME680,°C
+14 Temperatur SHT31,°C
+14 rel. Luftfeuchte SHT31,%
+06 Temperatur,°C
+06 Temperature,°C
+06 Humidity,%
+06 Pressure,hPa
+Temperature BME680,°C
+Humidity BME680,%
+Pressure BME680,hPa
+korrigierte Himmelstemperatur,°C
+12_soil Moisture,%
+12_Surface Temp.,°C
+12_Soil Moisture 2,%
+12_Surface Temp. 2,°C
+estimated_people,people
+pm10,ugm
+pm2.5,ugm
+Lux,lm
+UV,UVI
+UV-Intensität,?W/cm²
+signal,dbm
+14A TemperaturBME680,°C
+14A rel. LuftfeuchteBME680,%
+14A LuftdruckBME680,hPa
+14A TemperaturSHT31,°C
+14A rel. LuftfeuchteSHT31,%
+14A Bodenfeuchtigkeit 1,%
+14A Bodenfeuchtigkeit 2,%
+14A Bodenfeuchtigkeit 3,%
+14A Bodenfeuchtigkeit 4,%
+14A Bodenpermittivität 1,F*m^-1
+14A Bodenpermittivität 2,F*m^-1
+14A Bodenpermittivität 3,F*m^-1
+14A Bodenpermittivität 4,F*m^-1
+14A Bodentemperatur 1,°C
+14A Bodentemperatur 2,°C
+14A Bodentemperatur 3,°C
+14A Bodentemperatur 4,°C
+01 Temperature SHT85_1,°C
+01 Humidity SHT85_1,%
+01 Temperature SHT85_2,°C
+01 Humidity SHT85_2,%
+01 Niederschlag,mm
+"01 Wind Direction, Anemometer",°N
+"01 Wind Speed, Anemometer",m/s
+8 Temperatur,°C
+8 rel. Luftfeuchte,%
+8 Luftdruck,hPa
+8 PM1,µg/m³
+Akkustand,Prozent
+Niederschlagsintensität,mm
+tVOC,ppb
+"Beleuchtungsstärke, TSL45315",lx
+"rel. Luftfeuchte, BME680",%
+"Temperatur, BME680",°C
+"UV-Intensität, VEML6070",W/m2
+"Luftdruck, BME680",hPa
+"Temperatur, SHT31_0",°C
+"rel. Luftfeuchte, SHT31_0",%
+"Temperatur, SHT85_2",°C
+"rel. Luftfeuchte, SHT85_2",%
+"Temperatur, SHT31_1",°C
+"rel. Luftfeuchte, SHT31_1",%
+"Temperatur, SHT85_3",°C
+"rel. Luftfeuchte, SHT85_3",%
+"Temperatur, SHT85_4",°C
+"rel. Luftfeuchte, SHT85_4",%
+"Temperatur, SHT85_5",°C
+"rel. Luftfeuchte, SHT85_5",%
+J0,°
+J1,°
+J2,°
+J3,°
+PM25,ugm
+WiFi Devices,devices
+Total Devices,devices
+ble,devices
+14 Bodenfeuchte 1,%
+14 Bodenfeuchte 2,%
+14 Bodenfeuchte 3,%
+14 Bodenfeuchte 4,%
+14 Bodentemperatur 1,°C
+14 Bodentemperatur 2,°C
+14 Bodentemperatur 3,°C
+14 Bodentemperatur 4,°C
+Hukseflu,W/m^2
+wg_ping,ms
+06 Temperatur_B,°C
+06 rel. Luftfeuchte_B,%
+06 Luftdruck_B,hPa
+06 Humidity_B,%
+06 Particulate Matter PM10,PM 10
+06 Particulate Matter PM2.5,PM 2.5
+06 Typical Particle Size,nanometer
+06 CO2,nano
+Heatflux,W/m2
+Beleuchtungsastärke,Lux
+PM0.5,μm
+PM1.0,μm
+PM2.5,μm
+PM4.0,μm
+PM10,μm
+TemperatureSHT31,°C
+HumiditySHT31,%
+p10,mikrog/m3
+p25,mikrog/m3
+CO2SCD41,ppm
+TemperatureSCD41,°C
+HumiditySCD41,%
+01 Temperature SHT31_2,°C
+01 Humidity SHT31_2,%
+01 Temperature SHT85_3,°C
+01 Humidity SHT85_3,%
+01 Temperature SHT85_4,°C
+01 Humidity SHT85_4,%
+01 Temperature SHT31_3,°C
+01 Humidity SHT31_3,%
+01 Temperature SHT31_4,°C
+01 Humidity SHT31_4,%
+Temperature SHT31_0,°C
+Humidity SHT31_0,%
+Temperature SHT85_1,°C
+Temperature SHT31_2,°C
+Humidity SHT31_2,%
+Temperature SHT85_3,°C
+Temperature SHT31_4,°C
+Temperature SHT85_5,°C
+Humidity SHT85_5,%
+Temperature SHT85_6,°C
+Humidity SHT85_6,%
+Temperature SHT31_7,°C
+Wind Angle,Degrees
+Rain Intensity,mL/min
+06 CO2,ppm
+06 Mass Concentration PM10,PM10
+06 Mass Concentration PM4.0,PM4.0
+06 Mass Concentration PM2.5,PM2.5
+06 Mass Concentration PM1.0,PM1.0
+06 Number Concentration PM0.5,PM0.5
+06 Number Concentration PM1.0,PM1.0
+06 Number Concentraion PM4.0,PM4.0
+06 Number Concentration PM10,PM10
+"Windgeschwindigkeit, Davies",km/h
+"Windrichtung, Davies",°
+"Niederschlag, Davis",mm/min
+Temperature Chill,°C
+Rain  intensity,mm/h
+Rain event,mm
+Rain total,mm
+pm1.0,µg/m³
+UV-Intensität,mW/cm²
+Windrichtung in Grad,Grad
+Niederschlagsmenge pro Tag,mm/Tag
+Temperatur T,°C
+PM 0.5,particles/cm3
+PM 1.0,particles/cm3
+PM 2.5,particles/cm3
+PM 4.0,particles/cm3
+PM 10.0,particles/cm3
+Wärmefluss,W/m2
+Heatflux,W/m^2
+Temperature (1) (A3) Mitte links,°C
+Bodenfeuchte (2) (A4) rechts,%
+Bodenfeuchte (3) (A5) mitte rechts,%
+Bodenfeuchte (4) (A6) links,%
+Bodenfeuchte (1) (A3) mitte links,%
+Temperatur (2)(A4) rechts,°C
+Temperatur (3) (A5) mitte rechts,°C
+Temperatur (4) (A6) links,°C
+nc_1p0,ppcm3
+nc_2p5,ppcm3
+nc_4p0,ppcm3
+nc_10p0,ppcm3
+co2_SCD30,ppm
+Wind direction,wind
+wind rotation,wind
+Niederschlag,Niederschlag
+Bodenfeuchtigkeit 3,%
+Bodenfeuchtigkeit 4,%
+Temperature (DHT22),°C
+Humidity (DHT22),%
+01 Temperatur BME680,°C
+01 rel. Luftfeuchte BME680,%
+01 Temperature SHT31_1,°C
+"01 Wind Direction, Anemometer",°C
+Air Pressure,HPa
+Feuchtigkeit,Ohm
+Luftgüte,Ohm
+VOCs,ppb
+Feuchtigkeit,g/m³
+NOx,PPM
+VOC,PPM
+POWER SUPPLY,V
+06 Particulate Matter PM10,PM 10 number
+06 Particulate Matter 4,PM 4 Number
+bluetooth devices,devices
+wifi devices,devices
+total devices,units
+total devices,devices
+Ortung,m
+Bodentemp.3,°C
+Bodentemp. 4,°C
+Temperatur pin3,°C
+Bodenfeuchte pin3,%
+Temperatur pin4,°C
+Bodenfeuchte pin4,%
+Temperatur pin5,°C
+Bodenfeuchte pin5,%
+Temperatur pin6,°C
+Bodenfeuchte pin6,%
+"PM2,5",µg/m3
+Temperatur unten,°C
+rel. Luftfeuchte unten,%
+Temperature oben,°C
+rel. Luftfeuchte oben,%
+Temperatur Mitte,°C
+rel. Luftfeuchte Mitte,%
+rel. Luftfeuchtigkeit Mitte,%
+Temperature Mitte,°C
+3.A Temperature BME680 in sensbox,°C
+3.A Humidity BME680 in sensebox,%
+3.A Pressure BME680 in sensbox,hPa
+3.A Temperature SHT31_0 Boden,°C
+3.A Humidity SHT31_0 Boden,%
+3.A Temperature SHT85_1 1m,°C
+3.A Humidity SHT85_1 1m,%
+3.A Temperature SHT31_2 1m,°C
+3.A Humidity SHT31_2 1m,%
+3.A Temperature SHT85_3 Boden,°C
+3.A Humidity SHT85_3 Boden,%
+3.A Temperature SHT31_4 1m,°C
+3.A Humidity SHT31_4 1m,%
+3.A Temperature SHT85_5 1m,°C
+3.A Humidity SHT85_5 1m,%
+3.A Temperature SHT85_6 2m,°C
+3.A Humidity SHT85_6 2m,%
+3.A Temperature SHT31_7 2m,°C
+3.A Humidity SHT31_7 2m,%
+3.A Wind Speed 2m,km/h
+3.A Wind Angle 2m,Degrees
+3.A Rain Intensity 2m,mL/min
+PV Power,Watt
+Relative Hummidity,%
+Air pressure,HPa
+Höhenmeter,m
+"UV-Intensität, VEML6070",mikroW/cm2
+"Temperatur, 102cm",°C
+"rel. Luftfeuchtigkeit, 102cm",%
+"Temperatur, 174cm_2",°C
+"rel. Luftfeuchtigkeit, 174cm_2",%
+"Temperatur, 12cm_Süd",°C
+"rel. Luftfeuchtigkeit, 12cm_Süd",%
+"Temperatur, 12cm_Nord_3",°C
+"rel. Luftfeuchtigkeit, 12cm_Nord_3",%
+"Temperatur, 12cm_Nord_4",°C
+"rel. Luftfeuchtigkeit, 12cm_Nord_4",%
+"Temperatur, 174cm_5",°C
+"rel. Luftfeuchtigkeit, 174cm_5",%
+"Windgeschwindigkeit, 200cm",km/h
+"Windrichtung, 200cm",°
+"Niederschlag, 180cm",mm/min
+PVVoltage,V
+PVCurrent,A
+PVPower,Watt
+BatteryVoltage,V
+BatteryChargingCurrent,A
+BatteryChargingPower,W
+BatteryCapacity,%
+BatteryTemperature,°C
+LoadVoltage,V
+LoadCurrent,A
+LoadPower,W
+ConsumedEnergyToday,kWh
+GeneratedEnergyToday,kWh
+TotalConsumedEnergy,kWh
+TotalGeneratedEnergy,kWh
+Boden-Temperatur,°C
+Boden-Feuchtigkeit,%
+Boden-Leitfähigkeit (EC),mS/cm
+Luft-Temperatur,°C
+pH-Wert,ph-Wert
+Feuchtigkeit im Boden,%
+Leitfähigkeit,mS/cm
+Bluetooth Devices,devices
+People,people
+PM10,µg/m³ SDS011
+PM2.5,µg/m³ SDS011
+Luftdruck,Pa BME280
+Temperatur,°C SEN55
+rel. Luftfeuchte,% SEN55
+PM01,µg/m³ SEN55
+PM2.5,µg/m³ SEN55
+PM10,µg/m³ SEN55
+Temperatur,°C BME280
+rel. Luftfeuchte,% BME280
+Temperatur BME,°C
+Luftdruck BME,hPa
+Temperatur unten 1,°C
+rel. Luftfeuchte unten 1,%
+Temperature oben 1,°C
+rel. Luftfeuchte oben 1,%
+Temperatur Mitte 1,°C
+rel. Luftfeuchte Mitte 1,%
+Temperatur Mitte 2,°C
+rel. Luftfeuchtigkeit Mitte 2,%
+Temperatur unten 2,°C
+rel. Luftfeuchte unten 2,%
+Temperature oben 2,°C
+rel. Luftfeuchte oben 2,%
+Temperature Mitte 3,°C
+rel. Luftfeuchte Mitte 3,%
+Temperatur oben 1,°C
+Temperatur oben 2,°C
+Temperatur Mitte 3,°C
+Automatik Modus,_
+Wassermenge,Liter
+Niederschlag_sensor,l/m2
+UV-Intensität,Lux
+co2_SCD41,ppm
+Temperature_SCD30,°C
+Temperature_SCD41,°C
+Humidity_SCD30,%
+Humidity_SCD41,%
+nc_0p5,ppcm3
+mc_1p0,ug/kg
+mc_2p5,ug/kg
+mc_4p0,ug/kg
+mc_10p0,ug/kg
+Temperature_SHT31,°C
+Humidity_SHT31,%
+Mikrofon,dB
+LDR,lx
+Background radiation,uSv/h
+Joystick X,k
+Joystick Y,k
+Temperatur mitte 1,°C
+rel. Luftfeuchte mitte 1,%
+rel. Luftfeuchtigkeit unten 2,%
+Temperatur mitte 2,°C
+rel. Luftfeuchte mitte 2,%
+Temperatur unten 3,°C
+rel. Luftfeuchte unten 3,%
+Humidity,rH
+CO₂eq,ppm
+Pressure,(Pa)
+Lufdruck,mB
+PM10,um
+PM2.5,um
+Luftdruck_box,hPa
+Temperatur_box,°C
+pressure,Bar
+UV-Intensität,µW/cm².
+Luftdruck N.N.,hPa
+Luftdruck NHN,hPa
+Breite,°N
+Länge,°O
+Höhe,mm
+UV-Index,I
+Ultra Schallwellen,Schall
+Lärm,DB
+Ballstand,%
+UV-Index,UV-Index
+Abstandssensor,cm
+Temp2,°C
+Temp3,°C
+Ore sonno,hours
+Capacitive Soil Moisture Sensor,1
+Temp1,°C
+Temp4,°C
+Pressure,bar
+pH-Wert,pH-Wert
+Elektrische Leitfähigkeit,µS/cm
+Wetter,Beobachtung
+Bebauungsgrad,Stufe
+Färbung,Farbe
+Geruch,Intensität
+Solar Power,kw
+co2 savings today,g
+co2 savings in total,kg
+Case temperature,°C
+Battey,%
+Soil temperature 5 cm depth,°C
+Soil temperature 35 cm depth,°C
+Humidity,rh(%)
+Winddirection,(N/S/W/O)
+Solar Power,kW
+Taupunkt,τ
+UV,lux
+Temperatur Gehäuse,°C
+Taupunkt,T
+Counter,Counts
+Temperatur,CO2
+Bodenfeuchtigkeit 60cm,%
+Event,Boolean
+Rel. Humidity (DHT22),%
+Temperature,°
+Dew point,°C
+Air pressure at see level,hPa
+Radiation (not calibrated yet),µS/h
+Capacitive Soil Moisture Sensor,units
+Tempeatur,Grad Celsius
+Radiation,µS/h
+Überholvorgang,%
+Finedust PM1,µg/m³
+Finedust PM2.5,µg/m³
+Finedust PM4,µg/m³
+Finedust PM10,µg/m³
+Overtaking Manoeuvre,%
+Overtaking Distance,%
+Surface Asphalt,%
+Surface Sett,%
+Surface Compacted,%
+Surface Paving,%
+Standing,%
+Speed,m/s
+Temperatur Feinstaubsensor,C°
+Overtaking Distance,cm
+Surface Anomaly,Δ
+Liter Gesamt Heute,L
+Radiation,Micro Sieverts per hour (µSv/h)
+charge,mV
+Geräuschpegel,DB
+name1,unit
+name3,unit
+name2,unit
+name4,unit
+name_01,unit
+name_02,unit
+name_11,unit
+name_12,unit
+Acceleration X,m/s²
+Acceleration Y,m/s²
+Acceleration Z,m/s²
+Distance Left,cm
+UV-A,W/m^2
+phenomenon2,unit
+phenomenon1,unit
+UV-A,W/m²
+UV-B,W/m²
+UV-C,W/m²
+Temperatur Solar-Charger,°C
+umidade,%
+Schallpegel,dB
+Niederschlag (aktuell),mm
+Niederschlagsmenge (letzter Regen),mm
+Niederschlagsmenge (gestern),mm
+Soundpresure,dbA
+Batteryvoltage,V
+Noise,dB
+#Beleuchtungsstärke,lx
+Sensor1,%
+Sensor2,%
+Sensor3,%
+Relatív páratartalom,%
+Nyomás,Pa
+Hőmérséklet,°C
+Overtaking Car,%
+Overtaking Bike,%
+Wasserstand,cm
+Systemtemperatur,°C
+VOC,VOCi
+Temp5,°C
+Niederschlag pro Minute,mm/min
+Niederschlag pro Stunde,mm/h
+Ts_03,°C
+Ts_01,°C
+Ts_02,°C
+Besucherzahl,Personen
+Besucher,Anzahl
+"Rel. Hum""id""ity",%
+Tipo sonno,moves
+Besucherzähler,Besucher
+PM2_5,μg/m3
+Ta_01,°C
+Druck,bar
+Ta_02,°C
+Ta_08,°C
+Ta_06,°C
+Ta_04,°C
+Ts_05,°C
+Ts_06,°C
+Ts_04,°C
+Ta_07,°C
+Ts_10,°C
+Ts_11,°C
+Ta_03,°C
+Ta_05,°C
+Ts_07,°C
+Ts_08,°C
+Ts_09,°C
+Ta_10,°C
+Ts_18,°C
+Ts_17,°C
+Ts_16,°C
+Ta_09,°C
+Ts_15,°C
+Ts_13,°C
+Ts_14,°C
+Ts_12,°C
+PM4,ug/m3
+VOCraw,VOCr
+VOCindex,VOCi
+Soundpresure dBc,dBc
+Solar voltage,V
+NOX,ppm
+LUX,lux
+NOISE,dB
+Water Flow Rate,L/m
+Soil Moisture,%
+Liters Total Today,L
+Rain today,mm
+Lautstärke,dB(a)
+Eclairement,lx
+UV-Intensité,μW/cm²
+Humidité du sol,%
+Température du sol,°C
+Pression atmosphérique,hPa
+Feinstaub 2.5µm,PM2.5
+Feinstaub 10µm,PM10
+Feinstaub PM2.5,µm
+FeinstaubPM10,µm
+Feinstaub PM 2.5,µm
+Feinstaub PM 10,µm
+TVOC,ppm
+Niederschlagsmenge (aktuelles Ereignis),mm
+Niederschlagsmenge (gesammelt),mm
+Light,Lx
+UV-Index,mW/cr²
+UV-Index,mW/cr
+"PM2,5",ppm
+Light,LX
+Air presure,Pa
+UV-index,mW/cr
+UV-Index,mW/mm²
+Kalibrierungswert,kΩ
+rel. Luftfeuchtigkeit SCD30,%
+iaq,iaq
+co2eq,co2eq
+calib,calib
+UfoSonar,Spatzen
+Zeitmaschine,§
+Alarmanlage ausgelöst,Alarm
+Alarm,Alarm ausgelöst = 1
+Trip Time Device20 unshielded 14m from AP,ms
+Trip Time Device20 shielded by walls 11m from AP,ms
+Trip Time Device20 shielded by metalbox 9m from AP,ms
+Trip Time Device25 shielded by Ytong base 9m from AP,ms
+Trip Time Device20 1.5m from Router,ms
+Air quality,ppm
+LAeq_1min,dBA
+LAmax_125ms_1min,dBA
+LAmin_125ms_1min,dBA
+LAeq 1min,dBA
+LAF max 1min,dBA
+LAF min 1min,dBA
+Ultraschall-Abstandssensor,cm
+TripTime Device20 000009,ms
+Moisture Sensor,%
+Moisture Sensor Raw Value,Value
+Innenraumluftqualität,IAQ
+Kalibrierungswert,Kalibrierungswert
+plantMoistureRawValue,Value
+plantMoisturepercent,%
+waterLevelRawValue,Value
+waterLevelpercent,%
+potentiometerRawValue,Value
+potentiometerVoltage,mv
+dust,pm2.5
+Luftdruck,Hpa
+NOx,NOx
+VOC,VOC
+Airpressure,Pa
+Indoor Air Quality,IAQ
+CO2 Equivalent,CO2-e
+Calibration,Calib
+TEMP_SCD30,°C
+FEUCHT_SCD30,%
+Electric mains frequency,Hz
+Electric mains L1 voltage,V
+Electric mains L2 voltage,V
+Electric mains L3 voltage,V
+Case relative humidity,%
+Rayos UV,UVI
+Feinstaub (PM10),µg/m³
+Feinstaub (PM2.5),µg/m³
+UV-Index,mW/cm2
+Air quality,n/a
+Indoor Air Quality,N/A
+Relative Pressure,hPa
+Solar Lux,lx
+Solar Radiation,W/m2
+Feels like Temperature,°C
+Bat,V
+Leitfähigkeit,Ohm
+rel. umidade,%
+Iluminância,lx
+Precipitation Rate,mm/h
+Precipitation Today,mm
+TS,µm
+noise_LAeq,dB(A)
+noise_LA_min,dB(A)
+noise_LA_max,dB(A)
+Entfernung,cm
+Powergrid Frequency,Hz
+UV-Intensity,μW/cm²
+Helligkeit (VEML6070),qW/cm²
+Signalstrength,dBm
+Soundpresure dBA,dBA
+PM1.0,μg/m³
+PM4.0,μg/m³
+PM1.0 raw,µg/m3
+Bienenstock,1
+Bienenstock,2
+Bienenstock,3
+Bienenstock,4
+Bienenstock,5
+Bienenstock,6
+Bienenstock,7
+Bienenstock,8
+Bienenstock,9
+Bienenstock,10
+humidity,rel. h. %
+dew point,°C
+heat index,index
+humidity,rel.h.%
+Air pressure at MSL,hPa
+Latitude,degrees
+Longitude,degrees
+Altitude,degrees
+Radiation,mkR/h
+NOx,NOxi
