@@ -43,6 +43,34 @@ async def overall(request: Request):
         "sensors": summary_row['total_sensors'],
         "downloads": downloads_row['total_downloads'] or 0
     }
+
+@app.get('/top_ten')
+async def top_ten(request: Request):
+    db = request.app.state.db
+    async with db.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT
+                st.country,
+                SUM(st.stations)          AS stations,
+                SUM(st.sensors)           AS sensors,
+                COALESCE(SUM(d.count), 0) AS downloads
+            FROM summary_table st
+            LEFT JOIN downloads d ON d.country = st.country
+            WHERE st.country IS NOT NULL
+            GROUP BY st.country
+            ORDER BY stations DESC
+            LIMIT 10
+        """)
+
+    return [
+        {
+            "country":   row['country'],
+            "stations":  row['stations'],
+            "sensors":   row['sensors'],
+            "downloads": row['downloads']
+        }
+        for row in rows
+    ]
     
     
 print('done!')
