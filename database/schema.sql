@@ -69,17 +69,6 @@ ALTER TABLE readings SET (
 SELECT add_compression_policy('readings', compress_after => INTERVAL '1 month', if_not_exists => TRUE);
 
 
--- Hourly summary
-CREATE MATERIALIZED VIEW IF NOT EXISTS readings_hourly
-WITH (timescaledb.continuous) AS
-SELECT
-    se_uuid,
-    time_bucket('1 hour', time)  AS bucket,
-    AVG(value)                   AS avg_value
-FROM readings
-GROUP BY se_uuid, time_bucket('1 hour', time)
-WITH NO DATA;
-
 -- Daily summary
 CREATE MATERIALIZED VIEW IF NOT EXISTS readings_daily
 WITH (timescaledb.continuous) AS
@@ -89,6 +78,17 @@ SELECT
     AVG(value)                   AS avg_value
 FROM readings
 GROUP BY se_uuid, time_bucket('1 day', time)
+WITH NO DATA;
+
+-- Weekly summary
+CREATE MATERIALIZED VIEW IF NOT EXISTS readings_weekly
+WITH (timescaledb.continuous) AS
+SELECT
+    se_uuid,
+    time_bucket('1 week', time)  AS bucket,
+    AVG(value)                   AS avg_value
+FROM readings
+GROUP BY se_uuid, time_bucket('1 week', time)
 WITH NO DATA;
 
 -- Monthly summary
@@ -116,17 +116,17 @@ WITH NO DATA;
 
 -- Continuous aggregate refresh policies (one-time setup)
 -- TimescaleDB's background worker handles all future refreshes automatically.
-SELECT add_continuous_aggregate_policy('readings_hourly',
-    start_offset      => INTERVAL '3 hours',
-    end_offset        => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour',
-    if_not_exists     => TRUE
-);
-
 SELECT add_continuous_aggregate_policy('readings_daily',
     start_offset      => INTERVAL '7 days',
     end_offset        => INTERVAL '1 day',
     schedule_interval => INTERVAL '1 day',
+    if_not_exists     => TRUE
+);
+
+SELECT add_continuous_aggregate_policy('readings_weekly',
+    start_offset      => INTERVAL '3 weeks',
+    end_offset        => INTERVAL '1 week',
+    schedule_interval => INTERVAL '1 week',
     if_not_exists     => TRUE
 );
 
@@ -148,6 +148,7 @@ SELECT add_continuous_aggregate_policy('readings_yearly',
 CREATE TABLE IF NOT EXISTS downloads (
     dl_uuid     INT     GENERATED ALWAYS AS IDENTITY,
     type        TEXT    NOT NULL,
+    country     TEXT,
     count       INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT pk_downloads PRIMARY KEY (dl_uuid)
