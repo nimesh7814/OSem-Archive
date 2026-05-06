@@ -12,72 +12,158 @@ BEGIN
 END$$;
 
 
--- Ensure compression policies exist for ALL hypertables
-CREATE OR REPLACE FUNCTION ensure_compression_policies_for_all_hypertables()
+CREATE OR REPLACE FUNCTION refresh_summary_table()
 RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    r      RECORD;
-    fqname TEXT;
+    r RECORD;
 BEGIN
+    TRUNCATE summary_table RESTART IDENTITY;
+
     FOR r IN
-        SELECT hypertable_schema, hypertable_name
-        FROM timescaledb_information.hypertables
+        SELECT DISTINCT st.country, st.region
+        FROM stations st
+        ORDER BY st.country, st.region
     LOOP
-        fqname := format('%I.%I', r.hypertable_schema, r.hypertable_name);
-        BEGIN
-            EXECUTE format(
-                $stmt$
-                    SELECT add_compression_policy(
-                        %L,
-                        compress_after => INTERVAL '1 month',
-                        if_not_exists  => TRUE
-                    );
-                $stmt$,
-                fqname
-            );
-        EXCEPTION WHEN OTHERS THEN
-            RAISE NOTICE 'Could not set compression policy for %: %', fqname, SQLERRM;
-        END;
+        INSERT INTO summary_table (country, region, stations, sensors, readings, refreshed_at)
+        SELECT
+            st.country,
+            st.region,
+            COUNT(DISTINCT st.st_uuid)  AS stations,
+            COUNT(DISTINCT se.se_uuid)  AS sensors,
+            COUNT(r2.time)              AS readings,
+            now()                       AS refreshed_at
+        FROM stations st
+        LEFT JOIN sensors se ON se.st_uuid = st.st_uuid
+        LEFT JOIN readings r2 ON r2.se_uuid = se.se_uuid
+        WHERE (st.country = r.country OR (st.country IS NULL AND r.country IS NULL))
+          AND (st.region  = r.region  OR (st.region  IS NULL AND r.region  IS NULL))
+        GROUP BY st.country, st.region
+        ON CONFLICT ON CONSTRAINT uq_summary_country_region
+        DO UPDATE SET
+            stations     = EXCLUDED.stations,
+            sensors      = EXCLUDED.sensors,
+            readings     = EXCLUDED.readings,
+            refreshed_at = EXCLUDED.refreshed_at;
     END LOOP;
 END;
 $$;
 
 
--- Refresh summary_table (country/region station+sensor+reading counts)
--- Counts readings directly from the readings table for accuracy.
-CREATE OR REPLACE FUNCTION refresh_summary_table()
+-- Incremental refresh of summary_table
+CREATE OR REPLACE FUNCTION incremental_refresh_summary_table()
 RETURNS void
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    last_refresh TIMESTAMPTZ;
+    r            RECORD;
 BEGIN
-    TRUNCATE summary_table RESTART IDENTITY;
+    -- Get the last refresh timestamp from summary_table
+    -- If summary_table is empty, fall back to full refresh
+    SELECT MIN(refreshed_at) INTO last_refresh FROM summary_table;
 
+    IF last_refresh IS NULL THEN
+        RAISE NOTICE 'summary_table is empty, running full refresh...';
+        PERFORM refresh_summary_table();
+        RETURN;
+    END IF;
+
+    RAISE NOTICE 'Incremental refresh from %', last_refresh;
+
+    -- Update reading counts for country/region combinations
+    -- that have new readings since last refresh
+    FOR r IN
+        SELECT DISTINCT st.country, st.region
+        FROM stations st
+        JOIN sensors se ON se.st_uuid = st.st_uuid
+        JOIN readings rd ON rd.se_uuid = se.se_uuid
+        WHERE rd.time > last_refresh
+        ORDER BY st.country, st.region
+    LOOP
+        -- Count only new readings since last refresh for this country/region
+        INSERT INTO summary_table (country, region, stations, sensors, readings, refreshed_at)
+        SELECT
+            st.country,
+            st.region,
+            COUNT(DISTINCT st.st_uuid)                           AS stations,
+            COUNT(DISTINCT se.se_uuid)                           AS sensors,
+            COALESCE(
+                (SELECT readings FROM summary_table s
+                 WHERE (s.country = st.country OR (s.country IS NULL AND st.country IS NULL))
+                   AND (s.region  = st.region  OR (s.region  IS NULL AND st.region  IS NULL))
+                ), 0
+            ) + COUNT(r2.time)                                   AS readings,
+            now()                                                AS refreshed_at
+        FROM stations st
+        LEFT JOIN sensors se ON se.st_uuid = st.st_uuid
+        LEFT JOIN readings r2 ON r2.se_uuid = se.se_uuid
+            AND r2.time > last_refresh
+        WHERE (st.country = r.country OR (st.country IS NULL AND r.country IS NULL))
+          AND (st.region  = r.region  OR (st.region  IS NULL AND r.region  IS NULL))
+        GROUP BY st.country, st.region
+        ON CONFLICT ON CONSTRAINT uq_summary_country_region
+        DO UPDATE SET
+            stations     = EXCLUDED.stations,
+            sensors      = EXCLUDED.sensors,
+            readings     = EXCLUDED.readings,
+            refreshed_at = EXCLUDED.refreshed_at;
+    END LOOP;
+
+    -- Also handle newly added stations/sensors that may have no readings yet
     INSERT INTO summary_table (country, region, stations, sensors, readings, refreshed_at)
     SELECT
         st.country,
         st.region,
-        COUNT(DISTINCT st.st_uuid)        AS stations,
-        COUNT(DISTINCT se.se_uuid)        AS sensors,
-        COUNT(r.time)                     AS readings,
-        now()                             AS refreshed_at
+        COUNT(DISTINCT st.st_uuid) AS stations,
+        COUNT(DISTINCT se.se_uuid) AS sensors,
+        0                          AS readings,
+        now()                      AS refreshed_at
     FROM stations st
     LEFT JOIN sensors se ON se.st_uuid = st.st_uuid
-    LEFT JOIN readings r  ON r.se_uuid  = se.se_uuid
-    GROUP BY st.country, st.region;
+    WHERE st.init_date > last_refresh
+    GROUP BY st.country, st.region
+    ON CONFLICT ON CONSTRAINT uq_summary_country_region
+    DO UPDATE SET
+        stations     = EXCLUDED.stations,
+        sensors      = EXCLUDED.sensors,
+        refreshed_at = EXCLUDED.refreshed_at;
+
 END;
 $$;
 
 
--- Refresh sensors-by-year breakdown
+-- Refresh sensors-by-year breakdown (incremental)
+-- Only adds newly registered sensors since last refresh.
 CREATE OR REPLACE FUNCTION refresh_sensors_by_year_region_country()
 RETURNS void
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    last_refresh TIMESTAMPTZ;
 BEGIN
-    TRUNCATE TABLE sensors_by_year_region_country RESTART IDENTITY;
+    -- Check if table is empty → full refresh
+    SELECT MAX(id) INTO last_refresh FROM sensors_by_year_region_country;
 
+    IF last_refresh IS NULL THEN
+        -- Full refresh on first run
+        INSERT INTO sensors_by_year_region_country (year, region, country, sensor_count)
+        SELECT
+            EXTRACT(YEAR FROM s.init_date)::INT AS year,
+            st.region,
+            st.country,
+            COUNT(*)                            AS sensor_count
+        FROM sensors s
+        JOIN stations st ON s.st_uuid = st.st_uuid
+        WHERE s.init_date IS NOT NULL
+        GROUP BY year, st.region, st.country
+        ON CONFLICT ON CONSTRAINT uq_sensors_by_year
+        DO UPDATE SET sensor_count = EXCLUDED.sensor_count;
+        RETURN;
+    END IF;
+
+    -- Incremental: only process sensors added since last known sensor
     INSERT INTO sensors_by_year_region_country (year, region, country, sensor_count)
     SELECT
         EXTRACT(YEAR FROM s.init_date)::INT AS year,
@@ -88,7 +174,8 @@ BEGIN
     JOIN stations st ON s.st_uuid = st.st_uuid
     WHERE s.init_date IS NOT NULL
     GROUP BY year, st.region, st.country
-    ORDER BY year DESC, st.country, st.region;
+    ON CONFLICT ON CONSTRAINT uq_sensors_by_year
+    DO UPDATE SET sensor_count = EXCLUDED.sensor_count;
 END;
 $$;
 
@@ -105,100 +192,29 @@ CREATE TABLE IF NOT EXISTS sensors_by_year_region_country (
 );
 
 
-SELECT add_continuous_aggregate_policy('readings_hourly',
-    start_offset      => INTERVAL '2 hours',
-    end_offset        => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy('readings_daily',
-    start_offset      => INTERVAL '7 days',
-    end_offset        => INTERVAL '1 day',
-    schedule_interval => INTERVAL '1 day',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy('readings_monthly',
-    start_offset      => INTERVAL '3 months',
-    end_offset        => INTERVAL '1 month',
-    schedule_interval => INTERVAL '1 month',
-    if_not_exists     => TRUE
-);
-
-SELECT add_continuous_aggregate_policy('readings_yearly',
-    start_offset      => INTERVAL '3 years',
-    end_offset        => INTERVAL '1 year',
-    schedule_interval => INTERVAL '1 year',
-    if_not_exists     => TRUE
-);
-
-
-SELECT add_compression_policy(
-    'readings',
-    compress_after => INTERVAL '1 month',
-    if_not_exists  => TRUE
-);
-
-
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'cron') THEN
 
         -- Remove existing jobs to avoid duplicates on re-run
         DELETE FROM cron.job WHERE jobname IN (
-            'compress-readings',
-            'ensure-compression-policy-readings',
-            'ensure-compression-policies-all',
             'refresh-summary-table',
             'refresh-sensors-by-year-region-country'
         );
 
-        -- Compress chunks older than 1 month, twice a day
-        PERFORM cron.schedule(
-            'compress-readings',
-            '0 */12 * * *',
-            $cron$
-                SELECT compress_chunk(i, if_not_compressed => TRUE)
-                FROM show_chunks('readings', older_than => INTERVAL '1 month') i;
-            $cron$
-        );
-
-        -- Re-register compression policy for readings daily (safety guard)
-        PERFORM cron.schedule(
-            'ensure-compression-policy-readings',
-            '0 4 * * *',
-            $cron$
-                SELECT add_compression_policy(
-                    'readings',
-                    compress_after => INTERVAL '1 month',
-                    if_not_exists  => TRUE
-                );
-            $cron$
-        );
-
-        -- Ensure compression policies exist for ALL hypertables (safety guard)
-        PERFORM cron.schedule(
-            'ensure-compression-policies-all',
-            '5 4 * * *',
-            $cron$
-                SELECT ensure_compression_policies_for_all_hypertables();
-            $cron$
-        );
-
-        -- Refresh summary_table every hour at :05
+        -- Incremental refresh of summary_table every night at midnight
         PERFORM cron.schedule(
             'refresh-summary-table',
-            '5 * * * *',
+            '0 0 * * *',
             $cron$
-                SELECT refresh_summary_table();
+                SELECT incremental_refresh_summary_table();
             $cron$
         );
 
-        -- Refresh sensors-by-year every hour at :10
+        -- Refresh sensors-by-year every night at midnight
         PERFORM cron.schedule(
             'refresh-sensors-by-year-region-country',
-            '10 * * * *',
+            '0 0 * * *',
             $cron$
                 SELECT refresh_sensors_by_year_region_country();
             $cron$
