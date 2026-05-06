@@ -1,0 +1,13 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: osem_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/osem}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./main.py:/app/main.py:ro
