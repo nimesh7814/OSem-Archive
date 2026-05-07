@@ -140,13 +140,11 @@ CREATE OR REPLACE FUNCTION refresh_sensors_by_year_region_country()
 RETURNS void
 LANGUAGE plpgsql
 AS $$
-DECLARE
-    last_refresh TIMESTAMPTZ;
 BEGIN
-    -- Check if table is empty → full refresh
-    SELECT MAX(id) INTO last_refresh FROM sensors_by_year_region_country;
+    -- Check if table is empty → full refresh, otherwise incremental upsert
+    PERFORM 1 FROM sensors_by_year_region_country LIMIT 1;
 
-    IF last_refresh IS NULL THEN
+    IF NOT FOUND THEN
         -- Full refresh on first run
         INSERT INTO sensors_by_year_region_country (year, region, country, sensor_count)
         SELECT
@@ -163,7 +161,7 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Incremental: only process sensors added since last known sensor
+    -- Incremental: upsert all current counts (ON CONFLICT handles updates)
     INSERT INTO sensors_by_year_region_country (year, region, country, sensor_count)
     SELECT
         EXTRACT(YEAR FROM s.init_date)::INT AS year,
