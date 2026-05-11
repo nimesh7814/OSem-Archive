@@ -111,14 +111,22 @@ BEGIN
             refreshed_at = EXCLUDED.refreshed_at;
     END LOOP;
 
-    -- Also handle newly added stations/sensors that may have no readings yet
+    -- Also handle newly added stations/sensors that may have no readings yet.
+    -- Uses IS NOT DISTINCT FROM for NULL-safe equality so PostgreSQL can
+    -- plan a hash/merge join (avoiding the "FULL JOIN" planner error).
     INSERT INTO summary_table (country, region, stations, sensors, readings, refreshed_at)
     SELECT
         st.country,
         st.region,
         COUNT(DISTINCT st.st_uuid) AS stations,
         COUNT(DISTINCT se.se_uuid) AS sensors,
-        0                          AS readings,
+        -- Preserve any existing reading count; don't overwrite with 0
+        COALESCE(
+            (SELECT s.readings FROM summary_table s
+             WHERE s.country IS NOT DISTINCT FROM st.country
+               AND s.region  IS NOT DISTINCT FROM st.region
+            ), 0
+        )                          AS readings,
         now()                      AS refreshed_at
     FROM stations st
     LEFT JOIN sensors se ON se.st_uuid = st.st_uuid
@@ -128,6 +136,8 @@ BEGIN
     DO UPDATE SET
         stations     = EXCLUDED.stations,
         sensors      = EXCLUDED.sensors,
+        -- Keep the greater reading count to avoid overwriting real data with 0
+        readings     = GREATEST(summary_table.readings, EXCLUDED.readings),
         refreshed_at = EXCLUDED.refreshed_at;
 
 END;
@@ -184,6 +194,7 @@ CREATE TABLE IF NOT EXISTS sensors_by_year_region_country (
     region       TEXT,
     country      TEXT,
     sensor_count BIGINT NOT NULL DEFAULT 0,
+    refreshed_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
 
     CONSTRAINT pk_sensors_by_year PRIMARY KEY (id),
     CONSTRAINT uq_sensors_by_year UNIQUE NULLS NOT DISTINCT (year, region, country)
