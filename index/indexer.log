@@ -1,0 +1,1410 @@
+2026-05-13 00:18:49  INFO      ============================================================
+2026-05-13 00:18:49  INFO      OpenSenseMap Indexer  2026-05-13 00:18:49
+2026-05-13 00:18:49  INFO      Log file   : D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.log
+2026-05-13 00:18:49  INFO      Resume file: D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.resume
+2026-05-13 00:18:49  INFO      Mode       : DRY RUN — no DB writes
+2026-05-13 00:18:49  INFO      ============================================================
+2026-05-13 00:18:49  INFO      Range      : 2014-06-01 → 2014-12-31  (214 days)
+2026-05-13 00:18:49  WARNING   GeoJSON not found at data\admin_boundary.geojson — country/region will be NULL
+2026-05-13 00:18:49  INFO      Days to process: 214  (skipped/done: 0)
+2026-05-13 00:18:49  INFO      ── 2014-06-01 ──────────────────────────────────────────
+2026-05-13 00:18:49  DEBUG     Starting new HTTPS connection (1): archive.opensensemap.org:443
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-01/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-01
+2026-05-13 00:18:50  INFO      ── 2014-06-02 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-02/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-02
+2026-05-13 00:18:50  INFO      ── 2014-06-03 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-03
+2026-05-13 00:18:50  INFO      ── 2014-06-04 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-04
+2026-05-13 00:18:50  INFO      ── 2014-06-05 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-05
+2026-05-13 00:18:50  INFO      ── 2014-06-06 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-06
+2026-05-13 00:18:50  INFO      ── 2014-06-07 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-07
+2026-05-13 00:18:50  INFO      ── 2014-06-08 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-08
+2026-05-13 00:18:50  INFO      ── 2014-06-09 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-09
+2026-05-13 00:18:50  INFO      ── 2014-06-10 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-10
+2026-05-13 00:18:50  INFO      ── 2014-06-11 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-11
+2026-05-13 00:18:50  INFO      ── 2014-06-12 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-12
+2026-05-13 00:18:50  INFO      ── 2014-06-13 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-13
+2026-05-13 00:18:50  INFO      ── 2014-06-14 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-14
+2026-05-13 00:18:50  INFO      ── 2014-06-15 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-15
+2026-05-13 00:18:50  INFO      ── 2014-06-16 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-16
+2026-05-13 00:18:50  INFO      ── 2014-06-17 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-17
+2026-05-13 00:18:50  INFO      ── 2014-06-18 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-18
+2026-05-13 00:18:50  INFO      ── 2014-06-19 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-19
+2026-05-13 00:18:50  INFO      ── 2014-06-20 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-20/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-20
+2026-05-13 00:18:50  INFO      ── 2014-06-21 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-21
+2026-05-13 00:18:50  INFO      ── 2014-06-22 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-22
+2026-05-13 00:18:50  INFO      ── 2014-06-23 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-23
+2026-05-13 00:18:50  INFO      ── 2014-06-24 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-24
+2026-05-13 00:18:50  INFO      ── 2014-06-25 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-25
+2026-05-13 00:18:50  INFO      ── 2014-06-26 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-26
+2026-05-13 00:18:50  INFO      ── 2014-06-27 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-27/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-27
+2026-05-13 00:18:50  INFO      ── 2014-06-28 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-28/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-28
+2026-05-13 00:18:50  INFO      ── 2014-06-29 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-29/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-29
+2026-05-13 00:18:50  INFO      ── 2014-06-30 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-30/ HTTP/1.1" 404 0
+2026-05-13 00:18:50  WARNING   No folders found for 2014-06-30
+2026-05-13 00:18:50  INFO      ── 2014-07-01 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-01/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-07-01
+2026-05-13 00:18:50  INFO      ── 2014-07-02 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-07-02
+2026-05-13 00:18:50  INFO      ── 2014-07-03 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-07-03
+2026-05-13 00:18:50  INFO      ── 2014-07-04 ──────────────────────────────────────────
+2026-05-13 00:18:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:50  WARNING   No folders found for 2014-07-04
+2026-05-13 00:18:50  INFO      ── 2014-07-05 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-05
+2026-05-13 00:18:51  INFO      ── 2014-07-06 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-06
+2026-05-13 00:18:51  INFO      ── 2014-07-07 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-07
+2026-05-13 00:18:51  INFO      ── 2014-07-08 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-08
+2026-05-13 00:18:51  INFO      ── 2014-07-09 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-09
+2026-05-13 00:18:51  INFO      ── 2014-07-10 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-10
+2026-05-13 00:18:51  INFO      ── 2014-07-11 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-11
+2026-05-13 00:18:51  INFO      ── 2014-07-12 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-12
+2026-05-13 00:18:51  INFO      ── 2014-07-13 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-13
+2026-05-13 00:18:51  INFO      ── 2014-07-14 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-14
+2026-05-13 00:18:51  INFO      ── 2014-07-15 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-15
+2026-05-13 00:18:51  INFO      ── 2014-07-16 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-16
+2026-05-13 00:18:51  INFO      ── 2014-07-17 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-17
+2026-05-13 00:18:51  INFO      ── 2014-07-18 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-18
+2026-05-13 00:18:51  INFO      ── 2014-07-19 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-19
+2026-05-13 00:18:51  INFO      ── 2014-07-20 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-20/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-20
+2026-05-13 00:18:51  INFO      ── 2014-07-21 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-21
+2026-05-13 00:18:51  INFO      ── 2014-07-22 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-22
+2026-05-13 00:18:51  INFO      ── 2014-07-23 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-23
+2026-05-13 00:18:51  INFO      ── 2014-07-24 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-24
+2026-05-13 00:18:51  INFO      ── 2014-07-25 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-25
+2026-05-13 00:18:51  INFO      ── 2014-07-26 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-26
+2026-05-13 00:18:51  INFO      ── 2014-07-27 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-27/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-27
+2026-05-13 00:18:51  INFO      ── 2014-07-28 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-28/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-28
+2026-05-13 00:18:51  INFO      ── 2014-07-29 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-29/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-29
+2026-05-13 00:18:51  INFO      ── 2014-07-30 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-30/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-30
+2026-05-13 00:18:51  INFO      ── 2014-07-31 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-31/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-07-31
+2026-05-13 00:18:51  INFO      ── 2014-08-01 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-01/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-08-01
+2026-05-13 00:18:51  INFO      ── 2014-08-02 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-08-02
+2026-05-13 00:18:51  INFO      ── 2014-08-03 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-08-03
+2026-05-13 00:18:51  INFO      ── 2014-08-04 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-08-04
+2026-05-13 00:18:51  INFO      ── 2014-08-05 ──────────────────────────────────────────
+2026-05-13 00:18:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:51  WARNING   No folders found for 2014-08-05
+2026-05-13 00:18:51  INFO      ── 2014-08-06 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-06
+2026-05-13 00:18:52  INFO      ── 2014-08-07 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-07
+2026-05-13 00:18:52  INFO      ── 2014-08-08 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-08
+2026-05-13 00:18:52  INFO      ── 2014-08-09 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-09
+2026-05-13 00:18:52  INFO      ── 2014-08-10 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-10
+2026-05-13 00:18:52  INFO      ── 2014-08-11 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-11
+2026-05-13 00:18:52  INFO      ── 2014-08-12 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-12
+2026-05-13 00:18:52  INFO      ── 2014-08-13 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-13
+2026-05-13 00:18:52  INFO      ── 2014-08-14 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-14
+2026-05-13 00:18:52  INFO      ── 2014-08-15 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-15
+2026-05-13 00:18:52  INFO      ── 2014-08-16 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-16
+2026-05-13 00:18:52  INFO      ── 2014-08-17 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-17
+2026-05-13 00:18:52  INFO      ── 2014-08-18 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-18
+2026-05-13 00:18:52  INFO      ── 2014-08-19 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-19
+2026-05-13 00:18:52  INFO      ── 2014-08-20 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-20/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-20
+2026-05-13 00:18:52  INFO      ── 2014-08-21 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-21
+2026-05-13 00:18:52  INFO      ── 2014-08-22 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-22
+2026-05-13 00:18:52  INFO      ── 2014-08-23 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-23
+2026-05-13 00:18:52  INFO      ── 2014-08-24 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-24
+2026-05-13 00:18:52  INFO      ── 2014-08-25 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-25
+2026-05-13 00:18:52  INFO      ── 2014-08-26 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-26
+2026-05-13 00:18:52  INFO      ── 2014-08-27 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-27/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-27
+2026-05-13 00:18:52  INFO      ── 2014-08-28 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-28/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-28
+2026-05-13 00:18:52  INFO      ── 2014-08-29 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-29/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-29
+2026-05-13 00:18:52  INFO      ── 2014-08-30 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-30/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-30
+2026-05-13 00:18:52  INFO      ── 2014-08-31 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-31/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-08-31
+2026-05-13 00:18:52  INFO      ── 2014-09-01 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-01/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-01
+2026-05-13 00:18:52  INFO      ── 2014-09-02 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-02
+2026-05-13 00:18:52  INFO      ── 2014-09-03 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-03
+2026-05-13 00:18:52  INFO      ── 2014-09-04 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-04
+2026-05-13 00:18:52  INFO      ── 2014-09-05 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-05
+2026-05-13 00:18:52  INFO      ── 2014-09-06 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-06
+2026-05-13 00:18:52  INFO      ── 2014-09-07 ──────────────────────────────────────────
+2026-05-13 00:18:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:52  WARNING   No folders found for 2014-09-07
+2026-05-13 00:18:52  INFO      ── 2014-09-08 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-08
+2026-05-13 00:18:53  INFO      ── 2014-09-09 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-09
+2026-05-13 00:18:53  INFO      ── 2014-09-10 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-10
+2026-05-13 00:18:53  INFO      ── 2014-09-11 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-11
+2026-05-13 00:18:53  INFO      ── 2014-09-12 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-12
+2026-05-13 00:18:53  INFO      ── 2014-09-13 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-13
+2026-05-13 00:18:53  INFO      ── 2014-09-14 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-14
+2026-05-13 00:18:53  INFO      ── 2014-09-15 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-15
+2026-05-13 00:18:53  INFO      ── 2014-09-16 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-16
+2026-05-13 00:18:53  INFO      ── 2014-09-17 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-17
+2026-05-13 00:18:53  INFO      ── 2014-09-18 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-18
+2026-05-13 00:18:53  INFO      ── 2014-09-19 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-19
+2026-05-13 00:18:53  INFO      ── 2014-09-20 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-20/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-20
+2026-05-13 00:18:53  INFO      ── 2014-09-21 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-21
+2026-05-13 00:18:53  INFO      ── 2014-09-22 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-22
+2026-05-13 00:18:53  INFO      ── 2014-09-23 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-23
+2026-05-13 00:18:53  INFO      ── 2014-09-24 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-24
+2026-05-13 00:18:53  INFO      ── 2014-09-25 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-25
+2026-05-13 00:18:53  INFO      ── 2014-09-26 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-26
+2026-05-13 00:18:53  INFO      ── 2014-09-27 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-27/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-27
+2026-05-13 00:18:53  INFO      ── 2014-09-28 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-28/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-28
+2026-05-13 00:18:53  INFO      ── 2014-09-29 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-29/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-29
+2026-05-13 00:18:53  INFO      ── 2014-09-30 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-30/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-09-30
+2026-05-13 00:18:53  INFO      ── 2014-10-01 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-01/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-01
+2026-05-13 00:18:53  INFO      ── 2014-10-02 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-02
+2026-05-13 00:18:53  INFO      ── 2014-10-03 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-03
+2026-05-13 00:18:53  INFO      ── 2014-10-04 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-04
+2026-05-13 00:18:53  INFO      ── 2014-10-05 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-05
+2026-05-13 00:18:53  INFO      ── 2014-10-06 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-06
+2026-05-13 00:18:53  INFO      ── 2014-10-07 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-07
+2026-05-13 00:18:53  INFO      ── 2014-10-08 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-08
+2026-05-13 00:18:53  INFO      ── 2014-10-09 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-09
+2026-05-13 00:18:53  INFO      ── 2014-10-10 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-10
+2026-05-13 00:18:53  INFO      ── 2014-10-11 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-11
+2026-05-13 00:18:53  INFO      ── 2014-10-12 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-12
+2026-05-13 00:18:53  INFO      ── 2014-10-13 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-13
+2026-05-13 00:18:53  INFO      ── 2014-10-14 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-14
+2026-05-13 00:18:53  INFO      ── 2014-10-15 ──────────────────────────────────────────
+2026-05-13 00:18:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:53  WARNING   No folders found for 2014-10-15
+2026-05-13 00:18:53  INFO      ── 2014-10-16 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-16
+2026-05-13 00:18:54  INFO      ── 2014-10-17 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-17
+2026-05-13 00:18:54  INFO      ── 2014-10-18 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-18
+2026-05-13 00:18:54  INFO      ── 2014-10-19 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-19
+2026-05-13 00:18:54  INFO      ── 2014-10-20 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-20/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-20
+2026-05-13 00:18:54  INFO      ── 2014-10-21 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-21
+2026-05-13 00:18:54  INFO      ── 2014-10-22 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-22
+2026-05-13 00:18:54  INFO      ── 2014-10-23 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-23
+2026-05-13 00:18:54  INFO      ── 2014-10-24 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-24/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-24
+2026-05-13 00:18:54  INFO      ── 2014-10-25 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-25/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-25
+2026-05-13 00:18:54  INFO      ── 2014-10-26 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-26/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-26
+2026-05-13 00:18:54  INFO      ── 2014-10-27 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-27/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-27
+2026-05-13 00:18:54  INFO      ── 2014-10-28 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-28/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-28
+2026-05-13 00:18:54  INFO      ── 2014-10-29 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-29/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-29
+2026-05-13 00:18:54  INFO      ── 2014-10-30 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-30/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-30
+2026-05-13 00:18:54  INFO      ── 2014-10-31 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-31/ HTTP/1.1" 404 0
+2026-05-13 00:18:54  WARNING   No folders found for 2014-10-31
+2026-05-13 00:18:54  INFO      ── 2014-11-01 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-01/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-01
+2026-05-13 00:18:54  INFO      ── 2014-11-02 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-02
+2026-05-13 00:18:54  INFO      ── 2014-11-03 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-03/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-03
+2026-05-13 00:18:54  INFO      ── 2014-11-04 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-04/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-04
+2026-05-13 00:18:54  INFO      ── 2014-11-05 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-05/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-05
+2026-05-13 00:18:54  INFO      ── 2014-11-06 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-06/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-06
+2026-05-13 00:18:54  INFO      ── 2014-11-07 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-07/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-07
+2026-05-13 00:18:54  INFO      ── 2014-11-08 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-08/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-08
+2026-05-13 00:18:54  INFO      ── 2014-11-09 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-09/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-09
+2026-05-13 00:18:54  INFO      ── 2014-11-10 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-10/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-10
+2026-05-13 00:18:54  INFO      ── 2014-11-11 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-11/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-11
+2026-05-13 00:18:54  INFO      ── 2014-11-12 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-12/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-12
+2026-05-13 00:18:54  INFO      ── 2014-11-13 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-13/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-13
+2026-05-13 00:18:54  INFO      ── 2014-11-14 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-14/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-14
+2026-05-13 00:18:54  INFO      ── 2014-11-15 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-15/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-15
+2026-05-13 00:18:54  INFO      ── 2014-11-16 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-16/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-16
+2026-05-13 00:18:54  INFO      ── 2014-11-17 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-17/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-17
+2026-05-13 00:18:54  INFO      ── 2014-11-18 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-18/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-18
+2026-05-13 00:18:54  INFO      ── 2014-11-19 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-19/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-19
+2026-05-13 00:18:54  INFO      ── 2014-11-20 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-20/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-20
+2026-05-13 00:18:54  INFO      ── 2014-11-21 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-21/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-21
+2026-05-13 00:18:54  INFO      ── 2014-11-22 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-22/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-22
+2026-05-13 00:18:54  INFO      ── 2014-11-23 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-23
+2026-05-13 00:18:54  INFO      ── 2014-11-24 ──────────────────────────────────────────
+2026-05-13 00:18:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:54  WARNING   No folders found for 2014-11-24
+2026-05-13 00:18:54  INFO      ── 2014-11-25 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-25
+2026-05-13 00:18:55  INFO      ── 2014-11-26 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-26
+2026-05-13 00:18:55  INFO      ── 2014-11-27 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-27/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-27
+2026-05-13 00:18:55  INFO      ── 2014-11-28 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-28/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-28
+2026-05-13 00:18:55  INFO      ── 2014-11-29 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-29/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-29
+2026-05-13 00:18:55  INFO      ── 2014-11-30 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-30/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-11-30
+2026-05-13 00:18:55  INFO      ── 2014-12-01 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-01/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-01
+2026-05-13 00:18:55  INFO      ── 2014-12-02 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-02/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-02
+2026-05-13 00:18:55  INFO      ── 2014-12-03 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-03/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-03
+2026-05-13 00:18:55  INFO      ── 2014-12-04 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-04/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-04
+2026-05-13 00:18:55  INFO      ── 2014-12-05 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-05/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-05
+2026-05-13 00:18:55  INFO      ── 2014-12-06 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-06/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-06
+2026-05-13 00:18:55  INFO      ── 2014-12-07 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-07/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-07
+2026-05-13 00:18:55  INFO      ── 2014-12-08 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-08/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-08
+2026-05-13 00:18:55  INFO      ── 2014-12-09 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-09/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-09
+2026-05-13 00:18:55  INFO      ── 2014-12-10 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-10/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-10
+2026-05-13 00:18:55  INFO      ── 2014-12-11 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-11/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-11
+2026-05-13 00:18:55  INFO      ── 2014-12-12 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-12/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-12
+2026-05-13 00:18:55  INFO      ── 2014-12-13 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-13/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-13
+2026-05-13 00:18:55  INFO      ── 2014-12-14 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-14/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-14
+2026-05-13 00:18:55  INFO      ── 2014-12-15 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-15/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-15
+2026-05-13 00:18:55  INFO      ── 2014-12-16 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-16/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-16
+2026-05-13 00:18:55  INFO      ── 2014-12-17 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-17/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-17
+2026-05-13 00:18:55  INFO      ── 2014-12-18 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-18/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-18
+2026-05-13 00:18:55  INFO      ── 2014-12-19 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-19/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-19
+2026-05-13 00:18:55  INFO      ── 2014-12-20 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-20/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-20
+2026-05-13 00:18:55  INFO      ── 2014-12-21 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-21/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-21
+2026-05-13 00:18:55  INFO      ── 2014-12-22 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-22/ HTTP/1.1" 404 0
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-22
+2026-05-13 00:18:55  INFO      ── 2014-12-23 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-23/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-23
+2026-05-13 00:18:55  INFO      ── 2014-12-24 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-24/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-24
+2026-05-13 00:18:55  INFO      ── 2014-12-25 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-25/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-25
+2026-05-13 00:18:55  INFO      ── 2014-12-26 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-26/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-26
+2026-05-13 00:18:55  INFO      ── 2014-12-27 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-27/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-27
+2026-05-13 00:18:55  INFO      ── 2014-12-28 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-28/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-28
+2026-05-13 00:18:55  INFO      ── 2014-12-29 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-29/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-29
+2026-05-13 00:18:55  INFO      ── 2014-12-30 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-30/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-30
+2026-05-13 00:18:55  INFO      ── 2014-12-31 ──────────────────────────────────────────
+2026-05-13 00:18:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-31/ HTTP/1.1" 200 None
+2026-05-13 00:18:55  WARNING   No folders found for 2014-12-31
+2026-05-13 00:18:55  INFO      
+2026-05-13 00:18:55  INFO      ============================================================
+2026-05-13 00:18:55  INFO      Indexing complete
+2026-05-13 00:18:55  INFO        success:     0
+2026-05-13 00:18:55  INFO        partial:     0
+2026-05-13 00:18:55  INFO        failed:      214
+2026-05-13 00:18:55  INFO        dry:         0
+2026-05-13 00:18:55  INFO        skipped:     0
+2026-05-13 00:18:55  INFO        stations:    0
+2026-05-13 00:18:55  INFO        sensors:     0
+2026-05-13 00:18:55  INFO        errors:      214
+2026-05-13 00:18:55  INFO      ============================================================
+2026-05-13 00:21:51  INFO      ============================================================
+2026-05-13 00:21:51  INFO      OpenSenseMap Indexer  2026-05-13 00:21:51
+2026-05-13 00:21:51  INFO      Log file   : D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.log
+2026-05-13 00:21:51  INFO      Resume file: D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.resume
+2026-05-13 00:21:51  INFO      Mode       : DRY RUN — no DB writes
+2026-05-13 00:21:51  INFO      ============================================================
+2026-05-13 00:21:51  INFO      Range      : 2014-06-01 → 2014-12-31  (214 days)
+2026-05-13 00:21:51  WARNING   GeoJSON not found at data\admin_boundary.geojson — country/region will be NULL
+2026-05-13 00:21:51  INFO      Days to process: 214  (skipped/done: 0)
+2026-05-13 00:21:51  INFO      ── 2014-06-01 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     Starting new HTTPS connection (1): archive.opensensemap.org:443
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-01/ HTTP/1.1" 404 0
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-01
+2026-05-13 00:21:51  INFO      ── 2014-06-02 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-02/ HTTP/1.1" 404 0
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-02
+2026-05-13 00:21:51  INFO      ── 2014-06-03 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-03
+2026-05-13 00:21:51  INFO      ── 2014-06-04 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-04
+2026-05-13 00:21:51  INFO      ── 2014-06-05 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-05
+2026-05-13 00:21:51  INFO      ── 2014-06-06 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-06
+2026-05-13 00:21:51  INFO      ── 2014-06-07 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-07
+2026-05-13 00:21:51  INFO      ── 2014-06-08 ──────────────────────────────────────────
+2026-05-13 00:21:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:51  WARNING   No folders found for 2014-06-08
+2026-05-13 00:21:51  INFO      ── 2014-06-09 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-09
+2026-05-13 00:21:52  INFO      ── 2014-06-10 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-10
+2026-05-13 00:21:52  INFO      ── 2014-06-11 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-11
+2026-05-13 00:21:52  INFO      ── 2014-06-12 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-12
+2026-05-13 00:21:52  INFO      ── 2014-06-13 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-13
+2026-05-13 00:21:52  INFO      ── 2014-06-14 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-14
+2026-05-13 00:21:52  INFO      ── 2014-06-15 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-15
+2026-05-13 00:21:52  INFO      ── 2014-06-16 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-16
+2026-05-13 00:21:52  INFO      ── 2014-06-17 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-17
+2026-05-13 00:21:52  INFO      ── 2014-06-18 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-18
+2026-05-13 00:21:52  INFO      ── 2014-06-19 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-19
+2026-05-13 00:21:52  INFO      ── 2014-06-20 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-20/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-20
+2026-05-13 00:21:52  INFO      ── 2014-06-21 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-21
+2026-05-13 00:21:52  INFO      ── 2014-06-22 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-22
+2026-05-13 00:21:52  INFO      ── 2014-06-23 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-23
+2026-05-13 00:21:52  INFO      ── 2014-06-24 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-24
+2026-05-13 00:21:52  INFO      ── 2014-06-25 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-25
+2026-05-13 00:21:52  INFO      ── 2014-06-26 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-26
+2026-05-13 00:21:52  INFO      ── 2014-06-27 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-27/ HTTP/1.1" 404 0
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-27
+2026-05-13 00:21:52  INFO      ── 2014-06-28 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-28/ HTTP/1.1" 404 0
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-28
+2026-05-13 00:21:52  INFO      ── 2014-06-29 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-29/ HTTP/1.1" 404 0
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-29
+2026-05-13 00:21:52  INFO      ── 2014-06-30 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-06-30/ HTTP/1.1" 404 0
+2026-05-13 00:21:52  WARNING   No folders found for 2014-06-30
+2026-05-13 00:21:52  INFO      ── 2014-07-01 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-01/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-01
+2026-05-13 00:21:52  INFO      ── 2014-07-02 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-02
+2026-05-13 00:21:52  INFO      ── 2014-07-03 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-03
+2026-05-13 00:21:52  INFO      ── 2014-07-04 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-04
+2026-05-13 00:21:52  INFO      ── 2014-07-05 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-05
+2026-05-13 00:21:52  INFO      ── 2014-07-06 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-06
+2026-05-13 00:21:52  INFO      ── 2014-07-07 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-07
+2026-05-13 00:21:52  INFO      ── 2014-07-08 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-08
+2026-05-13 00:21:52  INFO      ── 2014-07-09 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-09
+2026-05-13 00:21:52  INFO      ── 2014-07-10 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-10
+2026-05-13 00:21:52  INFO      ── 2014-07-11 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-11
+2026-05-13 00:21:52  INFO      ── 2014-07-12 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-12
+2026-05-13 00:21:52  INFO      ── 2014-07-13 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-13
+2026-05-13 00:21:52  INFO      ── 2014-07-14 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-14
+2026-05-13 00:21:52  INFO      ── 2014-07-15 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-15
+2026-05-13 00:21:52  INFO      ── 2014-07-16 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-16
+2026-05-13 00:21:52  INFO      ── 2014-07-17 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-17
+2026-05-13 00:21:52  INFO      ── 2014-07-18 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-18
+2026-05-13 00:21:52  INFO      ── 2014-07-19 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-19
+2026-05-13 00:21:52  INFO      ── 2014-07-20 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-20/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-20
+2026-05-13 00:21:52  INFO      ── 2014-07-21 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-21
+2026-05-13 00:21:52  INFO      ── 2014-07-22 ──────────────────────────────────────────
+2026-05-13 00:21:52  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:52  WARNING   No folders found for 2014-07-22
+2026-05-13 00:21:52  INFO      ── 2014-07-23 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-23
+2026-05-13 00:21:53  INFO      ── 2014-07-24 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-24
+2026-05-13 00:21:53  INFO      ── 2014-07-25 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-25
+2026-05-13 00:21:53  INFO      ── 2014-07-26 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-26
+2026-05-13 00:21:53  INFO      ── 2014-07-27 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-27/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-27
+2026-05-13 00:21:53  INFO      ── 2014-07-28 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-28/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-28
+2026-05-13 00:21:53  INFO      ── 2014-07-29 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-29/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-29
+2026-05-13 00:21:53  INFO      ── 2014-07-30 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-30/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-30
+2026-05-13 00:21:53  INFO      ── 2014-07-31 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-07-31/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-07-31
+2026-05-13 00:21:53  INFO      ── 2014-08-01 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-01/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-01
+2026-05-13 00:21:53  INFO      ── 2014-08-02 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-02
+2026-05-13 00:21:53  INFO      ── 2014-08-03 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-03
+2026-05-13 00:21:53  INFO      ── 2014-08-04 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-04
+2026-05-13 00:21:53  INFO      ── 2014-08-05 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-05
+2026-05-13 00:21:53  INFO      ── 2014-08-06 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-06
+2026-05-13 00:21:53  INFO      ── 2014-08-07 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-07
+2026-05-13 00:21:53  INFO      ── 2014-08-08 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-08
+2026-05-13 00:21:53  INFO      ── 2014-08-09 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-09
+2026-05-13 00:21:53  INFO      ── 2014-08-10 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-10
+2026-05-13 00:21:53  INFO      ── 2014-08-11 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-11
+2026-05-13 00:21:53  INFO      ── 2014-08-12 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-12
+2026-05-13 00:21:53  INFO      ── 2014-08-13 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-13
+2026-05-13 00:21:53  INFO      ── 2014-08-14 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-14
+2026-05-13 00:21:53  INFO      ── 2014-08-15 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-15
+2026-05-13 00:21:53  INFO      ── 2014-08-16 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-16
+2026-05-13 00:21:53  INFO      ── 2014-08-17 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-17
+2026-05-13 00:21:53  INFO      ── 2014-08-18 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-18
+2026-05-13 00:21:53  INFO      ── 2014-08-19 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-19
+2026-05-13 00:21:53  INFO      ── 2014-08-20 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-20/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-20
+2026-05-13 00:21:53  INFO      ── 2014-08-21 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-21
+2026-05-13 00:21:53  INFO      ── 2014-08-22 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-22
+2026-05-13 00:21:53  INFO      ── 2014-08-23 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-23
+2026-05-13 00:21:53  INFO      ── 2014-08-24 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-24
+2026-05-13 00:21:53  INFO      ── 2014-08-25 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-25
+2026-05-13 00:21:53  INFO      ── 2014-08-26 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-26
+2026-05-13 00:21:53  INFO      ── 2014-08-27 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-27/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-27
+2026-05-13 00:21:53  INFO      ── 2014-08-28 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-28/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-28
+2026-05-13 00:21:53  INFO      ── 2014-08-29 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-29/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-29
+2026-05-13 00:21:53  INFO      ── 2014-08-30 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-30/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-30
+2026-05-13 00:21:53  INFO      ── 2014-08-31 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-31/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-08-31
+2026-05-13 00:21:53  INFO      ── 2014-09-01 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-01/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-09-01
+2026-05-13 00:21:53  INFO      ── 2014-09-02 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-09-02
+2026-05-13 00:21:53  INFO      ── 2014-09-03 ──────────────────────────────────────────
+2026-05-13 00:21:53  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:53  WARNING   No folders found for 2014-09-03
+2026-05-13 00:21:53  INFO      ── 2014-09-04 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-04
+2026-05-13 00:21:54  INFO      ── 2014-09-05 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-05
+2026-05-13 00:21:54  INFO      ── 2014-09-06 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-06
+2026-05-13 00:21:54  INFO      ── 2014-09-07 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-07
+2026-05-13 00:21:54  INFO      ── 2014-09-08 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-08
+2026-05-13 00:21:54  INFO      ── 2014-09-09 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-09
+2026-05-13 00:21:54  INFO      ── 2014-09-10 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-10
+2026-05-13 00:21:54  INFO      ── 2014-09-11 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-11
+2026-05-13 00:21:54  INFO      ── 2014-09-12 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-12
+2026-05-13 00:21:54  INFO      ── 2014-09-13 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-13
+2026-05-13 00:21:54  INFO      ── 2014-09-14 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-14
+2026-05-13 00:21:54  INFO      ── 2014-09-15 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-15
+2026-05-13 00:21:54  INFO      ── 2014-09-16 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-16
+2026-05-13 00:21:54  INFO      ── 2014-09-17 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-17
+2026-05-13 00:21:54  INFO      ── 2014-09-18 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-18
+2026-05-13 00:21:54  INFO      ── 2014-09-19 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-19
+2026-05-13 00:21:54  INFO      ── 2014-09-20 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-20/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-20
+2026-05-13 00:21:54  INFO      ── 2014-09-21 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-21
+2026-05-13 00:21:54  INFO      ── 2014-09-22 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-22
+2026-05-13 00:21:54  INFO      ── 2014-09-23 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-23
+2026-05-13 00:21:54  INFO      ── 2014-09-24 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-24
+2026-05-13 00:21:54  INFO      ── 2014-09-25 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-25
+2026-05-13 00:21:54  INFO      ── 2014-09-26 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-26
+2026-05-13 00:21:54  INFO      ── 2014-09-27 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-27/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-27
+2026-05-13 00:21:54  INFO      ── 2014-09-28 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-28/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-28
+2026-05-13 00:21:54  INFO      ── 2014-09-29 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-29/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-29
+2026-05-13 00:21:54  INFO      ── 2014-09-30 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-09-30/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-09-30
+2026-05-13 00:21:54  INFO      ── 2014-10-01 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-01/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-01
+2026-05-13 00:21:54  INFO      ── 2014-10-02 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-02
+2026-05-13 00:21:54  INFO      ── 2014-10-03 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-03
+2026-05-13 00:21:54  INFO      ── 2014-10-04 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-04
+2026-05-13 00:21:54  INFO      ── 2014-10-05 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-05
+2026-05-13 00:21:54  INFO      ── 2014-10-06 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-06
+2026-05-13 00:21:54  INFO      ── 2014-10-07 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-07
+2026-05-13 00:21:54  INFO      ── 2014-10-08 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-08
+2026-05-13 00:21:54  INFO      ── 2014-10-09 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-09
+2026-05-13 00:21:54  INFO      ── 2014-10-10 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-10
+2026-05-13 00:21:54  INFO      ── 2014-10-11 ──────────────────────────────────────────
+2026-05-13 00:21:54  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:54  WARNING   No folders found for 2014-10-11
+2026-05-13 00:21:54  INFO      ── 2014-10-12 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-12
+2026-05-13 00:21:55  INFO      ── 2014-10-13 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-13
+2026-05-13 00:21:55  INFO      ── 2014-10-14 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-14
+2026-05-13 00:21:55  INFO      ── 2014-10-15 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-15
+2026-05-13 00:21:55  INFO      ── 2014-10-16 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-16
+2026-05-13 00:21:55  INFO      ── 2014-10-17 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-17
+2026-05-13 00:21:55  INFO      ── 2014-10-18 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-18
+2026-05-13 00:21:55  INFO      ── 2014-10-19 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-19
+2026-05-13 00:21:55  INFO      ── 2014-10-20 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-20/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-20
+2026-05-13 00:21:55  INFO      ── 2014-10-21 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-21
+2026-05-13 00:21:55  INFO      ── 2014-10-22 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-22
+2026-05-13 00:21:55  INFO      ── 2014-10-23 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-23
+2026-05-13 00:21:55  INFO      ── 2014-10-24 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-24/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-24
+2026-05-13 00:21:55  INFO      ── 2014-10-25 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-25/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-25
+2026-05-13 00:21:55  INFO      ── 2014-10-26 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-26/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-26
+2026-05-13 00:21:55  INFO      ── 2014-10-27 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-27/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-27
+2026-05-13 00:21:55  INFO      ── 2014-10-28 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-28/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-28
+2026-05-13 00:21:55  INFO      ── 2014-10-29 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-29/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-29
+2026-05-13 00:21:55  INFO      ── 2014-10-30 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-30/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-30
+2026-05-13 00:21:55  INFO      ── 2014-10-31 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-10-31/ HTTP/1.1" 404 0
+2026-05-13 00:21:55  WARNING   No folders found for 2014-10-31
+2026-05-13 00:21:55  INFO      ── 2014-11-01 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-01/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-01
+2026-05-13 00:21:55  INFO      ── 2014-11-02 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-02
+2026-05-13 00:21:55  INFO      ── 2014-11-03 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-03/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-03
+2026-05-13 00:21:55  INFO      ── 2014-11-04 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-04/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-04
+2026-05-13 00:21:55  INFO      ── 2014-11-05 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-05/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-05
+2026-05-13 00:21:55  INFO      ── 2014-11-06 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-06/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-06
+2026-05-13 00:21:55  INFO      ── 2014-11-07 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-07/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-07
+2026-05-13 00:21:55  INFO      ── 2014-11-08 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-08/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-08
+2026-05-13 00:21:55  INFO      ── 2014-11-09 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-09/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-09
+2026-05-13 00:21:55  INFO      ── 2014-11-10 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-10/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-10
+2026-05-13 00:21:55  INFO      ── 2014-11-11 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-11/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-11
+2026-05-13 00:21:55  INFO      ── 2014-11-12 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-12/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-12
+2026-05-13 00:21:55  INFO      ── 2014-11-13 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-13/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-13
+2026-05-13 00:21:55  INFO      ── 2014-11-14 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-14/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-14
+2026-05-13 00:21:55  INFO      ── 2014-11-15 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-15/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-15
+2026-05-13 00:21:55  INFO      ── 2014-11-16 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-16/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-16
+2026-05-13 00:21:55  INFO      ── 2014-11-17 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-17/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-17
+2026-05-13 00:21:55  INFO      ── 2014-11-18 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-18/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-18
+2026-05-13 00:21:55  INFO      ── 2014-11-19 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-19/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-19
+2026-05-13 00:21:55  INFO      ── 2014-11-20 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-20/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-20
+2026-05-13 00:21:55  INFO      ── 2014-11-21 ──────────────────────────────────────────
+2026-05-13 00:21:55  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-21/ HTTP/1.1" 200 None
+2026-05-13 00:21:55  WARNING   No folders found for 2014-11-21
+2026-05-13 00:21:55  INFO      ── 2014-11-22 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-22/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-22
+2026-05-13 00:21:56  INFO      ── 2014-11-23 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-23
+2026-05-13 00:21:56  INFO      ── 2014-11-24 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-24
+2026-05-13 00:21:56  INFO      ── 2014-11-25 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-25
+2026-05-13 00:21:56  INFO      ── 2014-11-26 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-26
+2026-05-13 00:21:56  INFO      ── 2014-11-27 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-27/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-27
+2026-05-13 00:21:56  INFO      ── 2014-11-28 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-28/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-28
+2026-05-13 00:21:56  INFO      ── 2014-11-29 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-29/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-29
+2026-05-13 00:21:56  INFO      ── 2014-11-30 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-11-30/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-11-30
+2026-05-13 00:21:56  INFO      ── 2014-12-01 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-01/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-01
+2026-05-13 00:21:56  INFO      ── 2014-12-02 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-02/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-02
+2026-05-13 00:21:56  INFO      ── 2014-12-03 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-03/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-03
+2026-05-13 00:21:56  INFO      ── 2014-12-04 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-04/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-04
+2026-05-13 00:21:56  INFO      ── 2014-12-05 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-05/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-05
+2026-05-13 00:21:56  INFO      ── 2014-12-06 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-06/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-06
+2026-05-13 00:21:56  INFO      ── 2014-12-07 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-07/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-07
+2026-05-13 00:21:56  INFO      ── 2014-12-08 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-08/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-08
+2026-05-13 00:21:56  INFO      ── 2014-12-09 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-09/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-09
+2026-05-13 00:21:56  INFO      ── 2014-12-10 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-10/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-10
+2026-05-13 00:21:56  INFO      ── 2014-12-11 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-11/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-11
+2026-05-13 00:21:56  INFO      ── 2014-12-12 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-12/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-12
+2026-05-13 00:21:56  INFO      ── 2014-12-13 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-13/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-13
+2026-05-13 00:21:56  INFO      ── 2014-12-14 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-14/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-14
+2026-05-13 00:21:56  INFO      ── 2014-12-15 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-15/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-15
+2026-05-13 00:21:56  INFO      ── 2014-12-16 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-16/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-16
+2026-05-13 00:21:56  INFO      ── 2014-12-17 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-17/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-17
+2026-05-13 00:21:56  INFO      ── 2014-12-18 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-18/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-18
+2026-05-13 00:21:56  INFO      ── 2014-12-19 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-19/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-19
+2026-05-13 00:21:56  INFO      ── 2014-12-20 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-20/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-20
+2026-05-13 00:21:56  INFO      ── 2014-12-21 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-21/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-21
+2026-05-13 00:21:56  INFO      ── 2014-12-22 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-22/ HTTP/1.1" 404 0
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-22
+2026-05-13 00:21:56  INFO      ── 2014-12-23 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-23/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-23
+2026-05-13 00:21:56  INFO      ── 2014-12-24 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-24/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-24
+2026-05-13 00:21:56  INFO      ── 2014-12-25 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-25/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-25
+2026-05-13 00:21:56  INFO      ── 2014-12-26 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-26/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-26
+2026-05-13 00:21:56  INFO      ── 2014-12-27 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-27/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-27
+2026-05-13 00:21:56  INFO      ── 2014-12-28 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-28/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-28
+2026-05-13 00:21:56  INFO      ── 2014-12-29 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-29/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-29
+2026-05-13 00:21:56  INFO      ── 2014-12-30 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-30/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-30
+2026-05-13 00:21:56  INFO      ── 2014-12-31 ──────────────────────────────────────────
+2026-05-13 00:21:56  DEBUG     https://archive.opensensemap.org:443 "GET /2014-12-31/ HTTP/1.1" 200 None
+2026-05-13 00:21:56  WARNING   No folders found for 2014-12-31
+2026-05-13 00:21:56  INFO      
+2026-05-13 00:21:56  INFO      ============================================================
+2026-05-13 00:21:56  INFO      Indexing complete
+2026-05-13 00:21:56  INFO        success:     0
+2026-05-13 00:21:56  INFO        partial:     0
+2026-05-13 00:21:56  INFO        failed:      214
+2026-05-13 00:21:56  INFO        dry:         0
+2026-05-13 00:21:56  INFO        skipped:     0
+2026-05-13 00:21:56  INFO        stations:    0
+2026-05-13 00:21:56  INFO        sensors:     0
+2026-05-13 00:21:56  INFO        errors:      214
+2026-05-13 00:21:56  INFO      ============================================================
+2026-05-13 00:25:00  INFO      ============================================================
+2026-05-13 00:25:00  INFO      OpenSenseMap Indexer  2026-05-13 00:25:00
+2026-05-13 00:25:00  INFO      Log file   : D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.log
+2026-05-13 00:25:00  INFO      Resume file: D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.resume
+2026-05-13 00:25:00  INFO      Mode       : DRY RUN — no DB writes
+2026-05-13 00:25:00  INFO      ============================================================
+2026-05-13 00:25:00  INFO      Range      : 2014-08-03 → 2014-08-03  (1 days)
+2026-05-13 00:25:00  WARNING   GeoJSON not found at data\admin_boundary.geojson — country/region will be NULL
+2026-05-13 00:25:00  INFO      Days to process: 1  (skipped/done: 0)
+2026-05-13 00:25:00  INFO      ── 2014-08-03 ──────────────────────────────────────────
+2026-05-13 00:25:00  DEBUG     Starting new HTTPS connection (1): archive.opensensemap.org:443
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  INFO        3 station folders
+2026-05-13 00:25:01  DEBUG     Starting new HTTPS connection (2): archive.opensensemap.org:443
+2026-05-13 00:25:01  DEBUG     Starting new HTTPS connection (3): archive.opensensemap.org:443
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/53c57d64e79c90a0102f6b9c-PaderBox-2014-08-03.json HTTP/1.1" 200 307
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/53d2c94de79c90a01037c3d5-Jarosit-2014-08-03.json HTTP/1.1" 200 309
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/53cace31e79c90a010327bf5-senseboxTpf-2014-08-03.json HTTP/1.1" 200 292
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/ HTTP/1.1" 200 None
+2026-05-13 00:25:01  INFO        Fetched 3/3 stations  0 sensors  0 fetch-errors
+2026-05-13 00:25:01  INFO        [DRY RUN] Would insert/update 3 stations, 0 sensors
+2026-05-13 00:25:01  INFO          station sample: box_id=53c57d64e79c90a0102f6b9c   name=PaderBox  country=?  sensors=0
+2026-05-13 00:25:01  INFO          station sample: box_id=53d2c94de79c90a01037c3d5   name=Jarosit  country=?  sensors=0
+2026-05-13 00:25:01  INFO          station sample: box_id=53cace31e79c90a010327bf5   name=senseboxTpf  country=?  sensors=0
+2026-05-13 00:25:01  INFO      
+2026-05-13 00:25:01  INFO      ============================================================
+2026-05-13 00:25:01  INFO      Indexing complete
+2026-05-13 00:25:01  INFO        success:     0
+2026-05-13 00:25:01  INFO        partial:     0
+2026-05-13 00:25:01  INFO        failed:      0
+2026-05-13 00:25:01  INFO        dry:         1
+2026-05-13 00:25:01  INFO        skipped:     0
+2026-05-13 00:25:01  INFO        stations:    3
+2026-05-13 00:25:01  INFO        sensors:     0
+2026-05-13 00:25:01  INFO        errors:      0
+2026-05-13 00:25:01  INFO      ============================================================
+2026-05-13 00:26:50  INFO      ============================================================
+2026-05-13 00:26:50  INFO      OpenSenseMap Indexer  2026-05-13 00:26:50
+2026-05-13 00:26:50  INFO      Log file   : D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.log
+2026-05-13 00:26:50  INFO      Resume file: D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap\OSem-Archive\index\indexer.resume
+2026-05-13 00:26:50  INFO      Mode       : DRY RUN — no DB writes
+2026-05-13 00:26:50  INFO      ============================================================
+2026-05-13 00:26:50  INFO      Range      : 2014-08-03 → 2014-08-03  (1 days)
+2026-05-13 00:26:50  WARNING   GeoJSON not found at data\admin_boundary.geojson — country/region will be NULL
+2026-05-13 00:26:50  INFO      Days to process: 1  (skipped/done: 0)
+2026-05-13 00:26:50  INFO      ── 2014-08-03 ──────────────────────────────────────────
+2026-05-13 00:26:50  DEBUG     Starting new HTTPS connection (1): archive.opensensemap.org:443
+2026-05-13 00:26:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/ HTTP/1.1" 200 None
+2026-05-13 00:26:50  INFO        3 station folders
+2026-05-13 00:26:50  DEBUG     Starting new HTTPS connection (2): archive.opensensemap.org:443
+2026-05-13 00:26:50  DEBUG     Starting new HTTPS connection (3): archive.opensensemap.org:443
+2026-05-13 00:26:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/ HTTP/1.1" 200 None
+2026-05-13 00:26:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/53cace31e79c90a010327bf5-senseboxTpf-2014-08-03.json HTTP/1.1" 200 292
+2026-05-13 00:26:50  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53cace31e79c90a010327bf5-senseboxTpf/ HTTP/1.1" 200 None
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/ HTTP/1.1" 200 None
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/ HTTP/1.1" 200 None
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/53d2c94de79c90a01037c3d5-Jarosit-2014-08-03.json HTTP/1.1" 200 309
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/53c57d64e79c90a0102f6b9c-PaderBox-2014-08-03.json HTTP/1.1" 200 307
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53d2c94de79c90a01037c3d5-Jarosit/ HTTP/1.1" 200 None
+2026-05-13 00:26:51  DEBUG     https://archive.opensensemap.org:443 "GET /2014-08-03/53c57d64e79c90a0102f6b9c-PaderBox/ HTTP/1.1" 200 None
+2026-05-13 00:26:51  INFO        Fetched 3/3 stations  15 sensors  0 fetch-errors
+2026-05-13 00:26:51  INFO        [DRY RUN] Would insert/update 3 stations, 15 sensors
+2026-05-13 00:26:51  INFO          station sample: box_id=53cace31e79c90a010327bf5   name=senseboxTpf  country=?  sensors=5
+2026-05-13 00:26:51  INFO          station sample: box_id=53d2c94de79c90a01037c3d5   name=Jarosit  country=?  sensors=5
+2026-05-13 00:26:51  INFO          station sample: box_id=53c57d64e79c90a0102f6b9c   name=PaderBox  country=?  sensors=5
+2026-05-13 00:26:51  INFO      
+2026-05-13 00:26:51  INFO      ============================================================
+2026-05-13 00:26:51  INFO      Indexing complete
+2026-05-13 00:26:51  INFO        success:     0
+2026-05-13 00:26:51  INFO        partial:     0
+2026-05-13 00:26:51  INFO        failed:      0
+2026-05-13 00:26:51  INFO        dry:         1
+2026-05-13 00:26:51  INFO        skipped:     0
+2026-05-13 00:26:51  INFO        stations:    3
+2026-05-13 00:26:51  INFO        sensors:     15
+2026-05-13 00:26:51  INFO        errors:      0
+2026-05-13 00:26:51  INFO      ============================================================

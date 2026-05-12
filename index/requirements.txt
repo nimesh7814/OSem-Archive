@@ -1,0 +1,5 @@
+psycopg2-binary>=2.9
+requests>=2.31
+shapely>=2.0
+tqdm>=4.66
+python-dotenv>=1.0
