@@ -2,27 +2,28 @@
 OpenSenseMap Archive Indexer
 ============================
 Crawls https://archive.opensensemap.org daily, extracts station metadata,
-resolves country / region via PostGIS ST_Within against a pre-loaded
-admin-boundary GeoJSON, and stores everything in PostgreSQL for fast
-querying.  DuckDB uses sensor_files.csv_url for data access.
+resolves country / region in-process using Shapely point-in-polygon against
+a pre-loaded admin-boundary GeoJSON, and stores everything in PostgreSQL.
+DuckDB uses sensor_files.csv_url for data access.
 
 Usage
 -----
     python indexer.py --mode daily        # index yesterday
     python indexer.py --mode backfill     # index all missing historical dates
-    python indexer.py --mode date --date 2024-01-15   # index one date
-    python indexer.py --mode seed-boundaries           # load admin_boundary.geojson
-    python indexer.py --mode scheduler   # persistent daily scheduler (default)
+    python indexer.py --mode date --date 2024-01-15
+    python indexer.py --mode scheduler    # persistent daily scheduler (default)
 
 Boundary file
 -------------
-Place your GeoJSON at  data/admin_boundary.geojson  (relative to this script).
-Required properties on each feature:
+Place your GeoJSON at  data/admin_boundary.geojson  (relative to this script),
+or set the ADMIN_BOUNDARY_PATH environment variable.
+
+Required feature properties:
     adm0_name  →  country name   (e.g. "Germany")
     adm1_name  →  region / state (e.g. "Bavaria")
 
-Run  --mode seed-boundaries  once (or whenever the file changes) to load /
-refresh the admin_boundaries table.
+The file is loaded once at startup into a Shapely STRtree for fast
+point-in-polygon queries — no extra database table required.
 """
 
 import asyncio
@@ -36,10 +37,11 @@ from datetime import date, timedelta, datetime
 import httpx
 import asyncpg
 from bs4 import BeautifulSoup
+from shapely.geometry import shape, Point
+from shapely.strtree import STRtree
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
-# Local sensor-categorisation module
 from sensor_types import categorize_sensor
 
 load_dotenv()
@@ -64,12 +66,129 @@ BASE_URL        = os.getenv("ARCHIVE_BASE_URL", "https://archive.opensensemap.or
 DATABASE_URL    = os.getenv("DATABASE_URL")
 CONCURRENCY     = int(os.getenv("CRAWL_CONCURRENCY", "5"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30"))
-ARCHIVE_START   = date(2014, 6, 3)   # earliest date in the archive
+ARCHIVE_START   = date(2014, 6, 3)
 
-# Path to the admin boundary GeoJSON (can be overridden by env var)
 BOUNDARY_PATH = pathlib.Path(
     os.getenv("ADMIN_BOUNDARY_PATH", "data/admin_boundary.geojson")
 )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# In-process boundary index  (loaded once at startup)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Parallel lists — index i in _boundary_geoms corresponds to index i in _boundary_props
+_boundary_geoms: list       = []
+_boundary_props: list[dict] = []
+_boundary_tree:  STRtree | None = None
+
+
+def load_boundaries() -> None:
+    """
+    Parse BOUNDARY_PATH and build a Shapely STRtree for fast point-in-polygon
+    queries.  Called once before the async event loop starts.
+
+    Each GeoJSON feature must have at least one of these property pairs:
+        adm0_name / adm1_name   (preferred)
+        NAME_0    / NAME_1
+        COUNTRY   / region
+    """
+    global _boundary_tree
+
+    if not BOUNDARY_PATH.exists():
+        raise FileNotFoundError(
+            f"Admin boundary file not found: {BOUNDARY_PATH}\n"
+            "Place the file at data/admin_boundary.geojson or set ADMIN_BOUNDARY_PATH."
+        )
+
+    log.info(f"Loading boundaries from {BOUNDARY_PATH} ...")
+
+    with open(BOUNDARY_PATH, encoding="utf-8") as fh:
+        geojson = json.load(fh)
+
+    skipped = 0
+    for feat in geojson.get("features", []):
+        props   = feat.get("properties") or {}
+        geom_raw = feat.get("geometry")
+
+        if not geom_raw:
+            skipped += 1
+            continue
+
+        try:
+            geom = shape(geom_raw)   # handles both Polygon and MultiPolygon
+        except Exception as exc:
+            log.warning(f"Skipping invalid geometry: {exc}")
+            skipped += 1
+            continue
+
+        country = (
+            props.get("adm0_name")
+            or props.get("NAME_0")
+            or props.get("COUNTRY")
+        )
+        region = (
+            props.get("adm1_name")
+            or props.get("NAME_1")
+            or props.get("region")
+        )
+
+        _boundary_geoms.append(geom)
+        _boundary_props.append({"country": country, "region": region})
+
+    _boundary_tree = STRtree(_boundary_geoms)
+
+    log.info(
+        f"Boundaries loaded — {len(_boundary_geoms)} features indexed, "
+        f"{skipped} skipped"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# In-process location lookup  (replaces Nominatim + any DB table)
+# ─────────────────────────────────────────────────────────────────────────────
+_location_cache: dict[tuple[float, float], dict] = {}
+
+
+def lookup_location(lat: float, lon: float) -> dict:
+    """
+    Return {"country": ..., "region": ...} for a (lat, lon) coordinate by
+    testing the point against the pre-loaded boundary STRtree.
+
+    How it works:
+        1. STRtree.query(point) prunes candidates by bounding-box overlap —
+           O(log n) instead of checking all polygons.
+        2. Exact containment (shapely .contains()) is only run on the small
+           set of bbox candidates, typically 1-3 features.
+
+    Results are cached at ~1 km precision (2 dp) so repeat lookups for
+    nearby stations skip the geometry test entirely.
+
+    Returns {} if coordinates are None or no boundary contains the point
+    (e.g. open ocean, Antarctica).
+    """
+    if lat is None or lon is None:
+        return {}
+
+    cache_key = (round(lat, 2), round(lon, 2))
+    if cache_key in _location_cache:
+        return _location_cache[cache_key]
+
+    if _boundary_tree is None:
+        log.warning("Boundary tree not loaded — call load_boundaries() at startup")
+        return {}
+
+    # GeoJSON / Shapely convention: Point(x=longitude, y=latitude)
+    point = Point(lon, lat)
+
+    result: dict = {}
+    for idx in _boundary_tree.query(point):
+        if _boundary_geoms[idx].contains(point):
+            result = _boundary_props[idx]
+            break
+
+    _location_cache[cache_key] = result
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -101,123 +220,6 @@ async def get_pending_dates(pool: asyncpg.Pool) -> list:
             "SELECT date FROM index_log WHERE status IN ('pending', 'failed') ORDER BY date"
         )
         return [str(r["date"]) for r in rows]
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Boundary seeding  (run once: python indexer.py --mode seed-boundaries)
-# ─────────────────────────────────────────────────────────────────────────────
-async def seed_boundaries(pool: asyncpg.Pool) -> None:
-    """
-    Load (or refresh) admin_boundaries from BOUNDARY_PATH.
-
-    The GeoJSON must have features whose properties include:
-        adm0_name  – country name
-        adm1_name  – region / state name
-    Geometry may be Polygon or MultiPolygon; both are cast to MULTIPOLYGON.
-    """
-    if not BOUNDARY_PATH.exists():
-        raise FileNotFoundError(
-            f"Admin boundary file not found: {BOUNDARY_PATH}\n"
-            "Set ADMIN_BOUNDARY_PATH env var or place the file at data/admin_boundary.geojson"
-        )
-
-    log.info(f"Loading boundaries from {BOUNDARY_PATH} …")
-    with open(BOUNDARY_PATH, encoding="utf-8") as fh:
-        geojson = json.load(fh)
-
-    features = geojson.get("features", [])
-    log.info(f"Found {len(features)} features in boundary file")
-
-    inserted = updated = skipped = 0
-
-    async with pool.acquire() as conn:
-        async with conn.transaction():
-            # Truncate and reload for a clean refresh
-            await conn.execute("TRUNCATE admin_boundaries RESTART IDENTITY CASCADE")
-
-            for feat in features:
-                props = feat.get("properties") or {}
-                geom  = feat.get("geometry")
-
-                adm0 = props.get("adm0_name") or props.get("NAME_0") or props.get("COUNTRY")
-                adm1 = props.get("adm1_name") or props.get("NAME_1") or props.get("region")
-
-                if not geom:
-                    skipped += 1
-                    continue
-
-                # Normalise to MULTIPOLYGON
-                geom_type = geom.get("type", "")
-                if geom_type == "Polygon":
-                    geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
-                elif geom_type != "MultiPolygon":
-                    log.warning(f"Skipping unsupported geometry type: {geom_type}")
-                    skipped += 1
-                    continue
-
-                geom_json = json.dumps(geom)
-
-                await conn.execute("""
-                    INSERT INTO admin_boundaries (adm0_name, adm1_name, geom)
-                    VALUES ($1, $2, ST_SetSRID(ST_GeomFromGeoJSON($3), 4326))
-                """, adm0, adm1, geom_json)
-
-                inserted += 1
-
-    log.info(
-        f"Boundary seed complete — {inserted} inserted, {skipped} skipped"
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PostGIS location lookup  (replaces Nominatim reverse geocoding)
-# ─────────────────────────────────────────────────────────────────────────────
-_location_cache: dict[tuple[float, float], dict] = {}
-
-
-async def lookup_location(pool: asyncpg.Pool, lat: float, lon: float) -> dict:
-    """
-    Resolve country and region for a (lat, lon) point using ST_Within
-    against the admin_boundaries table.
-
-    Returns a dict with keys: country, region  (both may be None if the
-    point falls outside all boundaries, e.g. ocean / unmapped territory).
-
-    Results are cached in memory (rounded to ~1 km precision) to avoid
-    redundant DB round-trips for stations that are close together.
-    """
-    if lat is None or lon is None:
-        return {}
-
-    # Round to 2 dp (~1 km) for cache key
-    cache_key = (round(lat, 2), round(lon, 2))
-    if cache_key in _location_cache:
-        return _location_cache[cache_key]
-
-    try:
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT adm0_name AS country,
-                       adm1_name AS region
-                FROM   admin_boundaries
-                WHERE  ST_Within(
-                           ST_SetSRID(ST_MakePoint($1, $2), 4326),
-                           geom
-                       )
-                LIMIT 1
-            """, lon, lat)   -- ST_MakePoint(lon, lat) — X=lon, Y=lat
-
-        result = {
-            "country": row["country"] if row else None,
-            "region":  row["region"]  if row else None,
-        }
-
-    except Exception as exc:
-        log.warning(f"Location lookup failed for ({lat}, {lon}): {exc}")
-        result = {}
-
-    _location_cache[cache_key] = result
-    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -281,7 +283,7 @@ async def upsert_station(
     location: dict,
 ) -> str | None:
     """
-    Upsert a station row.  Returns the station UUID (str) or None.
+    Upsert a station row and return its UUID, or None if box_id is missing.
 
     *location* is the dict returned by lookup_location():
         {"country": "Germany", "region": "Bavaria"}
@@ -294,8 +296,12 @@ async def upsert_station(
     lon = coords[0] if coords and len(coords) > 0 else None
     lat = coords[1] if coords and len(coords) > 1 else None
 
-    # Build WKT point for PostGIS; keep NULL when coordinates are absent
-    point_wkt = f"SRID=4326;POINT({lon} {lat})" if lon is not None and lat is not None else None
+    # EWKT string for the PostGIS geometry column; None when no coordinates
+    point_ewkt = (
+        f"SRID=4326;POINT({lon} {lat})"
+        if lon is not None and lat is not None
+        else None
+    )
 
     station_uuid = await conn.fetchval("""
         INSERT INTO stations (
@@ -307,7 +313,8 @@ async def upsert_station(
         )
         VALUES (
             $1, $2,
-            ST_GeomFromEWKT($3),
+            CASE WHEN $3::text IS NULL THEN NULL
+                 ELSE ST_GeomFromEWKT($3) END,
             $4, $5,
             $6, $6,
             now()
@@ -317,12 +324,12 @@ async def upsert_station(
             location = COALESCE(EXCLUDED.location, stations.location),
             country  = COALESCE(EXCLUDED.country,  stations.country),
             region   = COALESCE(EXCLUDED.region,   stations.region),
-            ls_date  = GREATEST(stations.ls_date,  EXCLUDED.ls_date)
+            ls_date  = GREATEST(stations.ls_date, EXCLUDED.ls_date)
         RETURNING uuid
     """,
         box_id,
         meta.get("name"),
-        point_wkt,
+        point_ewkt,
         location.get("country"),
         location.get("region"),
         datetime.strptime(date_str, "%Y-%m-%d").date(),
@@ -417,11 +424,12 @@ async def process_station(
             log.debug(f"No metadata for {station_folder} on {date_str}")
             return False
 
-        # Extract coordinates and resolve country/region via PostGIS
         coords = meta.get("currentLocation", {}).get("coordinates", [None, None])
         lon = coords[0] if coords and len(coords) > 0 else None
         lat = coords[1] if coords and len(coords) > 1 else None
-        location = await lookup_location(pool, lat, lon)
+
+        # Synchronous in-process lookup — no I/O, negligible latency
+        location = lookup_location(lat, lon)
 
         try:
             async with pool.acquire() as conn:
@@ -549,14 +557,13 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="OpenSenseMap Archive Indexer")
     parser.add_argument(
         "--mode",
-        choices=["daily", "backfill", "date", "seed-boundaries", "scheduler"],
+        choices=["daily", "backfill", "date", "scheduler"],
         default="scheduler",
         help=(
-            "daily            = index yesterday\n"
-            "backfill         = index all missing historical dates\n"
-            "date             = index a specific date (use --date YYYY-MM-DD)\n"
-            "seed-boundaries  = load / refresh admin_boundary.geojson into DB\n"
-            "scheduler        = persistent daily scheduler (default)\n"
+            "daily      = index yesterday\n"
+            "backfill   = index all missing historical dates\n"
+            "date       = index a specific date (use --date YYYY-MM-DD)\n"
+            "scheduler  = persistent daily scheduler (default)\n"
         ),
     )
     parser.add_argument("--date", help="Specific date to index (YYYY-MM-DD)", default=None)
@@ -565,14 +572,15 @@ async def main() -> None:
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL environment variable is required")
 
+    # Load the boundary GeoJSON into the in-process STRtree before anything else.
+    # This is synchronous, fast (~1-2 s for a world-level file), and only runs once.
+    load_boundaries()
+
     pool = await create_pool()
     log.info("Database connection pool created")
 
     try:
-        if args.mode == "seed-boundaries":
-            await seed_boundaries(pool)
-
-        elif args.mode == "daily":
+        if args.mode == "daily":
             await daily_job(pool)
 
         elif args.mode == "backfill":
@@ -594,7 +602,6 @@ async def main() -> None:
                 id="daily_index",
             )
 
-            # Retry pending dates at 08:00 UTC (archive may publish late)
             async def retry_pending() -> None:
                 pending = await get_pending_dates(pool)
                 if pending:

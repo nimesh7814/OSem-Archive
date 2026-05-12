@@ -18,6 +18,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./postgrest_roles.sql:/docker-entrypoint-initdb.d/02_postgrest_roles.sql:ro
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -45,6 +46,41 @@ services:
       - ./logs:/app/logs
     command: ["python", "indexer.py", "--mode", "scheduler"]
 
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: opensensemap_postgrest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgresql://${POSTGREST_DB_USER}:${POSTGREST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      PGRST_DB_SCHEMA: ${POSTGREST_DB_SCHEMA:-public}
+      PGRST_DB_ANON_ROLE: ${POSTGREST_ANON_ROLE:-web_anon}
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:${POSTGREST_PORT:-3000}
+    ports:
+      - "${POSTGREST_PORT:-3000}:3000"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: opensensemap_pgadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+
 volumes:
   postgres_data:
+    driver: local
+  pgadmin_data:
     driver: local
