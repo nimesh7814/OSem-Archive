@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgis/postgis:16-3.4-alpine
@@ -9,12 +7,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Berlin
+      PGTZ: Europe/Berlin
     command:
-      - "postgres"
-      - "-c"
-      - "shared_preload_libraries=pg_cron"
-      - "-c"
-      - "cron.database_name=${POSTGRES_DB}"
+      - postgres
+      - -c
+      - timezone=Europe/Berlin
+      - -c
+      - log_timezone=Europe/Berlin
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
@@ -26,25 +26,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  indexer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: opensensemap_indexer
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      ARCHIVE_BASE_URL: ${ARCHIVE_BASE_URL}
-      CRAWL_CONCURRENCY: ${CRAWL_CONCURRENCY}
-      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS}
-      GEOCODE_DELAY_SECONDS: ${GEOCODE_DELAY_SECONDS}
-    volumes:
-      - ./logs:/app/logs
-    command: ["python", "indexer.py", "--mode", "scheduler"]
 
   postgrest:
     image: postgrest/postgrest:v12.2.3
@@ -58,12 +39,14 @@ services:
       PGRST_DB_SCHEMA: ${POSTGREST_DB_SCHEMA:-public}
       PGRST_DB_ANON_ROLE: ${POSTGREST_ANON_ROLE:-web_anon}
       PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
-      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:${POSTGREST_PORT:-3000}
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:${POSTGREST_PORT:-3001}
     ports:
-      - "${POSTGREST_PORT:-3000}:3000"
+      - "${POSTGREST_PORT:-3001}:3000"
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.pgadmin
     container_name: opensensemap_pgadmin
     restart: unless-stopped
     depends_on:
@@ -73,14 +56,21 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: "True"
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "${PGADMIN_PORT:-5051}:80"
 
 volumes:
   postgres_data:
+    name: opensensemap_postgres_data
     driver: local
   pgadmin_data:
+    name: opensensemap_pgadmin_data
     driver: local

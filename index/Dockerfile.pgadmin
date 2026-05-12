@@ -1,0 +1,24 @@
+﻿FROM dpage/pgadmin4:latest
+
+USER root
+
+# Copy the pgpass generation script
+COPY generate_pgpass.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/generate_pgpass.sh
+
+# Create a startup wrapper that generates pgpass before pgAdmin starts
+RUN cat > /usr/local/bin/startup-wrapper.sh << 'WRAPPER'
+#!/bin/bash
+set -e
+
+echo "Generating pgpass from environment variables..."
+/usr/local/bin/generate_pgpass.sh
+
+echo "Starting pgAdmin..."
+exec /entrypoint.sh "$@"
+WRAPPER
+RUN chmod +x /usr/local/bin/startup-wrapper.sh
+
+USER pgadmin
+
+ENTRYPOINT ["/usr/local/bin/startup-wrapper.sh"]

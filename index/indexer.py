@@ -46,6 +46,10 @@ from sensor_types import categorize_sensor
 
 load_dotenv()
 
+LOG_DIR = pathlib.Path("logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+RANGE_STATE_PATH = LOG_DIR / "range_state.json"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging
 # ─────────────────────────────────────────────────────────────────────────────
@@ -54,7 +58,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("logs/indexer.log"),
+        logging.FileHandler(LOG_DIR / "indexer.log"),
     ],
 )
 log = logging.getLogger(__name__)
@@ -550,6 +554,84 @@ async def backfill(pool: asyncpg.Pool) -> None:
         await asyncio.sleep(0.5)
 
 
+def parse_iso_date(value: str, arg_name: str) -> date:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"{arg_name} must be YYYY-MM-DD") from exc
+
+
+def load_range_state() -> dict | None:
+    if not RANGE_STATE_PATH.exists():
+        return None
+
+    try:
+        with RANGE_STATE_PATH.open("r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception as exc:
+        log.warning(f"Could not read range state file {RANGE_STATE_PATH}: {exc}")
+        return None
+
+
+def save_range_state(start_date: str, end_date: str, last_completed: str | None) -> None:
+    state = {
+        "start": start_date,
+        "end": end_date,
+        "last_completed": last_completed,
+        "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+    }
+    with RANGE_STATE_PATH.open("w", encoding="utf-8") as fh:
+        json.dump(state, fh, indent=2)
+
+
+def clear_range_state() -> None:
+    if RANGE_STATE_PATH.exists():
+        RANGE_STATE_PATH.unlink()
+
+
+async def index_date_range(pool: asyncpg.Pool, start_date: str, end_date: str) -> None:
+    start = parse_iso_date(start_date, "--start")
+    end = parse_iso_date(end_date, "--end")
+
+    if start > end:
+        raise ValueError("--start must be on or before --end")
+
+    resume_from = start
+    state = load_range_state()
+    if state and state.get("start") == start_date and state.get("end") == end_date:
+        last_completed = state.get("last_completed")
+        if last_completed:
+            resume_from = parse_iso_date(last_completed, "range_state.last_completed") + timedelta(days=1)
+
+    if resume_from > end:
+        log.info(f"Date range {start_date}..{end_date} already completed")
+        clear_range_state()
+        return
+
+    if resume_from > start:
+        log.info(
+            f"Resuming range run from {resume_from.strftime('%Y-%m-%d')} "
+            f"(configured range {start_date}..{end_date})"
+        )
+
+    current = resume_from
+    total_days = (end - resume_from).days + 1
+    done = 0
+
+    save_range_state(start_date, end_date, (resume_from - timedelta(days=1)).strftime("%Y-%m-%d") if resume_from > start else None)
+
+    while current <= end:
+        day = current.strftime("%Y-%m-%d")
+        log.info(f"Range progress: {done + 1}/{total_days} ({day})")
+        await index_date(day, pool)
+        save_range_state(start_date, end_date, day)
+        done += 1
+        current += timedelta(days=1)
+
+    clear_range_state()
+    log.info(f"Range run complete for {start_date}..{end_date}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
@@ -557,16 +639,19 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="OpenSenseMap Archive Indexer")
     parser.add_argument(
         "--mode",
-        choices=["daily", "backfill", "date", "scheduler"],
+        choices=["daily", "backfill", "date", "range", "scheduler"],
         default="scheduler",
         help=(
             "daily      = index yesterday\n"
             "backfill   = index all missing historical dates\n"
             "date       = index a specific date (use --date YYYY-MM-DD)\n"
+            "range      = index date range (use --start and --end)\n"
             "scheduler  = persistent daily scheduler (default)\n"
         ),
     )
     parser.add_argument("--date", help="Specific date to index (YYYY-MM-DD)", default=None)
+    parser.add_argument("--start", help="Range start date (YYYY-MM-DD)", default=None)
+    parser.add_argument("--end", help="Range end date (YYYY-MM-DD)", default=None)
     args = parser.parse_args()
 
     if not DATABASE_URL:
@@ -580,6 +665,12 @@ async def main() -> None:
     log.info("Database connection pool created")
 
     try:
+        if args.start or args.end:
+            if not (args.start and args.end):
+                raise ValueError("Both --start and --end are required when using range mode")
+            await index_date_range(pool, args.start, args.end)
+            return
+
         if args.mode == "daily":
             await daily_job(pool)
 
@@ -590,6 +681,11 @@ async def main() -> None:
             if not args.date:
                 raise ValueError("--date is required when mode=date")
             await index_date(args.date, pool)
+
+        elif args.mode == "range":
+            if not (args.start and args.end):
+                raise ValueError("--start and --end are required when mode=range")
+            await index_date_range(pool, args.start, args.end)
 
         elif args.mode == "scheduler":
             scheduler = AsyncIOScheduler()
