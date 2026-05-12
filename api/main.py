@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
+
 from database import get_db_pool
 
 @asynccontextmanager
@@ -51,8 +53,8 @@ async def top_ten(request: Request):
         rows = await conn.fetch("""
             SELECT
                 st.country,
-                SUM(st.stations)          AS stations,
-                SUM(st.sensors)           AS sensors,
+                SUM(st.stations) AS stations,
+                SUM(st.sensors) AS sensors,
                 COALESCE(SUM(d.count), 0) AS downloads
             FROM summary_table st
             LEFT JOIN downloads d ON d.country = st.country
@@ -64,13 +66,37 @@ async def top_ten(request: Request):
 
     return [
         {
-            "country":   row['country'],
-            "stations":  row['stations'],
-            "sensors":   row['sensors'],
+            "country": row['country'],
+            "stations": row['stations'],
+            "sensors": row['sensors'],
             "downloads": row['downloads']
         }
         for row in rows
     ]
     
-    
+@app.get('/countries')
+async def countries(request: Request):
+    db = request.app.state.db
+    async with db.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT  
+                    country,
+                    SUM(stations) AS stations,
+                    SUM(sensors) AS sensors
+            FROM summary_table
+            WHERE country IS NOT NULL
+            GROUP BY country
+            ORDER BY country
+        """)
+
+    return [
+        {
+            "country": row['country'],
+            "stations": row['stations'],
+            "sensors": row['sensors']
+        }
+        for row in rows
+    ]
+
+
 print('done!')
