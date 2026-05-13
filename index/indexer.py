@@ -632,18 +632,39 @@ def process_station(args: tuple) -> Optional[dict]:
 
     meta = fetch_station_meta(folder_url)
 
-    # coordinates
+    # coordinates — four formats observed in the wild:
+    #   1. currentLocation.geometry.coordinates  (newer API export)
+    #   2. loc.geometry.coordinates              (older API export, geometry may be null)
+    #   3. locations[0].coordinates              (archive format 2022+)
+    #   4. top-level longitude / latitude        (archive format 2022+, alongside locations)
     lon = lat = None
     if meta:
+        # format 1 & 2: currentLocation or loc → geometry → coordinates
         coords = meta.get("currentLocation") or meta.get("loc") or {}
         if isinstance(coords, dict):
-            geom = coords.get("geometry", {})
+            geom = coords.get("geometry")          # may be None/null
             if isinstance(geom, dict):
                 c = geom.get("coordinates", [])
                 if len(c) >= 2:
                     lon, lat = float(c[0]), float(c[1])
         if lon is None and isinstance(coords, list) and len(coords) >= 2:
             lon, lat = float(coords[0]), float(coords[1])
+
+        # format 3: locations array  e.g. [{"coordinates": [lon, lat], "type": "Point"}]
+        if lon is None:
+            locations = meta.get("locations")
+            if isinstance(locations, list) and locations:
+                c = locations[0].get("coordinates", [])
+                if len(c) >= 2:
+                    lon, lat = float(c[0]), float(c[1])
+
+        # format 4: top-level longitude / latitude keys
+        if lon is None and meta.get("longitude") is not None:
+            try:
+                lon = float(meta["longitude"])
+                lat = float(meta["latitude"])
+            except (TypeError, ValueError):
+                lon = lat = None
 
     # country / region via spatial lookup
     country = region = None
