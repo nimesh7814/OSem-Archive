@@ -2,8 +2,11 @@ from datetime import datetime
 import io
 import csv
 import zipfile
+import requests
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from fastapi import FastAPI, Query
 from dotenv import load_dotenv
@@ -14,7 +17,6 @@ import os
 load_dotenv()
 
 app = FastAPI()
-
 
 def get_db_connection():
     return psycopg2.connect(
@@ -87,20 +89,20 @@ def country_region_data(
     to_date: str | None = Query(None, description="Optional end date YYYY-MM-DD"),
     country: str | None = Query(None, description="Optional country filter"),
     region: str | None = Query(None, description="Optional region filter"),
-    download: bool = Query(False, description="Set true to download CSVs as a zip")
+    download: bool = Query(False, description="Set true to download a zip with urls.txt, downloader script and requirements")
 ):
     conn = get_db_connection()
     cursor = conn.cursor()
-
+ 
     effective_from = from_date or '2014-06-03'
-    effective_to   = to_date   or datetime.today().strftime('%Y-%m-%d')
-
+    effective_to = to_date or datetime.today().strftime('%Y-%m-%d')
+ 
     selected_categories = None if sensor_type.lower() == "all" else [s.strip() for s in sensor_type.split(",")]
-
+ 
     # Build dynamic filters
-    filters = ["1=1", "st.country IS NOT NULL", "sf.csv_url IS NOT NULL"]
+    filters = ["st.country IS NOT NULL", "sf.csv_url IS NOT NULL"]
     params  = []
-
+ 
     if country:
         filters.append("st.country = %s")
         params.append(country)
@@ -111,24 +113,60 @@ def country_region_data(
         placeholders = ", ".join(["%s"] * len(selected_categories))
         filters.append(f"se.category IN ({placeholders})")
         params.extend(selected_categories)
-
+ 
     where_clause = " AND ".join(filters)
-
-    # Query sensor files with optional filters
-    query = f"""
+ 
+    if not download:
+        summary_query = f"""
+        SELECT
+            st.country,
+            st.region,
+            COUNT(DISTINCT st.st_id) AS station_count,
+            COUNT(DISTINCT se.se_id) AS sensor_count,
+            COALESCE(SUM(sf.size_mb), 0) AS total_size_mb
+        FROM sensor_files sf
+        JOIN sensors se ON sf.se_id = se.se_id
+        JOIN stations st ON sf.st_id = st.st_id
+        WHERE sf.date BETWEEN %s AND %s
+          AND {where_clause}
+        GROUP BY st.country, st.region
+        ORDER BY st.country, st.region;
+        """
+        cursor.execute(summary_query, (effective_from, effective_to, *params))
+        rows = cursor.fetchall()
+        conn.close()
+ 
+        if not rows:
+            return {"message": "No data found for the given filters."}
+ 
+        return {
+            "summary": [
+                {
+                    "country": r[0],
+                    "region": r[1],
+                    "station_count": r[2],
+                    "sensor_count": r[3],
+                    "total_size_mb": round(float(r[4]), 2)
+                }
+                for r in rows
+            ]
+        }
+ 
+    # Download mode — zip up urls.txt + downloader files
+    download_query = f"""
     SELECT
-        st.country,
-        st.region,
         st.st_id,
         st.name AS station_name,
         st.exposure,
         st.model,
         ST_Y(st.location::geometry) AS latitude,
         ST_X(st.location::geometry) AS longitude,
+        st.country,
+        st.region,
         se.se_id,
         se.title AS sensor_title,
-        se.category,
         se.type AS sensor_type,
+        se.category,
         se.unit,
         sf.date,
         sf.csv_url,
@@ -140,99 +178,59 @@ def country_region_data(
       AND {where_clause}
     ORDER BY st.country, st.region, se.category, st.st_id, se.se_id, sf.date;
     """
-
-    cursor.execute(query, (effective_from, effective_to, *params))
+ 
+    cursor.execute(download_query, (effective_from, effective_to, *params))
     rows = cursor.fetchall()
     conn.close()
-
+ 
     if not rows:
         return {"message": "No data found for the given filters."}
-
-    # ------------------------------------------------------------------ #
-    # Organize rows into folder structure
-    # ------------------------------------------------------------------ #
-    structure    = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list)))))
-    sensor_meta  = {}
-    station_meta = {}
-    total_size_mb = 0
-
-    summary = defaultdict(lambda: {"station_count": 0, "sensor_count": 0, "total_size_mb": 0})
-
-    for row in rows:
-        (
-            country_val, region_val, st_id, station_name, exposure, model,
-            lat, lon, se_id, sensor_title, category, s_type, unit,
-            date, csv_url, size_mb
-        ) = row
-
-        structure[country_val][region_val][category][st_id][se_id].append({
-            "date": date,
-            "url": csv_url,
-            "size_mb": size_mb or 0
-        })
-
-        station_meta[st_id] = {
-            "st_id": st_id, "name": station_name, "exposure": exposure,
-            "model": model, "latitude": lat, "longitude": lon,
-            "country": country_val, "region": region_val
-        }
-        sensor_meta[se_id] = {
-            "se_id": se_id, "st_id": st_id, "title": sensor_title,
-            "category": category, "type": s_type, "unit": unit
-        }
-
-        # Aggregate summary
-        key = (country_val, region_val)
-        summary[key]["station_count"] = len({s["st_id"] for s in station_meta.values() if s["country"] == country_val and s["region"] == region_val})
-        summary[key]["sensor_count"]  = len({s["se_id"] for s in sensor_meta.values() if station_meta[s["st_id"]]["country"] == country_val and station_meta[s["st_id"]]["region"] == region_val})
-        summary[key]["total_size_mb"] += size_mb or 0
-        total_size_mb += size_mb or 0
-
-    summary_list = [
-        {"country": k[0], "region": k[1], **v} for k, v in summary.items()
-    ]
-
-    if not download:
-        return {"summary": summary_list}
-
-    # ------------------------------------------------------------------ #
-    # Download CSVs into a zip
-    # ------------------------------------------------------------------ #
-    base_dir = Path("downloads")
-    base_dir.mkdir(exist_ok=True)
-
-    for country_val, regions in structure.items():
-        for region_val, categories in regions.items():
-            for category_val, stations in categories.items():
-                for st_id_val, sensors in stations.items():
-                    for se_id_val, files in sensors.items():
-                        folder = base_dir / country_val / region_val / category_val / st_id_val
-                        folder.mkdir(parents=True, exist_ok=True)
-                        for f in files:
-                            file_name = f"{se_id_val}_{f['date']}.csv"
-                            file_path = folder / file_name
-                            if not file_path.exists():
-                                r = requests.get(f["url"], stream=True)
-                                with open(file_path, "wb") as fd:
-                                    for chunk in r.iter_content(chunk_size=1024*1024):
-                                        fd.write(chunk)
-
-    # Create zip
+ 
+    total_size_mb = sum(r[15] or 0 for r in rows)
+    total_files = len(rows)
+    label = f"{country}_{region}" if country and region else country or "all"
+ 
+    # Build urls.txt (TSV) in memory
+    tsv_buffer = io.StringIO()
+    tsv_writer = csv.writer(tsv_buffer, delimiter="\t")
+    tsv_writer.writerow([
+        "st_id", "station_name", "exposure", "model",
+        "latitude", "longitude", "country", "region",
+        "se_id", "sensor_title", "sensor_type", "category", "unit",
+        "date", "csv_url", "size_mb"
+    ])
+    for r in rows:
+        tsv_writer.writerow([
+            r[0], r[1], r[2], r[3],
+            r[4], r[5], r[6], r[7],
+            r[8], r[9], r[10], r[11], r[12],
+            r[13], r[14], r[15] or 0
+        ])
+    urls_txt = tsv_buffer.getvalue().encode("utf-8")
+ 
+    # Read downloader files from the ./downloader folder 
+    downloader_dir = Path(__file__).parent / "downloader"
+    downloader_py = (downloader_dir / "osem_downloader.py").read_bytes()
+    requirements = (downloader_dir / "requirements.txt").read_bytes()
+    readme = (downloader_dir / "README.md").read_bytes()
+ 
+    # Pack everything into a zip in memory
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for file_path in base_dir.rglob("*"):
-            zf.write(file_path, file_path.relative_to(base_dir))
+        zf.writestr("urls.txt", urls_txt)
+        zf.writestr("osem_downloader.py", downloader_py)
+        zf.writestr("requirements.txt", requirements)
+        zf.writestr("README.md", readme)
     zip_buffer.seek(0)
-
-    label = f"{country}_{region}" if country and region else country or "all"
+ 
     generated = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
-
+ 
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
         headers={
             "Content-Disposition": f"attachment; filename=osem_{label}_{generated}.zip",
-            "X-Total-Files": str(len(rows)),
+            "X-Total-Files": str(total_files),
             "X-Total-Size-MB": f"{total_size_mb:.2f}"
         }
     )
