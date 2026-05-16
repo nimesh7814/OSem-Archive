@@ -441,13 +441,23 @@ def bbox_data(
                 else {"type": "aoi_custom"}
             )
 
+            # Collect all unique categories across every matched station
+            unique_categories = sorted({
+                cat.strip()
+                for r in rows
+                if r[9]
+                for cat in r[9].split(",")
+                if cat.strip()
+            })
+
             return {
-                "area":           area_info,
-                "period":         {"from": effective_from, "to": effective_to},
-                "total_stations": len(rows),
-                "total_sensors":  sum(r[6] for r in rows),
-                "total_readings": sum(int(r[7]) for r in rows),
-                "total_size_mb":  round(sum(float(r[8]) for r in rows), 2),
+                "area":               area_info,
+                "period":             {"from": effective_from, "to": effective_to},
+                "total_stations":     len(rows),
+                "total_sensors":      sum(r[6] for r in rows),
+                "total_readings":     sum(int(r[7]) for r in rows),
+                "total_size_mb":      round(sum(float(r[8]) for r in rows), 2),
+                "categories":         unique_categories,
                 "stations": [
                     {
                         "st_id":          r[0],
@@ -797,12 +807,14 @@ def station_readings(
                 ST_X(st.location::geometry) AS longitude,
                 COUNT(DISTINCT se.se_id)    AS total_sensors,
                 SUM(re.count)               AS total_readings,
-                STRING_AGG(DISTINCT se.category, ', ') AS categories
+                STRING_AGG(DISTINCT se.category, ', ') AS categories,
+                st.country,
+                st.region
             FROM stations st
             JOIN sensors  se ON st.st_id = se.st_id
             JOIN readings re ON se.se_id = re.se_id
             WHERE st.st_id = %s
-            GROUP BY st.st_id, st.name, st.location;
+            GROUP BY st.st_id, st.name, st.location, st.country, st.region;
         """, (st_id,))
 
         row = cursor.fetchone()
@@ -817,6 +829,8 @@ def station_readings(
             "total_sensors":  row[4],
             "total_readings": int(row[5]) if row[5] is not None else 0,
             "categories":     row[6],
+            "country":        row[7],
+            "region":         row[8],
         }
 
         # ── 2. Daily avg per sensor category ─────────────────────────────────
@@ -824,6 +838,8 @@ def station_readings(
             SELECT
                 EXTRACT(DAY FROM re.date)::int       AS day,
                 se.category,
+                se.unit,
+                se.title,
                 ROUND(AVG(re.avg_value)::numeric, 2) AS avg_value,
                 ROUND(AVG(re.min_value)::numeric, 2) AS min_value,
                 ROUND(AVG(re.max_value)::numeric, 2) AS max_value
@@ -833,15 +849,19 @@ def station_readings(
               AND EXTRACT(MONTH FROM re.date) = %s
               AND EXTRACT(YEAR  FROM re.date) = %s
               AND se.category IS NOT NULL
-            GROUP BY day, se.category
+            GROUP BY day, se.category, se.unit, se.title
             ORDER BY day, se.category;
         """, (st_id, month, year))
 
-        chart_data: dict[str, list] = {}
-        for day, category, avg, mn, mx in cursor.fetchall():
+        chart_data: dict[str, dict] = {}
+        for day, category, unit, title, avg, mn, mx in cursor.fetchall():
             if category not in chart_data:
-                chart_data[category] = []
-            chart_data[category].append({
+                chart_data[category] = {
+                    "unit":  unit,
+                    "title": title,
+                    "data":  [],
+                }
+            chart_data[category]["data"].append({
                 "day": day,
                 "avg": float(avg) if avg is not None else None,
                 "min": float(mn)  if mn  is not None else None,
