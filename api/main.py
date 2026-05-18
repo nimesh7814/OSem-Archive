@@ -1,14 +1,14 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, UploadFile, File, HTTPException, Body
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, Query, HTTPException
 from typing import Optional
 from datetime import date
-from pathlib import Path
+from urllib.parse import unquote
+from utils import build_download_zip
+from datetime import datetime
+import json
 import psycopg2
 import os
-import io
-import csv
-import zipfile
+import math
 
 load_dotenv()
 
@@ -304,33 +304,18 @@ def country_region_data(
     cur.close()
     conn.close()
 
-    # Build urls.csv in memory
-    urls_csv_buf = io.StringIO()
-    writer = csv.writer(urls_csv_buf)
-    writer.writerow([
-        "st_id", "name", "exposure", "model", "latitude", "longitude", "country", "region", "se_id", "title", "type", "category", "unit", "date", "csv_url"
-    ])
-    for row in url_rows:
-        writer.writerow(row)
+    # Build zip filename
+    country_str = country.replace(",", "-").replace(" ", "_") if country else "all"
+    region_str = region.replace(",", "-").replace(" ", "_")  if region  else "all"
+    from_str = from_date.strftime("%Y%m%d") if from_date else "start"
+    to_str = to_date.strftime("%Y%m%d") if to_date else date.today().strftime("%Y%m%d")
+    
+    num_days = (to_date - from_date).days if (to_date and from_date) else (date.today() - from_date).days
+   
+    # Filename format
+    zip_filename = f"{country_str}_{region_str}_{from_str}_{to_str}_{num_days}d.zip"
 
-    # Build ZIP in memory
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("urls.csv", urls_csv_buf.getvalue())
-
-        downloader_dir = Path("downloader")
-        for filename in ["osem_downloader.py", "README.md", "requirements.txt"]:
-            filepath = downloader_dir / filename
-            if not filepath.exists():
-                raise HTTPException(status_code=500, detail=f"Missing required file: {filepath}")
-            zf.write(filepath, arcname=filename)
-
-    zip_buf.seek(0)
-    return StreamingResponse(
-        zip_buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=osem_download_package.zip"}
-    )
+    return build_download_zip(url_rows, zip_filename=zip_filename)
     
 
 @app.get("/station_readings")
@@ -339,7 +324,7 @@ def station_readings(
     month: int = Query(..., description="Month as integer e.g. 5"),
     year:  int = Query(..., description="Year as integer e.g. 2026"),
 ):
-    conn   = get_db_connection()
+    conn = get_db_connection()
     cur = conn.cursor()
 
     # Station metadata
@@ -462,3 +447,187 @@ def station_readings(
         "sensors": sensors,
     }
     
+@app.get("/bbox_data")
+def bbox_data(
+    aoi: str = Query(..., description="GeoJSON Feature or Polygon as URL-encoded string"),
+    from_date: Optional[date] = Query(date(2014, 6, 3), description="Start date (YYYY-MM-DD)"),
+    to_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
+    category: Optional[str] = Query("all", description="Sensor category (single or comma-separated)"),
+    download: Optional[bool] = Query(False, description="Set true to download ZIP")
+):
+    
+    # Parse AOI GeoJSON
+    try:
+        aoi_json = json.loads(unquote(aoi))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid AOI: could not parse GeoJSON.")
+    
+    # Accept Features
+    if aoi_json.get("type") == "Feature":
+        geometry = aoi_json.get("geometry")
+    elif aoi_json.get("type") == "Polygon":
+        geometry = aoi_json
+    elif aoi_json.get("type") == "FeatureCollection":
+        features = aoi_json.get("features", [])
+        geometry = next(
+            (f["geometry"] for f in features if f.get("geometry", {}).get("type") == "Polygon"),
+            None
+        )
+    else:
+        geometry = None
+
+    if not geometry or geometry.get("type") != "Polygon":
+        raise HTTPException(status_code=400, detail="AOI must contain a Polygon geometry.")
+
+    geojson_str = json.dumps(geometry)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Pre-aggregate sensor_files subquery for optimized filtering
+    sf_filters = []
+    sf_params = []
+    if from_date:
+        sf_filters.append("date >= %s")
+        sf_params.append(from_date)
+    if to_date:
+        sf_filters.append("date <= %s")
+        sf_params.append(to_date)
+
+    sf_where = ("WHERE " + " AND ".join(sf_filters)) if sf_filters else ""
+    
+    # Main Query
+    query = f'''
+        SELECT
+            st.country,
+            st.region,
+            COUNT(DISTINCT st.st_id) AS total_stations,
+            COUNT(DISTINCT se.se_id) AS total_sensors,
+            COALESCE(SUM(re_agg.total), 0) AS total_readings,
+            COALESCE(SUM(sf_agg.size_mb), 0) AS estimated_size
+        FROM stations st
+        LEFT JOIN sensors se ON st.st_id = se.st_id
+        LEFT JOIN (
+            SELECT se_id, SUM(size_mb) AS size_mb
+            FROM sensor_files
+            {sf_where}
+            GROUP BY se_id
+        ) sf_agg ON se.se_id = sf_agg.se_id
+        LEFT JOIN (
+            SELECT se_id, SUM(count) AS total
+            FROM readings
+            GROUP BY se_id
+        ) re_agg ON se.se_id = re_agg.se_id
+        WHERE st.location IS NOT NULL
+          AND ST_Within(
+                st.location::geometry,
+                ST_GeomFromGeoJSON(%s)
+              )
+    '''
+
+    params = sf_params + [geojson_str]
+    
+    if category and category.lower() != "all":
+        categories = [c.strip() for c in category.split(",")]
+        placeholders = ",".join(["%s"] * len(categories))
+        query += f" AND se.category IN ({placeholders})"
+        params.extend(categories)
+
+    query += " GROUP BY st.country, st.region ORDER BY st.country, st.region"
+    cur.execute(query, tuple(params))
+    rows = cur.fetchall()
+
+    # Build the result dictionary
+    result = []
+    total_stations_sum = 0
+    total_sensors_sum  = 0
+    total_readings_sum = 0
+    total_size_sum = 0.0
+
+    for row_country, row_region, total_stations, total_sensors, total_readings, estimated_size in rows:
+        total_stations_sum += total_stations
+        total_sensors_sum += total_sensors
+        total_readings_sum += int(total_readings)
+        total_size_sum += float(estimated_size)
+        result.append({
+            "country": row_country,
+            "region": row_region,
+            "total_stations": total_stations,
+            "total_sensors": total_sensors,
+            "total_readings": int(total_readings),
+            "estimated_size": float(estimated_size)
+        })
+
+    if not download:
+        cur.close()
+        conn.close()
+        return {
+            "summary": {
+                "total_stations": total_stations_sum,
+                "total_sensors": total_sensors_sum,
+                "total_readings": total_readings_sum,
+                "estimated_size": round(total_size_sum, 6)
+            },
+            "data": result
+        }
+    
+    # URLs query for the download
+    url_query = '''
+        SELECT
+            st.st_id,
+            st.name,
+            st.exposure,
+            st.model,
+            ST_Y(st.location::geometry) AS latitude,
+            ST_X(st.location::geometry) AS longitude,
+            st.country,
+            st.region,
+            se.se_id,
+            se.title,
+            se.type,
+            se.category,
+            se.unit,
+            sf.date,
+            sf.csv_url
+        FROM stations st
+        JOIN sensors se ON st.st_id = se.st_id
+        JOIN sensor_files sf ON se.se_id = sf.se_id
+        WHERE st.location IS NOT NULL
+          AND ST_Within(
+                st.location::geometry,
+                ST_GeomFromGeoJSON(%s)
+              )
+    '''
+
+    url_params = [geojson_str]
+    
+    # Apply the same filters to the URL query
+    if from_date:
+        url_query += " AND sf.date >= %s"
+        url_params.append(from_date)
+    if to_date:
+        url_query += " AND sf.date <= %s"
+        url_params.append(to_date)
+        
+    if category and category.lower() != "all":
+        categories = [c.strip() for c in category.split(",")]
+        placeholders = ",".join(["%s"] * len(categories))
+        url_query += f" AND se.category IN ({placeholders})"
+        url_params.extend(categories)
+
+    url_query += " ORDER BY sf.date"
+    cur.execute(url_query, tuple(url_params))
+    url_rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+    
+    # Build bbox zip filename
+    now = datetime.now()
+    date_str = now.strftime("%Y%m%d")
+    time_str = now.strftime("%H%M%S")
+    num_days = (to_date - from_date).days if (to_date and from_date) else (date.today() - from_date).days
+
+    zip_filename = f"aoi_{date_str}_{time_str}_{num_days}d.zip"
+
+    return build_download_zip(url_rows, zip_filename=zip_filename)
