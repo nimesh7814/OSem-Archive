@@ -124,6 +124,7 @@ def get_stations(station_id: Optional[str] = Query(None, description="Optional s
         cur.execute('''
             SELECT
                 st_id,
+                name,
                 ST_Y(location::geometry) AS latitude,
                 ST_X(location::geometry) AS longitude
             FROM stations
@@ -154,9 +155,10 @@ def get_stations(station_id: Optional[str] = Query(None, description="Optional s
     else:
         # General endpoint for map markers
         result = [{
-            "st_id": r[0], 
-            "latitude": r[1], 
-            "longitude": r[2]} for r in rows]
+            "st_id": r[0],
+            "name": r[1],
+            "latitude": r[2],
+            "longitude": r[3]} for r in rows]
 
     return result
 

@@ -3,3 +3,5 @@ __pycache__
 .env
 servers.json
 annon_role.sql
+indexer.log
+indexer.resume

@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS stations (
     region TEXT,
     fs_date DATE,
     ls_date DATE,
-    init_date TIMESTAMPTZ DEFAULT now()
+    recorded_at TIMESTAMPTZ DEFAULT now()
 );
 
 
@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS station_dates (
     st_id TEXT NOT NULL REFERENCES stations(st_id) ON DELETE CASCADE,
     date DATE NOT NULL,
     folder_url TEXT,
+    size_mb NUMERIC(20, 6),
     PRIMARY KEY (st_id, date)
 );
 
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS sensors (
     type TEXT,
     category TEXT,
     unit TEXT,
-    init_date TIMESTAMPTZ DEFAULT now()
+    recorded_at TIMESTAMPTZ DEFAULT now()
 );
 
 
@@ -59,6 +60,7 @@ CREATE TABLE IF NOT EXISTS sensor_files (
     st_id TEXT NOT NULL REFERENCES stations(st_id) ON DELETE CASCADE,
     date DATE NOT NULL,
     csv_url TEXT NOT NULL,
+    size_mb NUMERIC(20, 6),
     PRIMARY KEY (se_id, date)
 );
 
@@ -76,13 +78,43 @@ CREATE TABLE IF NOT EXISTS readings (
     se_id TEXT NOT NULL REFERENCES sensors(se_id) ON DELETE CASCADE,
     st_id TEXT NOT NULL REFERENCES stations(st_id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    recorded_at TIMESTAMPTZ,
-    min_value DOUBLE PRECISION,
-    max_value DOUBLE PRECISION,
-    avg_value DOUBLE PRECISION,
+    recorded_at TIMESTAMPTZ DEFAULT now(),
+    min_value NUMERIC,
+    max_value NUMERIC,
+    avg_value NUMERIC,
     count INT DEFAULT 0,
     UNIQUE(se_id, date)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_readings
+    ON readings (se_id, date);
+
+SELECT create_hypertable(
+    'readings',               
+    'date',               
+    chunk_time_interval => interval '30 days',  
+    if_not_exists => TRUE
+);
+
+CREATE TABLE IF NOT EXISTS countries (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    country TEXT,
+    region TEXT,
+    stations INT,
+    sensors INT,
+    geometry GEOMETRY(POLYGON, 4326)
+);
+
+CREATE TABLE IF NOT EXISTS summary (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    stations INT,
+    sensor_types INT,
+    readings INT,
+    countries INT,
+    regions INT,
+    last_updated TIMESTAMPTZ DEFAULT now()
+);
+
 
 
 -- Indexes
@@ -110,6 +142,9 @@ CREATE INDEX IF NOT EXISTS idx_stations_region
 
 CREATE INDEX IF NOT EXISTS idx_stations_location
     ON stations USING GIST (location);
+
+CREATE INDEX IF NOT EXISTS idx_country_location
+    ON countries USING GIST (geometry);
 
 CREATE INDEX IF NOT EXISTS idx_sensors_station
     ON sensors(st_id);

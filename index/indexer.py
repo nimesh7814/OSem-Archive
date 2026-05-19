@@ -281,18 +281,20 @@ def upsert_sensor(cur,
     return cur.fetchone()[0]
 
 
-def upsert_station_date(cur, st_id: str, d: date, folder_url: str) -> None:
+def upsert_station_date(cur, st_id: str, d: date, folder_url: str,
+                        size_mb: Optional[float] = None) -> None:
     """
     Schema 2: station_dates PK is (st_id, date).
     """
     cur.execute(
         """
-        INSERT INTO station_dates (st_id, date, folder_url)
-        VALUES (%s, %s, %s)
+        INSERT INTO station_dates (st_id, date, folder_url, size_mb)
+        VALUES (%s, %s, %s, %s)
         ON CONFLICT (st_id, date) DO UPDATE SET
-            folder_url = EXCLUDED.folder_url
+            folder_url = EXCLUDED.folder_url,
+            size_mb    = COALESCE(EXCLUDED.size_mb, station_dates.size_mb)
         """,
-        (st_id, d, folder_url),
+        (st_id, d, folder_url, size_mb),
     )
 
 
@@ -300,18 +302,20 @@ def upsert_sensor_file(cur,
                        se_id: str,
                        st_id: str,
                        d: date,
-                       csv_url: str) -> None:
+                       csv_url: str,
+                       size_mb: Optional[float] = None) -> None:
     """
     Schema 2: sensor_files PK is (se_id, date), FKs use se_id / st_id.
     """
     cur.execute(
         """
-        INSERT INTO sensor_files (se_id, st_id, date, csv_url)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO sensor_files (se_id, st_id, date, csv_url, size_mb)
+        VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (se_id, date) DO UPDATE SET
-            csv_url = EXCLUDED.csv_url
+            csv_url = EXCLUDED.csv_url,
+            size_mb = COALESCE(EXCLUDED.size_mb, sensor_files.size_mb)
         """,
-        (se_id, st_id, d, csv_url),
+        (se_id, st_id, d, csv_url, size_mb),
     )
 
 
@@ -564,21 +568,78 @@ def http_get_text(url: str) -> Optional[str]:
     return _get(url, as_json=False)  # type: ignore[return-value]
 
 
+def http_head_size_mb(url: str) -> Optional[float]:
+    """
+    Issue a HEAD request and return the file size in MB from Content-Length,
+    or None if the header is absent or the request fails.
+    Falls back to a GET request on servers that don't support HEAD.
+    """
+    delay = HTTP_BACKOFF
+    for attempt in range(1, HTTP_RETRIES + 1):
+        try:
+            r = _session.head(url, timeout=HTTP_TIMEOUT, allow_redirects=True)
+            if r.status_code == 405:
+                # Server doesn't support HEAD — use GET but discard body
+                r = _session.get(url, timeout=HTTP_TIMEOUT, stream=True)
+                r.close()
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            length = r.headers.get("Content-Length")
+            if length is not None:
+                return round(int(length) / (1024 * 1024), 6)
+            return None
+        except Exception as exc:
+            if attempt == HTTP_RETRIES:
+                log.debug("HEAD failed %s after %d tries: %s", url, attempt, exc)
+                return None
+            time.sleep(delay)
+            delay *= 2
+    return None
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 4.  Archive parsing
 # ══════════════════════════════════════════════════════════════════════════════
 
-def list_date_folders(d: date) -> list[tuple[str, str]]:
+def _parse_size_mb(size_str: str) -> Optional[float]:
+    """
+    Convert a human-readable size string from the archive HTML (e.g. '1.2M',
+    '345K', '12', '2.0G') to megabytes.  Returns None if unparseable.
+    """
+    s = size_str.strip()
+    if not s or s == "-":
+        return None
+    try:
+        m = re.match(r"^([0-9]+(?:\.[0-9]+)?)\s*([KMGT]?)$", s, re.IGNORECASE)
+        if not m:
+            return None
+        value  = float(m.group(1))
+        suffix = m.group(2).upper()
+        factor = {"K": 1/1024, "M": 1.0, "G": 1024.0, "T": 1024.0**2}.get(suffix, 1/1048576)
+        return round(value * factor, 6)
+    except Exception:
+        return None
+
+
+def list_date_folders(d: date) -> list[tuple[str, str, Optional[float]]]:
     """
     Fetch the archive day listing.
-    Returns [(box_id, folder_url), …].
+    Returns [(box_id, folder_url, size_mb), …].
+    size_mb is the total size of the station folder as reported by the
+    Content-Length header of a HEAD request against the folder URL,
+    or None if not available.
     """
     url  = f"{ARCHIVE_BASE}/{d.isoformat()}/"
     text = http_get_text(url)
     if not text:
         return []
 
-    pattern = re.compile(r'href="\.?/?([0-9a-f]{24}-[^/"]+)/"')
+    # Extract folder hrefs — sizes will be fetched via HEAD requests.
+    pattern = re.compile(
+        r'href="\.?/?([0-9a-f]{24}-[^/"]+)/"',
+        re.IGNORECASE,
+    )
     results = []
     seen: set[str] = set()
     for m in pattern.finditer(text):
@@ -588,7 +649,8 @@ def list_date_folders(d: date) -> list[tuple[str, str]]:
         seen.add(folder_name)
         box_id     = folder_name.split("-", 1)[0]
         folder_url = f"{ARCHIVE_BASE}/{d.isoformat()}/{folder_name}/"
-        results.append((box_id, folder_url))
+        size_mb    = http_head_size_mb(folder_url)
+        results.append((box_id, folder_url, size_mb))
     return results
 
 
@@ -605,21 +667,28 @@ def fetch_station_meta(folder_url: str) -> Optional[dict]:
     return http_get_json(json_url)
 
 
-def csv_urls_from_folder(folder_url: str, d: date) -> list[tuple[str, str]]:
-    """Return [(sensor_id, csv_url), …] for all CSVs in a station folder."""
+def csv_urls_from_folder(folder_url: str, d: date) -> list[tuple[str, str, Optional[float]]]:
+    """Return [(sensor_id, csv_url, size_mb), …] for all CSVs in a station folder.
+
+    size_mb is determined from the actual Content-Length header of each CSV
+    file (via a HEAD request) so it reflects the real file size on disk rather
+    than the approximate human-readable value shown in the directory listing.
+    """
     text = http_get_text(folder_url)
     if not text:
         return []
     date_str = d.isoformat()
     pattern = re.compile(
-        r'href="[^"]*?([0-9a-f]{24}-' + re.escape(date_str) + r'\.csv)"'
+        r'href="[^"]*?([0-9a-f]{24}-' + re.escape(date_str) + r'\.csv)"',
+        re.IGNORECASE,
     )
     results = []
     for m in pattern.finditer(text):
         filename  = m.group(1)
         sensor_id = filename.replace(f"-{date_str}.csv", "")
         csv_url   = folder_url.rstrip("/") + "/" + filename
-        results.append((sensor_id, csv_url))
+        size_mb   = http_head_size_mb(csv_url)
+        results.append((sensor_id, csv_url, size_mb))
     return results
 
 
@@ -628,7 +697,7 @@ def csv_urls_from_folder(folder_url: str, d: date) -> list[tuple[str, str]]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def process_station(args: tuple) -> Optional[dict]:
-    box_id, folder_url, d, geo_lookup = args
+    box_id, folder_url, d, geo_lookup, folder_size_mb = args
 
     meta = fetch_station_meta(folder_url)
 
@@ -688,18 +757,26 @@ def process_station(args: tuple) -> Optional[dict]:
 
     csv_files = csv_urls_from_folder(folder_url, d)
 
+    # When folder-level size wasn't available from the parent listing,
+    # fall back to summing the individual CSV file sizes.
+    if folder_size_mb is None:
+        individual_sizes = [sz for _, _, sz in csv_files if sz is not None]
+        if individual_sizes:
+            folder_size_mb = round(sum(individual_sizes), 6)
+
     return {
-        "box_id":      box_id,
-        "name":        name,
-        "lon":         lon,
-        "lat":         lat,
-        "country":     country,
-        "region":      region,
-        "exposure":    exposure,
-        "model":       model,
-        "folder_url":  folder_url,
-        "sensor_meta": sensor_meta,
-        "csv_files":   csv_files,  # [(sensor_id, csv_url), …]
+        "box_id":         box_id,
+        "name":           name,
+        "lon":            lon,
+        "lat":            lat,
+        "country":        country,
+        "region":         region,
+        "exposure":       exposure,
+        "model":          model,
+        "folder_url":     folder_url,
+        "folder_size_mb": folder_size_mb,
+        "sensor_meta":    sensor_meta,
+        "csv_files":      csv_files,  # [(sensor_id, csv_url, size_mb), …]
     }
 
 
@@ -733,8 +810,8 @@ def index_day(
     log.info("  %d station folders", total_folders)
 
     # ── parallel HTTP fetch ───────────────────────────────────────────────
-    tasks        = [(box_id, folder_url, d, geo_lookup)
-                    for box_id, folder_url in stations_list]
+    tasks        = [(box_id, folder_url, d, geo_lookup, size_mb)
+                    for box_id, folder_url, size_mb in stations_list]
     results      = []
     fetch_errors = 0
 
@@ -761,9 +838,10 @@ def index_day(
                  "(sensor_dates rows: 1 per sensor per date, data_available 0/1)",
                  len(results), total_sensors)
         for r in results[:3]:
-            log.info("    station sample: box_id=%-26s name=%s  country=%s  sensors=%d",
+            log.info("    station sample: box_id=%-26s name=%s  country=%s  sensors=%d  size_mb=%s",
                      r["box_id"], r["name"] or "-", r["country"] or "?",
-                     len(r["csv_files"]))
+                     len(r["csv_files"]),
+                     f"{r['folder_size_mb']:.3f}" if r["folder_size_mb"] is not None else "?")
         if len(results) > 3:
             log.info("    … and %d more", len(results) - 3)
         return {
@@ -788,13 +866,14 @@ def index_day(
                     r["exposure"], r["model"],
                     first_seen=d, last_seen=d,
                 )
-                upsert_station_date(cur, st_id, d, r["folder_url"])
+                upsert_station_date(cur, st_id, d, r["folder_url"],
+                                    r.get("folder_size_mb"))
 
                 # Build a set of sensor_ids that have a CSV for quick lookup
-                csv_sensor_ids = {sid for sid, _ in r["csv_files"]}
+                csv_sensor_ids = {sid for sid, _, _ in r["csv_files"]}
 
                 # Upsert sensors that have a CSV file → data_available = 1
-                for sensor_id, csv_url in r["csv_files"]:
+                for sensor_id, csv_url, csv_size_mb in r["csv_files"]:
                     sm       = r["sensor_meta"].get(sensor_id, {})
                     title    = sm.get("title")
                     stype    = sm.get("type")
@@ -806,7 +885,7 @@ def index_day(
                         cur, sensor_id, st_id,
                         title, stype, category, unit,
                     )
-                    upsert_sensor_file(cur, se_id, st_id, d, csv_url)
+                    upsert_sensor_file(cur, se_id, st_id, d, csv_url, csv_size_mb)
                     upsert_sensor_date(cur, se_id, d, 1)
 
                     # compute and store daily aggregates from the CSV
