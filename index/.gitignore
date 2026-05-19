@@ -5,3 +5,9 @@ servers.json
 annon_role.sql
 indexer.log
 indexer.resume
+indexer2.log
+indexer3.log
+indexer4.log
+indexer2.resume
+indexer3.resume
+indexer4.resume

@@ -35,6 +35,8 @@ Features
   --log FILE        write full log to FILE (default: indexer.log)
                     A companion FILE.resume tracks the last successful date
                     for automatic crash recovery.
+  --logN            shorthand for --log indexerN.log (e.g. --log2, --log3,
+                    --log99). Writes indexerN.log and indexerN.resume.
   -v / --verbose    DEBUG level logging
 
 Usage
@@ -67,7 +69,7 @@ Environment (.env or shell)
     POSTGRES_USER      default: osem_index
     POSTGRES_PASSWORD  (required)
     GEOJSON_PATH       path to admin_boundary.geojson
-                       default: ./data/admin_boundary.geojson
+                       default: data/admin_boundary.geojson
     ARCHIVE_BASE_URL   default: https://archive.opensensemap.org
     CONCURRENCY        HTTP workers per day, default: 8
 """
@@ -116,7 +118,7 @@ HTTP_TIMEOUT     = 20
 HTTP_RETRIES     = 3
 HTTP_BACKOFF     = 2.0
 CONCURRENCY      = int(os.getenv("CONCURRENCY", "8"))
-DEFAULT_LOG_FILE = "indexer.log"
+DEFAULT_LOG_FILE  = "indexer.log"
 
 
 # ─── resume-file helpers ──────────────────────────────────────────────────────
@@ -1004,6 +1006,17 @@ def date_range(start: date, end: date):
 
 
 def main() -> None:
+    # Detect --logN (e.g. --log2, --log3, --log99) before normal arg parsing.
+    # Any --logN flag sets the log file to indexerN.log (and indexerN.resume).
+    import re as _re
+    for _arg in sys.argv[1:]:
+        _m = _re.fullmatch(r"--log(\d+)", _arg)
+        if _m:
+            sys.argv.remove(_arg)
+            _n = _m.group(1)
+            sys.argv.extend(["--log", f"indexer{_n}.log"])
+            break
+
     args = parse_args()
     setup_logging(args.log, args.verbose)
     console = Console()
@@ -1041,7 +1054,7 @@ def main() -> None:
     # ── geo lookup ────────────────────────────────────────────────────────
     geojson_path = (
         args.geojson
-        or os.getenv("GEOJSON_PATH", "../database/data/admin_boundary.geojson")
+        or os.getenv("GEOJSON_PATH", "data/admin_boundary.geojson")
     )
     geo = GeoLookup(geojson_path)
 
