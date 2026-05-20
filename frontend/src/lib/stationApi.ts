@@ -90,16 +90,22 @@ export const fetchStationsInBbox = async ({
   fromDate,
   toDate,
   aoi,
+  category,
 }: {
   fromDate: string;
   toDate: string;
   aoi: string;
+  category?: string;
 }) => {
   const params = new URLSearchParams({
     from_date: fromDate,
     to_date: toDate,
     aoi,
   });
+
+  if (category && category !== 'all') {
+    params.set('category', category);
+  }
 
   const res = await fetch(apiUrl('/bbox_data', params));
 

@@ -257,6 +257,7 @@ const ArchivePage = () => {
         fromDate: filters.fromDate,
         toDate: filters.toDate,
         aoi: JSON.stringify(activeAoi),
+        category: filters.sensorTypes.length > 0 ? filters.sensorTypes.join(',') : undefined,
       });
 
       setStations(allStations);
@@ -295,10 +296,13 @@ const ArchivePage = () => {
       const params = new URLSearchParams({
         from_date: filters.fromDate,
         to_date: filters.toDate,
-        category: filters.sensorTypes.length > 0 ? filters.sensorTypes.join(',') : 'all',
         download: 'true',
         aoi: JSON.stringify(aoi),
       });
+
+      if (filters.sensorTypes.length > 0) {
+        params.set('category', filters.sensorTypes.join(','));
+      }
 
       const response = await fetch(apiUrl('/bbox_data', params));
       if (!response.ok) {

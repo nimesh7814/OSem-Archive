@@ -3,14 +3,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MousePointer2, Upload, Loader2, Search, Trash2 } from 'lucide-react';
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import SensorSelector from './SensorSelector';
-import AnalysisSummary, { DetailedSummary } from './AnalysisSummary';
+import AnalysisSummary, { type DetailedSummary } from './AnalysisSummary';
 import ExportControls from './ExportControls';
 import ArchiveMap, { type AOIShape } from './ArchiveMap';
 import { cn } from '@/lib/utils';
@@ -43,19 +41,39 @@ interface CustomModeViewProps {
 }
 
 const CustomModeView = ({
-  filters, onFilterChange, onToggleSensor, onSearch, onClearResults,
-  isSearching, searchResult, onExport, isExporting,
-  exportProgress, currentExportingSensor, onImportClick, importedFileName, onRemoveImportedFile,
-  mapCenter, mapZoom, aoi, hasRunSearch, canRunSearch, onAOIChange,
-  stations, onResetStations, isLoadingStations
+  filters,
+  onFilterChange,
+  onToggleSensor,
+  onSearch,
+  onClearResults,
+  isSearching,
+  searchResult,
+  onExport,
+  isExporting,
+  exportProgress,
+  currentExportingSensor,
+  onImportClick,
+  importedFileName,
+  onRemoveImportedFile,
+  mapCenter,
+  mapZoom,
+  aoi,
+  hasRunSearch,
+  canRunSearch,
+  onAOIChange,
+  stations,
+  onResetStations,
+  isLoadingStations,
 }: CustomModeViewProps) => {
 
-  const [drawingMode, setDrawingMode] = useState<'none' | 'rectangle' | 'polygon'>('none');
+  const [drawingMode, setDrawingMode] = useState<'none' | 'rectangle'>('none');
 
   const handleClear = () => {
     setDrawingMode('none');
     onClearResults();
   };
+
+  const queryDisabled = isSearching || !canRunSearch || !filters.sensorTypes.length || !filters.fromDate || !filters.toDate;
 
   return (
     <motion.div
@@ -66,7 +84,6 @@ const CustomModeView = ({
     >
       <div className="w-[420px] h-full bg-white border-r border-gray-100 flex flex-col z-10 shadow-xl overflow-hidden">
         <ScrollArea className="flex-1 min-h-0">
-
           <div className="p-10 space-y-10">
             <div>
               <h3 className="text-2xl font-extrabold mb-2 text-gray-900 tracking-tight">Custom Selection</h3>
@@ -77,26 +94,26 @@ const CustomModeView = ({
               <div className="space-y-3">
                 <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Area of Interest (AOI)</Label>
                 <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 transition-all group',
+                      drawingMode === 'rectangle' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                    )}
+                    onClick={() => setDrawingMode(drawingMode === 'rectangle' ? 'none' : 'rectangle')}
+                  >
+                    <MousePointer2 className={cn('w-6 h-6 transition-transform group-hover:scale-110', drawingMode === 'rectangle' ? 'text-blue-600' : 'text-gray-400')} />
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">Draw Area</span>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 transition-all group",
-                    drawingMode !== 'none' ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-500 hover:bg-blue-50"
-                  )}
-                  onClick={() => setDrawingMode(drawingMode === 'none' ? 'rectangle' : 'none')}
-                >
-                  <MousePointer2 className={cn("w-6 h-6 transition-transform group-hover:scale-110", drawingMode !== 'none' ? "text-blue-600" : "text-gray-400")} />
-                  <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">Draw Area</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
-                  onClick={onImportClick}
-                >
-                  <Upload className="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">Import KML</span>
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
+                    onClick={onImportClick}
+                  >
+                    <Upload className="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">Import KML</span>
+                  </Button>
                 </div>
 
                 {importedFileName && (
@@ -125,8 +142,8 @@ const CustomModeView = ({
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-3">
                   <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">From</Label>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={filters.fromDate}
                     className="rounded-xl h-14 bg-gray-50 border-none text-sm font-bold focus:ring-2 focus:ring-blue-500"
                     onChange={(e) => onFilterChange({ ...filters, fromDate: e.target.value })}
@@ -134,8 +151,8 @@ const CustomModeView = ({
                 </div>
                 <div className="space-y-3">
                   <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">To</Label>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     value={filters.toDate}
                     className="rounded-xl h-14 bg-gray-50 border-none text-sm font-bold focus:ring-2 focus:ring-blue-500"
                     onChange={(e) => onFilterChange({ ...filters, toDate: e.target.value })}
@@ -143,24 +160,17 @@ const CustomModeView = ({
                 </div>
               </div>
 
-              {(() => {
-                const queryDisabled = isSearching || !canRunSearch || !filters.sensorTypes.length || !filters.fromDate || !filters.toDate;
-
-                return (
-                  <Button
-                    onClick={() => {
-                      if (queryDisabled) return;
-                      onSearch();
-                    }}
-                    disabled={queryDisabled}
-                    className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-lg shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSearching ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Search className="w-6 h-6 mr-3" />}
-                    Run Query
-                  </Button>
-                );
-              })()}
-
+              <Button
+                onClick={() => {
+                  if (queryDisabled) return;
+                  onSearch();
+                }}
+                disabled={queryDisabled}
+                className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-lg shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSearching ? <Loader2 className="w-6 h-6 animate-spin mr-3" /> : <Search className="w-6 h-6 mr-3" />}
+                Run Query
+              </Button>
             </div>
 
             <AnimatePresence>
@@ -198,7 +208,6 @@ const CustomModeView = ({
                       </div>
                     </div>
                   )}
-
                 </motion.div>
               )}
             </AnimatePresence>
@@ -207,7 +216,6 @@ const CustomModeView = ({
       </div>
 
       <div className="flex-1 relative min-h-0 overflow-hidden">
-
         <ArchiveMap
           center={mapCenter}
           zoom={mapZoom}
@@ -224,9 +232,7 @@ const CustomModeView = ({
             onResetStations();
           }}
           stations={stations}
-          isLoadingStations={isLoadingStations}
         />
-
       </div>
     </motion.div>
   );
