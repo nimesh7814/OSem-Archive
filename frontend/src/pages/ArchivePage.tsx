@@ -313,7 +313,7 @@ const ArchivePage = () => {
     }
   };
 
-  const handleExport = async (_format: string, title?: string) => {
+  const handleExport = async (format: string, title?: string) => {
     if (!aoi) return;
 
     setIsExporting(true);
@@ -329,6 +329,9 @@ const ArchivePage = () => {
 
       if (filters.sensorTypes.length > 0) {
         params.set("category", filters.sensorTypes.join(","));
+      }
+      if (format && format !== "csv") {
+        params.set("type", format);
       }
 
       const response = await fetch(apiUrl("/bbox_data", params));

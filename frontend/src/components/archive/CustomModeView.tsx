@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import type { MapStation } from "@/lib/stationApi";
 
 interface CustomModeViewProps {
-  filters: { sensorTypes: string[]; fromDate: string; toDate: string };
-  onFilterChange: (filters: any) => void;
+  filters: ArchiveFilters;
+  onFilterChange: (filters: ArchiveFilters) => void;
   onToggleSensor: (value: string) => void;
   onSearch: () => void;
   onClearResults: () => void;
@@ -40,6 +40,12 @@ interface CustomModeViewProps {
   onResetStations: () => void;
   isLoadingStations?: boolean;
 }
+
+type ArchiveFilters = {
+  sensorTypes: string[];
+  fromDate: string;
+  toDate: string;
+};
 
 const CustomModeView = ({
   filters,
@@ -68,6 +74,9 @@ const CustomModeView = ({
   focusAoiToken,
 }: CustomModeViewProps) => {
   const [drawingMode, setDrawingMode] = useState<"none" | "rectangle">("none");
+  const [exportFormat, setExportFormat] = useState<"csv" | "json" | "geojson">(
+    "csv",
+  );
   const resultSectionRef = useRef<HTMLDivElement>(null);
   const hasSearchData =
     !!searchResult &&
@@ -264,6 +273,8 @@ const CustomModeView = ({
                         onExport={(format) =>
                           onExport(format, "Custom Selection")
                         }
+                        selectedFormat={exportFormat}
+                        onFormatChange={setExportFormat}
                         disabled={isExporting}
                         loading={isExporting}
                       />

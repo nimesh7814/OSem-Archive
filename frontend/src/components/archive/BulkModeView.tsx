@@ -13,13 +13,19 @@ import { CountryRegionSelect } from "./CountryRegionSelect";
 import { apiUrl } from "@/lib/api";
 
 interface BulkModeViewProps {
-  filters: { sensorTypes: string[]; fromDate: string; toDate: string };
-  onFilterChange: (filters: any) => void;
+  filters: ArchiveFilters;
+  onFilterChange: (filters: ArchiveFilters) => void;
   onToggleSensor: (value: string) => void;
   isSearching: boolean;
   searchResult: DetailedSummary | null;
   setSearchResult: (result: DetailedSummary | null) => void;
 }
+
+type ArchiveFilters = {
+  sensorTypes: string[];
+  fromDate: string;
+  toDate: string;
+};
 
 type RegionRow = {
   country: string;
@@ -37,6 +43,16 @@ type QuerySummary = {
   toDate: string;
 };
 
+type DownloadType = "csv" | "json" | "geojson";
+
+type CountryRegionApiRow = {
+  country: string;
+  region: string;
+  total_stations: number;
+  total_sensors: number;
+  estimated_size_mb: number;
+};
+
 const BulkModeView = ({
   filters,
   onFilterChange,
@@ -51,7 +67,13 @@ const BulkModeView = ({
   const [localSearching, setLocalSearching] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [downloadingRow, setDownloadingRow] = useState<string | null>(null);
+  const [rowDownloadTypes, setRowDownloadTypes] = useState<
+    Record<string, DownloadType>
+  >({});
   const [lastQuery, setLastQuery] = useState<QuerySummary | null>(null);
+
+  const getRowDownloadType = (rowKey: string): DownloadType =>
+    rowDownloadTypes[rowKey] ?? "csv";
 
   useEffect(() => {
     if (localSearching || searchResult) return;
@@ -65,8 +87,11 @@ const BulkModeView = ({
         if (!res.ok || !isMounted) return;
 
         const data = await res.json();
+        const rows: CountryRegionApiRow[] = Array.isArray(data)
+          ? (data as CountryRegionApiRow[])
+          : [];
         setTableData(
-          (data as any[]).map((row) => ({
+          rows.map((row) => ({
             country: row.country,
             region: row.region,
             stations: row.total_stations,
@@ -111,7 +136,10 @@ const BulkModeView = ({
       if (!res.ok) throw new Error("API error");
 
       const data = await res.json();
-      const newTableData: RegionRow[] = (data as any[]).map((row) => ({
+      const rows: CountryRegionApiRow[] = Array.isArray(data)
+        ? (data as CountryRegionApiRow[])
+        : [];
+      const newTableData: RegionRow[] = rows.map((row) => ({
         country: row.country,
         region: row.region,
         stations: row.total_stations,
@@ -120,6 +148,7 @@ const BulkModeView = ({
       }));
 
       setTableData(newTableData);
+      setRowDownloadTypes({});
       setLastQuery({
         sensors: selectedSensors,
         country: country || "All countries",
@@ -164,6 +193,7 @@ const BulkModeView = ({
 
   const handleDownload = async (row: RegionRow) => {
     const key = `${row.country}-${row.region}`;
+    const rowDownloadType = getRowDownloadType(key);
     setDownloadingRow(key);
 
     try {
@@ -177,6 +207,9 @@ const BulkModeView = ({
 
       if (filters.sensorTypes.length > 0) {
         params.set("category", filters.sensorTypes.join(","));
+      }
+      if (rowDownloadType !== "csv") {
+        params.set("type", rowDownloadType);
       }
 
       const res = await fetch(apiUrl("/country_region_data", params));
@@ -381,10 +414,14 @@ const BulkModeView = ({
                   <tr className="text-xs uppercase text-gray-400 font-black">
                     <th className="px-10 py-6">Country</th>
                     <th className="px-10 py-6">Region</th>
-                    <th className="px-10 py-6">Stations</th>
-                    <th className="px-10 py-6">Sensors</th>
-                    <th className="px-10 py-6 text-right">Est. Size</th>
-                    <th className="px-10 py-6 text-right">Action</th>
+                    <th className="px-10 py-6 text-right">Stations</th>
+                    <th className="px-10 py-6 text-right">Sensors</th>
+                    <th className="px-6 py-6 text-center w-[220px]">
+                      Download Format
+                    </th>
+                    <th className="pl-4 pr-12 py-6 text-right w-[190px]">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -402,40 +439,49 @@ const BulkModeView = ({
                         <td className="px-10 py-6 text-gray-600 font-bold">
                           {row.region}
                         </td>
-                        <td className="px-10 py-6 text-gray-600 font-bold">
+                        <td className="px-10 py-6 text-gray-600 font-bold text-right">
                           {row.stations.toLocaleString()}
                         </td>
-                        <td className="px-10 py-6 text-gray-600 font-bold">
+                        <td className="px-10 py-6 text-gray-600 font-bold text-right">
                           {row.sensors.toLocaleString()}
                         </td>
-                        <td className="px-10 py-6 text-gray-600 font-bold text-right">
-                          <span className="whitespace-nowrap inline-block">
-                            {(() => {
-                              const mb = row.sizeMB ?? 0;
-                              if (mb >= 1024) {
-                                return `${(mb / 1024).toFixed(2)} GB`;
-                              }
-                              return `${mb.toFixed(2)} MB`;
-                            })()}
-                          </span>
-                        </td>
-                        <td className="px-10 py-6 text-right">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="rounded-full text-white bg-blue-600 hover:bg-blue-700 font-black px-4 py-1 disabled:opacity-70"
-                            onClick={() => handleDownload(row)}
+                        <td className="px-6 py-6 text-center">
+                          <select
+                            aria-label="Download format"
+                            className="h-10 min-w-[160px] rounded-full border border-gray-200 bg-gray-50 px-4 text-sm font-bold text-gray-700 outline-none transition-colors focus:border-blue-400"
+                            value={getRowDownloadType(rowKey)}
+                            onChange={(e) =>
+                              setRowDownloadTypes((prev) => ({
+                                ...prev,
+                                [rowKey]: e.target.value as DownloadType,
+                              }))
+                            }
                             disabled={downloadingRow === rowKey}
                           >
-                            {downloadingRow === rowKey ? (
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4 mr-1" />
-                            )}
-                            {downloadingRow === rowKey
-                              ? "Downloading"
-                              : "Download"}
-                          </Button>
+                            <option value="csv">csv</option>
+                            <option value="json">json</option>
+                            <option value="geojson">geojson</option>
+                          </select>
+                        </td>
+                        <td className="pl-4 pr-12 py-6 text-right">
+                          <div className="inline-flex items-center">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-[140px] justify-center rounded-full bg-blue-600 px-0 py-1 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-70"
+                              onClick={() => handleDownload(row)}
+                              disabled={downloadingRow === rowKey}
+                            >
+                              {downloadingRow === rowKey ? (
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4 mr-1" />
+                              )}
+                              {downloadingRow === rowKey
+                                ? "Downloading"
+                                : "Download"}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
