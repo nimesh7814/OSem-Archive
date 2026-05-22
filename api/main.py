@@ -1,15 +1,14 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, HTTPException
-from typing import Optional
-from datetime import date
+from typing import List, Optional
+from datetime import date, datetime
 from urllib.parse import unquote
-from utils import build_download_zip
-from datetime import datetime
+from utils import build_output_file, OutputType
 import json
 import psycopg2
 import os
 import math
-
+ 
 load_dotenv()
 
 def get_db_connection():
@@ -33,13 +32,13 @@ def get_summary():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    cur.execute("SELECT COUNT(*) FROM stations")
+    cur.execute("SELECT COUNT(*) FROM stations WHERE country IS NOT NULL")
     total_stations = cur.fetchone()[0] or 0
     
-    cur.execute("SELECT COUNT(*) FROM sensors")
+    cur.execute("SELECT COUNT(*) FROM sensors se INNER JOIN stations st ON se.st_id = st.st_id WHERE st.country IS NOT NULL")
     total_sensors = cur.fetchone()[0] or 0
     
-    cur.execute("SELECT SUM(count) FROM readings")
+    cur.execute("SELECT SUM(re.count) FROM readings re INNER JOIN stations st ON re.st_id = st.st_id WHERE st.country IS NOT NULL")
     total_readings = cur.fetchone()[0] or 0
     
     cur.execute("SELECT COUNT(DISTINCT (country)) FROM stations WHERE country IS NOT NULL")
@@ -293,13 +292,15 @@ def station_readings(
 
 @app.get("/country_region_data")
 def country_region_data(
-    download: Optional[bool] = Query(False, description="Set true to download ZIP"),
+    download: Optional[bool] = Query(False, description="Set true to download output file(s)"),
+    type: Optional[List[OutputType]] = Query(None, description="Output format(s): csv, geojson, json (default: csv)"),
     from_date: Optional[date] = Query(date(2014, 6, 3), description="Start date (YYYY-MM-DD)"),
     to_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
     category: Optional[str] = Query("all", description="Sensor category (single or comma-separated)"),
     country: Optional[str] = Query(None, description="Country filter (single or comma-separated)"),
     region: Optional[str] = Query(None, description="Region filter (single or comma-separated)")
 ):
+    output_types: List[OutputType] = type if type else ["csv"]
     
     conn = get_db_connection()
     cur = conn.cursor()
@@ -435,18 +436,17 @@ def country_region_data(
     cur.close()
     conn.close()
 
-    # Build zip filename
+    # Build base filename
     country_str = country.replace(",", "-").replace(" ", "_") if country else "all"
     region_str = region.replace(",", "-").replace(" ", "_")  if region  else "all"
     from_str = from_date.strftime("%Y%m%d") if from_date else "start"
-    to_str = to_date.strftime("%Y%m%d") if to_date else date.today().strftime("%Y%m%d")
-    
-    num_days = (to_date - from_date).days if (to_date and from_date) else (date.today() - from_date).days
-   
-    # Filename format
-    zip_filename = f"{country_str}_{region_str}_{from_str}_{to_str}_{num_days}d.zip"
-
-    return build_download_zip(url_rows, zip_filename=zip_filename)
+    to_str = to_date.strftime("%Y%m%d")   if to_date   else date.today().strftime("%Y%m%d")
+    num_days = ((to_date - from_date).days if (to_date and from_date)
+                else (date.today() - from_date).days if from_date else 0)
+ 
+    base_filename = f"{country_str}_{region_str}_{from_str}_{to_str}_{num_days}d"
+ 
+    return build_output_file(url_rows, output_types=output_types, base_filename=base_filename)
     
 @app.get("/bbox_data")
 def bbox_data(
@@ -454,8 +454,10 @@ def bbox_data(
     from_date: Optional[date] = Query(date(2014, 6, 3), description="Start date (YYYY-MM-DD)"),
     to_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
     category: Optional[str] = Query("all", description="Sensor category (single or comma-separated)"),
-    download: Optional[bool] = Query(False, description="Set true to download ZIP")
+    download: Optional[bool] = Query(False, description="Set true to download output file(s)"),
+    type: Optional[List[OutputType]] = Query(None, description="Output format(s): csv, geojson, json (default: csv)")
 ):
+    output_types: List[OutputType] = type if type else ["csv"]
     
     # Parse AOI GeoJSON
     try:
@@ -628,8 +630,9 @@ def bbox_data(
     now = datetime.now()
     date_str = now.strftime("%Y%m%d")
     time_str = now.strftime("%H%M%S")
-    num_days = (to_date - from_date).days if (to_date and from_date) else (date.today() - from_date).days
-
-    zip_filename = f"aoi_{date_str}_{time_str}_{num_days}d.zip"
-
-    return build_download_zip(url_rows, zip_filename=zip_filename)
+    num_days = ((to_date - from_date).days if (to_date and from_date)
+                else (date.today() - from_date).days if from_date else 0)
+ 
+    base_filename = f"aoi_{date_str}_{time_str}_{num_days}d"
+ 
+    return build_output_file(url_rows, output_types=output_types, base_filename=base_filename)
