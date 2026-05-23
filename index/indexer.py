@@ -3,8 +3,8 @@ indexer.py
 ==========
 OpenSenseMap Archive Indexer
 -----------------------------
-Crawls https://archive.opensensemap.org/ day by day and populates the
-osem_index_db database with:
+Crawls https://archive.opensensemap.org/ day by day (or reads a local
+copy of the archive) and populates the osem_index_db database with:
 
   - stations        : one row per unique senseBox
   - sensors         : one row per unique sensor, linked to its station
@@ -32,18 +32,43 @@ Features
   --skip-done       skip individual dates already marked 'success'
   --dry             dry-run: fetch & parse, print what would be written,
                     no DB writes at all
+  --require-location
+                    skip any station that has no coordinate information.
+                    The check is two-layered:
+                      1. If the current day's metadata contains no lon/lat
+                         the station is skipped immediately (no DB touch).
+                      2. If lon/lat IS present but the station row already
+                         exists in the DB with location IS NULL (i.e. it
+                         was first inserted on a previous run without
+                         coordinates), the station is also skipped and
+                         a warning is logged.
+                    Both layers are enforced so that historical records
+                    without location data are never mixed into a
+                    location-filtered run.
   --log FILE        write full log to FILE (default: indexer.log)
                     A companion FILE.resume tracks the last successful date
                     for automatic crash recovery.
   --logN            shorthand for --log indexerN.log (e.g. --log2, --log3,
                     --log99). Writes indexerN.log and indexerN.resume.
   -v / --verbose    DEBUG level logging
+  --location PATH   path to a local downloaded copy of the archive
+                    (e.g. G:\\OSeM\\archive_data).  When supplied the
+                    indexer reads files from disk instead of fetching them
+                    over HTTP.  The directory must mirror the archive
+                    layout:  <location>/<YYYY-MM-DD>/<boxid-…>/<files>
+                    If omitted the live archive URL is used.
 
 Usage
 -----
-    # Date range  (--from/--to  or  --start/--end — both work)
+    # Online (default) — date range
     python indexer.py --from 2024-01-01 --to 2024-01-31
-    python indexer.py --start 2024-01-01 --end 2024-01-31
+
+    # Only index stations that have location data (skip any without coordinates)
+    python indexer.py --from 2023-01-01 --to 2024-12-31 --require-location
+
+    # Local archive copy
+    python indexer.py --from 2024-01-01 --to 2024-01-31 \\
+                      --location G:\\OSeM\\archive_data
 
     # Resume after crash — just re-run the exact same command
     python indexer.py --start 2024-01-01 --end 2024-01-31
@@ -72,6 +97,7 @@ Environment (.env or shell)
                        default: data/admin_boundary.geojson
     ARCHIVE_BASE_URL   default: https://archive.opensensemap.org
     CONCURRENCY        HTTP workers per day, default: 8
+    ARCHIVE_LOCATION   local archive path (overridden by --location flag)
 """
 
 from __future__ import annotations
@@ -120,8 +146,65 @@ HTTP_BACKOFF     = 2.0
 CONCURRENCY      = int(os.getenv("CONCURRENCY", "8"))
 DEFAULT_LOG_FILE  = "indexer.log"
 
+# ─── module-level logger — handlers added in setup_logging() ─────────────────
+log = logging.getLogger("indexer")
 
-# ─── resume-file helpers ──────────────────────────────────────────────────────
+# ─── module-level local-archive path (set by CLI, overrides HTTP) ─────────────
+# Populated in main() from --location / ARCHIVE_LOCATION env var.
+_LOCAL_ARCHIVE: Optional[Path] = None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 0-a.  Local-archive I/O helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _local_read_text(path: Path) -> Optional[str]:
+    """Read a local file as text, returning None if it doesn't exist."""
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        log.debug("local: file not found: %s", path)
+        return None
+    except Exception as exc:
+        log.debug("local: read error %s: %s", path, exc)
+        return None
+
+
+def _local_read_json(path: Path) -> Optional[dict]:
+    text = _local_read_text(path)
+    if not text:
+        return None
+    try:
+        return json.loads(text)
+    except Exception as exc:
+        log.debug("local: JSON parse error %s: %s", path, exc)
+        return None
+
+
+def _local_size_mb(path: Path) -> Optional[float]:
+    """Return a file's size in MB, or None if unavailable."""
+    try:
+        return round(path.stat().st_size / (1024 * 1024), 6)
+    except Exception:
+        return None
+
+
+def _local_dir_size_mb(directory: Path) -> Optional[float]:
+    """Sum the sizes of all immediate children of *directory* in MB."""
+    try:
+        total = sum(
+            f.stat().st_size
+            for f in directory.iterdir()
+            if f.is_file()
+        )
+        return round(total / (1024 * 1024), 6)
+    except Exception:
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 0-b.  Resume-file helpers
+# ══════════════════════════════════════════════════════════════════════════════
 
 def resume_file_path(log_file: str) -> Path:
     """Return the .resume sidecar path next to the log file."""
@@ -155,12 +238,8 @@ def write_resume_file(log_file: str, d: date) -> None:
         log.warning("Could not write resume file %s: %s", rf, exc)
 
 
-# ─── module-level logger — handlers added in setup_logging() ─────────────────
-log = logging.getLogger("indexer")
-
-
 # ══════════════════════════════════════════════════════════════════════════════
-# 0.  Logging setup
+# 1.  Logging setup
 # ══════════════════════════════════════════════════════════════════════════════
 
 def setup_logging(log_file: str, verbose: bool) -> None:
@@ -195,7 +274,7 @@ def setup_logging(log_file: str, verbose: bool) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1.  Database helpers
+# 2.  Database helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
 def get_connection() -> psycopg2.extensions.connection:
@@ -219,11 +298,6 @@ def upsert_station(cur,
                    model: Optional[str] = None,
                    first_seen: Optional[date] = None,
                    last_seen: Optional[date]  = None) -> str:
-    """
-    Upsert a station row.
-    Returns st_id (the natural text PK — same as box_id).
-    Schema 2: PK is st_id TEXT, no uuid column.
-    """
     point_wkt = (
         f"SRID=4326;POINT({lon} {lat})"
         if lon is not None and lat is not None else None
@@ -261,11 +335,6 @@ def upsert_sensor(cur,
                   sensor_type: Optional[str],
                   category: str,
                   unit: Optional[str]) -> str:
-    """
-    Upsert a sensor row.
-    Returns se_id (the natural text PK — same as sensor_id).
-    Schema 2: PK is se_id TEXT, FK to stations.st_id.
-    """
     cur.execute(
         """
         INSERT INTO sensors (se_id, st_id, title, type, category, unit)
@@ -285,9 +354,6 @@ def upsert_sensor(cur,
 
 def upsert_station_date(cur, st_id: str, d: date, folder_url: str,
                         size_mb: Optional[float] = None) -> None:
-    """
-    Schema 2: station_dates PK is (st_id, date).
-    """
     cur.execute(
         """
         INSERT INTO station_dates (st_id, date, folder_url, size_mb)
@@ -306,9 +372,6 @@ def upsert_sensor_file(cur,
                        d: date,
                        csv_url: str,
                        size_mb: Optional[float] = None) -> None:
-    """
-    Schema 2: sensor_files PK is (se_id, date), FKs use se_id / st_id.
-    """
     cur.execute(
         """
         INSERT INTO sensor_files (se_id, st_id, date, csv_url, size_mb)
@@ -325,12 +388,6 @@ def upsert_sensor_date(cur,
                        se_id: str,
                        d: date,
                        data_available: int) -> None:
-    """
-    Upsert a row in sensor_dates for (sensor, date).
-    data_available = 1 if a CSV file exists for this sensor on this date,
-                     0 if the sensor is known but no data was found.
-    Schema 2: PK is (se_id, date).
-    """
     cur.execute(
         """
         INSERT INTO sensor_dates (se_id, date, data_available)
@@ -351,10 +408,6 @@ def upsert_reading(cur,
                    max_val: Optional[float],
                    avg_val: Optional[float],
                    count: int) -> None:
-    """
-    Upsert aggregated daily reading stats for a sensor.
-    Schema 2: FKs use se_id / st_id; UNIQUE constraint on (se_id, date).
-    """
     cur.execute(
         """
         INSERT INTO readings
@@ -375,10 +428,13 @@ def upsert_reading(cur,
 
 def compute_readings(csv_url: str) -> Optional[dict]:
     """
-    Fetch a sensor CSV from the archive and compute daily aggregates.
+    Fetch (or read locally) a sensor CSV and compute daily aggregates.
 
     CSV format (comma-separated, with header):
         createdAt,value
+
+    When _LOCAL_ARCHIVE is set the function maps csv_url back to a local
+    file path instead of making an HTTP request.
 
     Returns:
         {recorded_at, min_value, max_value, avg_value, count}
@@ -387,7 +443,7 @@ def compute_readings(csv_url: str) -> Optional[dict]:
     import io
     import csv as csv_mod
 
-    text = http_get_text(csv_url)
+    text = http_get_text(csv_url)   # transparently local or remote
     if not text:
         log.debug("compute_readings: no text returned for %s", csv_url)
         return None
@@ -404,7 +460,6 @@ def compute_readings(csv_url: str) -> Optional[dict]:
     log.debug("compute_readings: detected columns: %s", reader.fieldnames)
 
     for row in reader:
-        # timestamp
         raw_ts = row.get("createdAt") or row.get("created_at") or ""
         if first_ts is None and raw_ts:
             try:
@@ -414,7 +469,6 @@ def compute_readings(csv_url: str) -> Optional[dict]:
             except Exception as e:
                 log.debug("compute_readings: ts parse error '%s': %s", raw_ts, e)
 
-        # numeric value
         raw_val = (row.get("value") or "").strip()
         if not raw_val:
             continue
@@ -443,10 +497,6 @@ def write_index_log(cur,
                     d: date,
                     station_count: int,
                     status: str) -> None:
-    """
-    Schema 2: PK column is inx_id (BIGINT GENERATED ALWAYS AS IDENTITY).
-    The INSERT itself is unchanged — inx_id is auto-generated.
-    """
     cur.execute(
         """
         INSERT INTO index_log (date, station_count, status)
@@ -461,10 +511,6 @@ def write_index_log(cur,
 
 
 def get_last_success(cur, start: date, end: date) -> Optional[date]:
-    """
-    Return the most-recent date in [start, end] that is marked 'success',
-    or None if there is none.  Used by auto-resume.
-    """
     cur.execute(
         """
         SELECT MAX(date) FROM index_log
@@ -486,8 +532,30 @@ def day_already_done(cur, d: date) -> bool:
     return cur.fetchone() is not None
 
 
+def station_has_location_in_db(cur, st_id: str) -> bool:
+    """
+    Return True if the station row already exists in the DB AND has a
+    non-NULL location.  Used by --require-location to catch stations that
+    were previously inserted without coordinates: even if the current day's
+    metadata now carries a lon/lat we still honour the filter because the
+    historical record is location-less.
+
+    Returns False when the station is not yet in the DB (new station) — the
+    caller will then rely on the metadata lon/lat check instead.
+    """
+    cur.execute(
+        "SELECT location IS NOT NULL FROM stations WHERE st_id = %s",
+        (st_id,),
+    )
+    row = cur.fetchone()
+    if row is None:
+        # Station not yet in DB — not a previously-inserted location-less record
+        return False
+    return bool(row[0])
+
+
 # ══════════════════════════════════════════════════════════════════════════════
-# 2.  GeoJSON spatial index  (country / region lookup)
+# 3.  GeoJSON spatial index  (country / region lookup)
 # ══════════════════════════════════════════════════════════════════════════════
 
 class GeoLookup:
@@ -537,14 +605,102 @@ class GeoLookup:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3.  HTTP helpers
+# 4.  HTTP / local-file helpers
+#
+#     All archive reads go through http_get_text / http_get_json.
+#     When _LOCAL_ARCHIVE is set those functions resolve the URL to a
+#     local path and read from disk instead of making HTTP requests.
 # ══════════════════════════════════════════════════════════════════════════════
 
 _session = requests.Session()
 _session.headers.update({"User-Agent": "osem-indexer/2.0 (study-project)"})
 
 
-def _get(url: str, as_json: bool) -> Optional[str | dict]:
+def _url_to_local_path(url: str) -> Optional[Path]:
+    """
+    Map an archive URL (or a local file:// / plain path string stored as the
+    "url") back to a Path under _LOCAL_ARCHIVE.
+
+    The archive URL structure is:
+        https://archive.opensensemap.org/<date>/<folder>/<file>
+
+    The local mirror is expected to follow the same relative layout:
+        <_LOCAL_ARCHIVE>/<date>/<folder>/<file>
+
+    The function strips the ARCHIVE_BASE prefix (or any http/https host) and
+    joins the remainder onto _LOCAL_ARCHIVE.  It also handles the case where
+    the url was already stored as a local path string (starts with a drive
+    letter or '/').
+    """
+    if _LOCAL_ARCHIVE is None:
+        return None
+
+    # Already a local path (e.g. stored folder_url from a previous local run)
+    p = Path(url)
+    if p.is_absolute():
+        return p
+
+    # Strip the base URL prefix to get the relative portion
+    relative = url
+    if relative.startswith(ARCHIVE_BASE):
+        relative = relative[len(ARCHIVE_BASE):]
+    else:
+        # Strip scheme + host generically
+        m = re.match(r"https?://[^/]+(/.*)$", relative)
+        if m:
+            relative = m.group(1)
+
+    # Remove leading slash
+    relative = relative.lstrip("/")
+
+    # Remove trailing slash for directory probing — we will check both
+    is_dir_url = url.endswith("/")
+    local = _LOCAL_ARCHIVE / relative.rstrip("/")
+    return local
+
+
+def _local_get(url: str, as_json: bool):
+    """
+    Serve a request from the local archive directory.
+
+    For a *directory* URL (ends with '/') we synthesise a minimal HTML
+    listing from the real directory entries so that the existing regex
+    parsers in list_date_folders / csv_urls_from_folder work unchanged.
+
+    For a *file* URL we read the file directly.
+    """
+    local = _url_to_local_path(url)
+    if local is None:
+        return None
+
+    is_dir_url = url.endswith("/")
+
+    if is_dir_url:
+        # Synthesise an HTML directory listing identical in structure to
+        # what the live archive returns so that all regex parsers work.
+        if not local.is_dir():
+            log.debug("local: directory not found: %s", local)
+            return None
+        lines = [f'<html><body>']
+        for child in sorted(local.iterdir()):
+            if child.is_dir():
+                lines.append(f'<a href="{child.name}/">{child.name}/</a>')
+            else:
+                lines.append(f'<a href="{child.name}">{child.name}</a>')
+        lines.append('</body></html>')
+        html = "\n".join(lines)
+        if as_json:
+            log.debug("local: directory requested as JSON — returning None")
+            return None
+        return html
+    else:
+        # Plain file
+        if as_json:
+            return _local_read_json(local)
+        return _local_read_text(local)
+
+
+def _remote_get(url: str, as_json: bool):
     delay = HTTP_BACKOFF
     for attempt in range(1, HTTP_RETRIES + 1):
         try:
@@ -563,25 +719,38 @@ def _get(url: str, as_json: bool) -> Optional[str | dict]:
 
 
 def http_get_json(url: str) -> Optional[dict]:
-    return _get(url, as_json=True)  # type: ignore[return-value]
+    if _LOCAL_ARCHIVE is not None:
+        return _local_get(url, as_json=True)
+    return _remote_get(url, as_json=True)  # type: ignore[return-value]
 
 
 def http_get_text(url: str) -> Optional[str]:
-    return _get(url, as_json=False)  # type: ignore[return-value]
+    if _LOCAL_ARCHIVE is not None:
+        return _local_get(url, as_json=False)
+    return _remote_get(url, as_json=False)  # type: ignore[return-value]
 
 
 def http_head_size_mb(url: str) -> Optional[float]:
     """
-    Issue a HEAD request and return the file size in MB from Content-Length,
-    or None if the header is absent or the request fails.
-    Falls back to a GET request on servers that don't support HEAD.
+    Return file size in MB.
+
+    For local files the size is read from the filesystem stat.
+    For remote URLs a HEAD request is issued (with GET fallback).
     """
+    if _LOCAL_ARCHIVE is not None:
+        local = _url_to_local_path(url)
+        if local is None:
+            return None
+        if local.is_dir():
+            return _local_dir_size_mb(local)
+        return _local_size_mb(local)
+
+    # ── remote ────────────────────────────────────────────────────────────
     delay = HTTP_BACKOFF
     for attempt in range(1, HTTP_RETRIES + 1):
         try:
             r = _session.head(url, timeout=HTTP_TIMEOUT, allow_redirects=True)
             if r.status_code == 405:
-                # Server doesn't support HEAD — use GET but discard body
                 r = _session.get(url, timeout=HTTP_TIMEOUT, stream=True)
                 r.close()
             if r.status_code == 404:
@@ -601,14 +770,10 @@ def http_head_size_mb(url: str) -> Optional[float]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4.  Archive parsing
+# 5.  Archive parsing
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _parse_size_mb(size_str: str) -> Optional[float]:
-    """
-    Convert a human-readable size string from the archive HTML (e.g. '1.2M',
-    '345K', '12', '2.0G') to megabytes.  Returns None if unparseable.
-    """
     s = size_str.strip()
     if not s or s == "-":
         return None
@@ -624,20 +789,66 @@ def _parse_size_mb(size_str: str) -> Optional[float]:
         return None
 
 
+def _make_folder_url(d: date, folder_name: str) -> str:
+    """
+    Build the canonical folder URL (or local path string) for a station folder.
+
+    When running in local mode the "URL" is a file:// style string built from
+    the local path so that _url_to_local_path can reconstruct the path later.
+    We still use the same relative structure as the live archive so that the
+    folder_url stored in the DB is human-readable and consistent.
+    """
+    if _LOCAL_ARCHIVE is not None:
+        # Store as a plain local path string (str(Path)) — cross-platform
+        local_folder = _LOCAL_ARCHIVE / d.isoformat() / folder_name
+        return str(local_folder) + os.sep
+    return f"{ARCHIVE_BASE}/{d.isoformat()}/{folder_name}/"
+
+
 def list_date_folders(d: date) -> list[tuple[str, str, Optional[float]]]:
     """
-    Fetch the archive day listing.
+    List all station folders for a date.
     Returns [(box_id, folder_url, size_mb), …].
-    size_mb is the total size of the station folder as reported by the
-    Content-Length header of a HEAD request against the folder URL,
-    or None if not available.
+
+    Local mode: scans the filesystem directly instead of parsing HTML.
+    Remote mode: fetches & parses the archive HTML listing.
     """
+    if _LOCAL_ARCHIVE is not None:
+        return _list_date_folders_local(d)
+    return _list_date_folders_remote(d)
+
+
+def _list_date_folders_local(d: date) -> list[tuple[str, str, Optional[float]]]:
+    """Scan <_LOCAL_ARCHIVE>/<date>/ for station sub-directories."""
+    day_dir = _LOCAL_ARCHIVE / d.isoformat()  # type: ignore[operator]
+    if not day_dir.is_dir():
+        log.debug("local: day directory not found: %s", day_dir)
+        return []
+
+    # Match the same pattern as the remote parser: 24-char hex id + optional name
+    pattern = re.compile(r"^([0-9a-f]{24})(?:-.*)?$", re.IGNORECASE)
+    results = []
+    for child in sorted(day_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        m = pattern.match(child.name)
+        if not m:
+            continue
+        box_id     = m.group(1)
+        folder_url = str(child) + os.sep       # local path with trailing sep
+        size_mb    = _local_dir_size_mb(child)
+        results.append((box_id, folder_url, size_mb))
+
+    log.debug("local: found %d station folders in %s", len(results), day_dir)
+    return results
+
+
+def _list_date_folders_remote(d: date) -> list[tuple[str, str, Optional[float]]]:
     url  = f"{ARCHIVE_BASE}/{d.isoformat()}/"
     text = http_get_text(url)
     if not text:
         return []
 
-    # Extract folder hrefs — sizes will be fetched via HEAD requests.
     pattern = re.compile(
         r'href="\.?/?([0-9a-f]{24}-[^/"]+)/"',
         re.IGNORECASE,
@@ -657,7 +868,30 @@ def list_date_folders(d: date) -> list[tuple[str, str, Optional[float]]]:
 
 
 def fetch_station_meta(folder_url: str) -> Optional[dict]:
-    """Fetch the station JSON metadata file from its folder."""
+    """
+    Fetch the station JSON metadata file from its folder.
+
+    Local mode: scans the folder directory for a .json file.
+    Remote mode: fetches the folder HTML then the JSON URL found inside.
+    """
+    if _LOCAL_ARCHIVE is not None:
+        return _fetch_station_meta_local(folder_url)
+    return _fetch_station_meta_remote(folder_url)
+
+
+def _fetch_station_meta_local(folder_url: str) -> Optional[dict]:
+    local = _url_to_local_path(folder_url)
+    if local is None or not local.is_dir():
+        log.debug("local: station folder not found: %s", folder_url)
+        return None
+    for f in local.iterdir():
+        if f.suffix.lower() == ".json":
+            return _local_read_json(f)
+    log.debug("local: no JSON metadata in %s", local)
+    return None
+
+
+def _fetch_station_meta_remote(folder_url: str) -> Optional[dict]:
     text = http_get_text(folder_url)
     if not text:
         return None
@@ -670,12 +904,45 @@ def fetch_station_meta(folder_url: str) -> Optional[dict]:
 
 
 def csv_urls_from_folder(folder_url: str, d: date) -> list[tuple[str, str, Optional[float]]]:
-    """Return [(sensor_id, csv_url, size_mb), …] for all CSVs in a station folder.
-
-    size_mb is determined from the actual Content-Length header of each CSV
-    file (via a HEAD request) so it reflects the real file size on disk rather
-    than the approximate human-readable value shown in the directory listing.
     """
+    Return [(sensor_id, csv_url, size_mb), …] for all CSVs in a station folder.
+
+    Local mode: scans the filesystem for matching CSV files.
+    Remote mode: fetches the folder HTML and parses CSV hrefs.
+    """
+    if _LOCAL_ARCHIVE is not None:
+        return _csv_urls_from_folder_local(folder_url, d)
+    return _csv_urls_from_folder_remote(folder_url, d)
+
+
+def _csv_urls_from_folder_local(folder_url: str, d: date) -> list[tuple[str, str, Optional[float]]]:
+    local = _url_to_local_path(folder_url)
+    if local is None or not local.is_dir():
+        log.debug("local: station folder not found for CSV scan: %s", folder_url)
+        return []
+
+    date_str = d.isoformat()
+    pattern  = re.compile(
+        r"^([0-9a-f]{24})-" + re.escape(date_str) + r"\.csv$",
+        re.IGNORECASE,
+    )
+    results = []
+    for f in sorted(local.iterdir()):
+        if not f.is_file():
+            continue
+        m = pattern.match(f.name)
+        if not m:
+            continue
+        sensor_id = m.group(1)
+        csv_url   = str(f)           # store local path as "url"
+        size_mb   = _local_size_mb(f)
+        results.append((sensor_id, csv_url, size_mb))
+
+    log.debug("local: found %d CSV files in %s", len(results), local)
+    return results
+
+
+def _csv_urls_from_folder_remote(folder_url: str, d: date) -> list[tuple[str, str, Optional[float]]]:
     text = http_get_text(folder_url)
     if not text:
         return []
@@ -695,7 +962,7 @@ def csv_urls_from_folder(folder_url: str, d: date) -> list[tuple[str, str, Optio
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5.  Process one station  (runs in thread pool)
+# 6.  Process one station  (runs in thread pool)
 # ══════════════════════════════════════════════════════════════════════════════
 
 def process_station(args: tuple) -> Optional[dict]:
@@ -703,17 +970,11 @@ def process_station(args: tuple) -> Optional[dict]:
 
     meta = fetch_station_meta(folder_url)
 
-    # coordinates — four formats observed in the wild:
-    #   1. currentLocation.geometry.coordinates  (newer API export)
-    #   2. loc.geometry.coordinates              (older API export, geometry may be null)
-    #   3. locations[0].coordinates              (archive format 2022+)
-    #   4. top-level longitude / latitude        (archive format 2022+, alongside locations)
     lon = lat = None
     if meta:
-        # format 1 & 2: currentLocation or loc → geometry → coordinates
         coords = meta.get("currentLocation") or meta.get("loc") or {}
         if isinstance(coords, dict):
-            geom = coords.get("geometry")          # may be None/null
+            geom = coords.get("geometry")
             if isinstance(geom, dict):
                 c = geom.get("coordinates", [])
                 if len(c) >= 2:
@@ -721,7 +982,6 @@ def process_station(args: tuple) -> Optional[dict]:
         if lon is None and isinstance(coords, list) and len(coords) >= 2:
             lon, lat = float(coords[0]), float(coords[1])
 
-        # format 3: locations array  e.g. [{"coordinates": [lon, lat], "type": "Point"}]
         if lon is None:
             locations = meta.get("locations")
             if isinstance(locations, list) and locations:
@@ -729,7 +989,6 @@ def process_station(args: tuple) -> Optional[dict]:
                 if len(c) >= 2:
                     lon, lat = float(c[0]), float(c[1])
 
-        # format 4: top-level longitude / latitude keys
         if lon is None and meta.get("longitude") is not None:
             try:
                 lon = float(meta["longitude"])
@@ -737,12 +996,10 @@ def process_station(args: tuple) -> Optional[dict]:
             except (TypeError, ValueError):
                 lon = lat = None
 
-    # country / region via spatial lookup
     country = region = None
     if lon is not None and lat is not None and geo_lookup:
         country, region = geo_lookup.lookup(lon, lat)
 
-    # station name, exposure, model & per-sensor metadata
     name        = meta.get("name") if meta else None
     exposure    = meta.get("exposure") if meta else None
     model       = meta.get("model") if meta else None
@@ -759,8 +1016,6 @@ def process_station(args: tuple) -> Optional[dict]:
 
     csv_files = csv_urls_from_folder(folder_url, d)
 
-    # When folder-level size wasn't available from the parent listing,
-    # fall back to summing the individual CSV file sizes.
     if folder_size_mb is None:
         individual_sizes = [sz for _, _, sz in csv_files if sz is not None]
         if individual_sizes:
@@ -778,12 +1033,12 @@ def process_station(args: tuple) -> Optional[dict]:
         "folder_url":     folder_url,
         "folder_size_mb": folder_size_mb,
         "sensor_meta":    sensor_meta,
-        "csv_files":      csv_files,  # [(sensor_id, csv_url, size_mb), …]
+        "csv_files":      csv_files,
     }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 6.  Index one full day
+# 7.  Index one full day
 # ══════════════════════════════════════════════════════════════════════════════
 
 def index_day(
@@ -792,11 +1047,8 @@ def index_day(
     conn,
     dry_run: bool,
     log_file: str = DEFAULT_LOG_FILE,
+    require_location: bool = False,
 ) -> dict:
-    """
-    Index (or dry-run) all stations for one date.
-    Returns {status, stations_written, sensors_written, errors}.
-    """
     log.info("── %s ──────────────────────────────────────────", d.isoformat())
 
     stations_list = list_date_folders(d)
@@ -811,7 +1063,6 @@ def index_day(
     total_folders = len(stations_list)
     log.info("  %d station folders", total_folders)
 
-    # ── parallel HTTP fetch ───────────────────────────────────────────────
     tasks        = [(box_id, folder_url, d, geo_lookup, size_mb)
                     for box_id, folder_url, size_mb in stations_list]
     results      = []
@@ -834,11 +1085,11 @@ def index_day(
     log.info("  Fetched %d/%d stations  %d sensors  %d fetch-errors",
              len(results), total_folders, total_sensors, fetch_errors)
 
-    # ── dry run ───────────────────────────────────────────────────────────
     if dry_run:
         log.info("  [DRY RUN] Would insert/update %d stations, %d sensors "
-                 "(sensor_dates rows: 1 per sensor per date, data_available 0/1)",
-                 len(results), total_sensors)
+                 "(sensor_dates rows: 1 per sensor per date, data_available 0/1)%s",
+                 len(results), total_sensors,
+                 "  [location filter active]" if require_location else "")
         for r in results[:3]:
             log.info("    station sample: box_id=%-26s name=%s  country=%s  sensors=%d  size_mb=%s",
                      r["box_id"], r["name"] or "-", r["country"] or "?",
@@ -853,84 +1104,139 @@ def index_day(
             "errors":           fetch_errors,
         }
 
-    # ── DB writes ─────────────────────────────────────────────────────────
     stations_written = sensors_written = db_errors = 0
+
+    DEADLOCK_RETRIES = 5
+    DEADLOCK_BACKOFF = 1.5
+
+    def _write_station(cur, r: dict) -> None:
+        nonlocal sensors_written
+
+        # ── location guard (--require-location) ──────────────────────────
+        # Decision matrix (metadata lon/lat  ×  existing DB location):
+        #
+        #   metadata   |  DB row       |  action
+        #   -----------+---------------+----------------------------------
+        #   has coords |  no row yet   |  ALLOW  (new station with location)
+        #   has coords |  has location |  ALLOW  (known station, still good)
+        #   has coords |  NULL location|  SKIP   (previously inserted w/o loc)
+        #   no coords  |  no row yet   |  SKIP   (brand-new, no location at all)
+        #   no coords  |  has location |  ALLOW  (DB has it; today's file just missing)
+        #   no coords  |  NULL location|  SKIP   (no location anywhere)
+        #
+        if require_location:
+            has_meta_loc = r["lon"] is not None and r["lat"] is not None
+            cur.execute(
+                "SELECT location IS NOT NULL FROM stations WHERE st_id = %s",
+                (r["box_id"],),
+            )
+            existing = cur.fetchone()
+            # existing is None     → station not yet in DB
+            # existing is (True,)  → station in DB with a location
+            # existing is (False,) → station in DB without a location
+
+            db_has_loc = existing is not None and bool(existing[0])
+
+            if not has_meta_loc and not db_has_loc:
+                log.debug(
+                    "  --require-location: skipping box %s — no coordinates in "
+                    "metadata and no location in DB",
+                    r["box_id"],
+                )
+                return
+
+            if has_meta_loc and existing is not None and not existing[0]:
+                log.warning(
+                    "  --require-location: skipping box %s — metadata now has "
+                    "coordinates but existing DB record has no location (previously "
+                    "inserted without coords)",
+                    r["box_id"],
+                )
+                return
+
+            # Remaining allowed cases:
+            #   has_meta_loc + no DB row  → new station with location
+            #   has_meta_loc + db_has_loc → known station, still has location
+            #   no meta loc  + db_has_loc → DB already holds the location; proceed
+
+        st_id = upsert_station(
+            cur,
+            r["box_id"], r["name"],
+            r["lon"], r["lat"],
+            r["country"], r["region"],
+            r["exposure"], r["model"],
+            first_seen=d, last_seen=d,
+        )
+        upsert_station_date(cur, st_id, d, r["folder_url"],
+                            r.get("folder_size_mb"))
+
+        csv_sensor_ids = {sid for sid, _, _ in r["csv_files"]}
+
+        for sensor_id, csv_url, csv_size_mb in r["csv_files"]:
+            sm       = r["sensor_meta"].get(sensor_id, {})
+            title    = sm.get("title")
+            stype    = sm.get("type")
+            unit     = sm.get("unit")
+            category = categorize_sensor(title or "", unit or "")
+            se_id = upsert_sensor(cur, sensor_id, st_id, title, stype, category, unit)
+            upsert_sensor_file(cur, se_id, st_id, d, csv_url, csv_size_mb)
+            upsert_sensor_date(cur, se_id, d, 1)
+
+            try:
+                agg = compute_readings(csv_url)
+                if agg:
+                    upsert_reading(
+                        cur, se_id, st_id, d,
+                        agg["recorded_at"],
+                        agg["min_value"], agg["max_value"],
+                        agg["avg_value"], agg["count"],
+                    )
+                    log.debug("  reading stored: sensor=%s count=%d avg=%.4f",
+                              sensor_id, agg["count"], agg["avg_value"])
+                else:
+                    log.debug("  no reading computed for sensor=%s url=%s",
+                              sensor_id, csv_url)
+            except Exception as exc:
+                log.warning("  reading failed for sensor=%s: %s", sensor_id, exc)
+
+            sensors_written += 1
+
+        for sensor_id, sm in r["sensor_meta"].items():
+            if sensor_id in csv_sensor_ids:
+                continue
+            title    = sm.get("title")
+            stype    = sm.get("type")
+            unit     = sm.get("unit")
+            category = categorize_sensor(title or "", unit or "")
+            se_id = upsert_sensor(cur, sensor_id, st_id, title, stype, category, unit)
+            upsert_sensor_date(cur, se_id, d, 0)
 
     with conn.cursor() as cur:
         for r in results:
-            try:
-                # upsert_station now returns st_id (TEXT) directly
-                st_id = upsert_station(
-                    cur,
-                    r["box_id"], r["name"],
-                    r["lon"], r["lat"],
-                    r["country"], r["region"],
-                    r["exposure"], r["model"],
-                    first_seen=d, last_seen=d,
-                )
-                upsert_station_date(cur, st_id, d, r["folder_url"],
-                                    r.get("folder_size_mb"))
-
-                # Build a set of sensor_ids that have a CSV for quick lookup
-                csv_sensor_ids = {sid for sid, _, _ in r["csv_files"]}
-
-                # Upsert sensors that have a CSV file → data_available = 1
-                for sensor_id, csv_url, csv_size_mb in r["csv_files"]:
-                    sm       = r["sensor_meta"].get(sensor_id, {})
-                    title    = sm.get("title")
-                    stype    = sm.get("type")
-                    unit     = sm.get("unit")
-                    category = categorize_sensor(title or "", unit or "")
-
-                    # upsert_sensor now returns se_id (TEXT) directly
-                    se_id = upsert_sensor(
-                        cur, sensor_id, st_id,
-                        title, stype, category, unit,
-                    )
-                    upsert_sensor_file(cur, se_id, st_id, d, csv_url, csv_size_mb)
-                    upsert_sensor_date(cur, se_id, d, 1)
-
-                    # compute and store daily aggregates from the CSV
-                    try:
-                        agg = compute_readings(csv_url)
-                        if agg:
-                            upsert_reading(
-                                cur, se_id, st_id, d,
-                                agg["recorded_at"],
-                                agg["min_value"], agg["max_value"],
-                                agg["avg_value"], agg["count"],
-                            )
-                            log.debug("  reading stored: sensor=%s count=%d avg=%.4f",
-                                      sensor_id, agg["count"], agg["avg_value"])
-                        else:
-                            log.debug("  no reading computed for sensor=%s url=%s",
-                                      sensor_id, csv_url)
-                    except Exception as exc:
-                        log.warning("  reading failed for sensor=%s: %s", sensor_id, exc)
-
-                    sensors_written += 1
-
-                # Upsert sensors known from metadata but missing a CSV → data_available = 0
-                for sensor_id, sm in r["sensor_meta"].items():
-                    if sensor_id in csv_sensor_ids:
-                        continue  # already handled above
-                    title    = sm.get("title")
-                    stype    = sm.get("type")
-                    unit     = sm.get("unit")
-                    category = categorize_sensor(title or "", unit or "")
-                    se_id = upsert_sensor(
-                        cur, sensor_id, st_id,
-                        title, stype, category, unit,
-                    )
-                    upsert_sensor_date(cur, se_id, d, 0)
-
-                stations_written += 1
-
-            except Exception as exc:
-                log.warning("DB error for box %s: %s", r["box_id"], exc)
-                conn.rollback()
-                db_errors += 1
-                continue
+            attempt = 0
+            backoff = DEADLOCK_BACKOFF
+            while True:
+                try:
+                    _write_station(cur, r)
+                    stations_written += 1
+                    break
+                except psycopg2.errors.DeadlockDetected as exc:
+                    conn.rollback()
+                    attempt += 1
+                    if attempt >= DEADLOCK_RETRIES:
+                        log.warning("DB deadlock for box %s (gave up after %d retries): %s",
+                                    r["box_id"], attempt, exc)
+                        db_errors += 1
+                        break
+                    log.warning("DB deadlock for box %s (retry %d/%d in %.1fs)",
+                                r["box_id"], attempt, DEADLOCK_RETRIES, backoff)
+                    time.sleep(backoff)
+                    backoff *= 2
+                except Exception as exc:
+                    log.warning("DB error for box %s: %s", r["box_id"], exc)
+                    conn.rollback()
+                    db_errors += 1
+                    break
 
         errors = fetch_errors + db_errors
         status = (
@@ -953,7 +1259,7 @@ def index_day(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 7.  CLI
+# 8.  CLI
 # ══════════════════════════════════════════════════════════════════════════════
 
 def parse_args() -> argparse.Namespace:
@@ -962,11 +1268,27 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Remote archive (default)
   python indexer.py --from 2024-01-01 --to 2024-01-31
-  python indexer.py --start 2024-01-01 --end 2024-01-31   # aliases for --from/--to
-  python indexer.py --from 2024-01-01 --to 2024-01-31     # re-run resumes automatically
+  python indexer.py --start 2024-01-01 --end 2024-01-31   # --start/--end are aliases
+
+  # Only index stations that have location data
+  python indexer.py --from 2023-01-01 --to 2024-12-31 --require-location
+
+  # Local downloaded archive
+  python indexer.py --from 2024-01-01 --to 2024-01-31 --location G:\\OSeM\\archive_data
+  python indexer.py --date 2024-06-15  --location /mnt/archive
+
+  # Re-run resumes automatically from last success
+  python indexer.py --start 2024-01-01 --end 2024-01-31
+
+  # Dry run — verify parsing without touching the DB
   python indexer.py --from 2024-01-01 --to 2024-01-03 --dry
+
+  # Last 7 days, skip already-done dates
   python indexer.py --last 7 --skip-done
+
+  # Single date with verbose output
   python indexer.py --date 2024-06-15 -v
         """,
     )
@@ -982,8 +1304,33 @@ Examples:
     p.add_argument("--to", "--end", dest="date_to", metavar="YYYY-MM-DD",
                    help="End of date range, inclusive (required with --from / --start)")
 
+    p.add_argument(
+        "--location", metavar="PATH",
+        default=None,
+        help=(
+            "Path to a local downloaded copy of the archive "
+            "(e.g. G:\\\\OSeM\\\\archive_data or /mnt/archive). "
+            "The directory must mirror the archive layout: "
+            "<PATH>/<YYYY-MM-DD>/<boxid-…>/<files>. "
+            "When omitted the live archive URL is used. "
+            "Can also be set via the ARCHIVE_LOCATION environment variable."
+        ),
+    )
+
     p.add_argument("--skip-done", action="store_true",
                    help="Skip individual dates already marked 'success'")
+    p.add_argument(
+        "--require-location", action="store_true", dest="require_location",
+        help=(
+            "Skip stations that have no coordinate information. "
+            "Two checks are applied: (1) stations whose current-day metadata "
+            "contains no lon/lat are dropped before any DB access; "
+            "(2) stations that already exist in the DB with location IS NULL "
+            "(inserted on a previous run without coordinates) are also skipped, "
+            "even if today's metadata now carries coordinates. "
+            "Use this flag to keep location-filtered runs strictly clean."
+        ),
+    )
     p.add_argument("--dry", action="store_true",
                    help="Fetch and parse only — no DB writes")
     p.add_argument("--log", metavar="FILE", default=DEFAULT_LOG_FILE,
@@ -1006,8 +1353,9 @@ def date_range(start: date, end: date):
 
 
 def main() -> None:
+    global _LOCAL_ARCHIVE
+
     # Detect --logN (e.g. --log2, --log3, --log99) before normal arg parsing.
-    # Any --logN flag sets the log file to indexerN.log (and indexerN.resume).
     import re as _re
     for _arg in sys.argv[1:]:
         _m = _re.fullmatch(r"--log(\d+)", _arg)
@@ -1021,10 +1369,28 @@ def main() -> None:
     setup_logging(args.log, args.verbose)
     console = Console()
 
-    # ── startup banner (console only, not log) ────────────────────────────
+    # ── resolve local archive location ────────────────────────────────────
+    location_str = args.location or os.getenv("ARCHIVE_LOCATION")
+    if location_str:
+        _LOCAL_ARCHIVE = Path(location_str)
+        if not _LOCAL_ARCHIVE.is_dir():
+            log.error(
+                "Local archive path does not exist or is not a directory: %s",
+                _LOCAL_ARCHIVE,
+            )
+            sys.exit(1)
+        log.info("Local archive mode: reading from %s", _LOCAL_ARCHIVE.resolve())
+
+    # ── startup banner ────────────────────────────────────────────────────
     console.rule("[bold cyan]OpenSenseMap Indexer[/]")
     console.print(f"  [dim]Started  :[/] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     console.print(f"  [dim]Log file :[/] {Path(args.log).resolve()}")
+    if _LOCAL_ARCHIVE is not None:
+        console.print(f"  [dim]Source   :[/] [green]LOCAL[/] {_LOCAL_ARCHIVE.resolve()}")
+    else:
+        console.print(f"  [dim]Source   :[/] [blue]REMOTE[/] {ARCHIVE_BASE}")
+    if args.require_location:
+        console.print("  [bold yellow]Filter   : --require-location active — stations without coordinates will be skipped[/]")
     if args.dry:
         console.print("  [bold yellow]Mode     : DRY RUN — no DB writes[/]")
     console.rule(style="dim")
@@ -1118,7 +1484,6 @@ def main() -> None:
     current_status = ""
 
     def make_display(progress: Progress) -> Table:
-        """Build the live display: progress bar + stats table side by side."""
         stats = Table.grid(padding=(0, 2))
         stats.add_column(style="bold cyan",  no_wrap=True)
         stats.add_column(style="white",      no_wrap=True)
@@ -1132,17 +1497,25 @@ def main() -> None:
         status_colour = {"success": "green", "partial": "yellow",
                          "failed": "red",    "dry": "blue", "": "white"}.get(current_status, "white")
 
+        source_label = (
+            f"LOCAL {_LOCAL_ARCHIVE}" if _LOCAL_ARCHIVE is not None else f"REMOTE {ARCHIVE_BASE}"
+        )
+
         stats.add_row(
             "Date",      current_day or "—",
             "Status",    Text(current_status or "—", style=status_colour),
         )
         stats.add_row(
-            "Days left", str(left),
+            "Source",    source_label,
             "Errors",    str(summary["total_errors"]),
         )
         stats.add_row(
+            "Days left", str(left),
             "Stations",  f"{summary['total_stations']:,}",
+        )
+        stats.add_row(
             "Sensors",   f"{summary['total_sensors']:,}",
+            "", "",
         )
         stats.add_row(
             "✓ success", str(summary["success"]),
@@ -1190,6 +1563,7 @@ def main() -> None:
                 d, geo, conn,
                 dry_run=args.dry,
                 log_file=args.log,
+                require_location=args.require_location,
             )
             current_status = result["status"]
             summary[current_status]    = summary.get(current_status, 0) + 1
