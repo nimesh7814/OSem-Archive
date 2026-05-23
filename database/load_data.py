@@ -4,9 +4,18 @@ load_data.py
 ------------
 Loads OpenSenseMap archive data into TimescaleDB running in Docker.
 
+Schema (schema.sql):
+  stations  – PK: st_i`d VARCHAR(24)  (no serial UUID)
+  sensors   – PK: se_id VARCHAR(24), FK → stations.st_id
+  readings  – FK: se_id VARCHAR(24), FK → sensors.se_id  (TimescaleDB hypertable)
+
 The script connects to the database using the values in your .env file.
 As long as Docker is running and the container is healthy, the script will
 connect to localhost on the port mapped in docker-compose.yml (POSTGRES_PORT).
+
+Checkpoint / resume files (written next to load_data.py):
+  data.resume  – one completed "date/station" key per line; delete to restart
+  data.log     – JSONL log of every missing-data or missing-location event
 
 Archive structure:
     <root>/
@@ -16,7 +25,7 @@ Archive structure:
           538da4d6a834155415765eaf-2014-06-03.csv            <- sensor readings
 
 Requirements:
-    pip install psycopg2-binary python-dotenv tqdm requests beautifulsoup4
+    pip install psycopg2-binary python-dotenv tqdm requests beautifulsoup4 shapely
 
 Usage:
     # Load everything from a local archive folder directly into the database
@@ -25,8 +34,14 @@ Usage:
     # Load from internet archive URL (directory listing must be browsable)
     python load_data.py --source https://archive.example.com/osem/
 
-    # Filter by date range
+    # Filter by date range  (resume-safe: same command picks up where it left off)
     python load_data.py --source /path/to/archive --start 2014-06-01 --end 2014-06-30
+
+    # Kill and resume example:
+    #   python load_data.py --source D:\\OSeM\\data --start 2014-06-04 --end 2025-05-06
+    #   ^C   (kill at any point)
+    #   python load_data.py --source D:\\OSeM\\data --start 2014-06-04 --end 2025-05-06
+    #   → automatically resumes from the last completed station
 
     # Dry run -- no DB writes, outputs preview CSVs in ./dry_run_output/
     python load_data.py --source /path/to/archive --dry-run
@@ -93,9 +108,15 @@ DATE_FOLDER_RE      = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DRY_RUN_DIR         = Path("dry_run_output")
 SQL_DUMP_DIR        = Path("sql")          # all .sql dumps live here
 STATION_ID_LEN      = 24
-ADMIN_BOUNDARY_PATH = Path("data/admin_boundary.geojson")
+# Default admin boundary – can be overridden with --admin-boundary CLI flag
+ADMIN_BOUNDARY_PATH = Path(
+    r"D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap"
+    r"\OSem-Archive\index\data\admin_boundary.geojson"
+)
 WORKER_THREADS      = 8   # parallel station folders per date folder
-PROGRESS_LOG        = Path("progress.log")  # resume checkpoint file
+# Fixed checkpoint/log file names (written next to the script)
+RESUME_FILE         = Path("data.resume")   # completed station keys → resumable on re-run
+DATA_LOG_FILE       = Path("data.log")      # JSONL log of missing-data / missing-location events
 
 # ---------------------------------------------------------------------------
 # Admin boundary spatial index (loaded once at startup)
@@ -157,18 +178,15 @@ def lookup_admin(lon: float, lat: float) -> tuple[Optional[str], Optional[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Progress log -- resumable checkpoint tracking
+# Resume checkpoint (data.resume) + data log (data.log)
 # ---------------------------------------------------------------------------
-def progress_log_path(source: str, start, end) -> Path:
-    """Return a unique progress log path per source+date-range so different
-    runs don't share the same log file."""
-    import hashlib
-    key = f"{source}|{start}|{end}"
-    slug = hashlib.md5(key.encode()).hexdigest()[:8]
-    start_s = str(start) if start else "begin"
-    end_s   = str(end)   if end   else "end"
-    return Path(f"progress_{start_s}_to_{end_s}_{slug}.log")
-
+# data.resume  – plain-text checkpoint; one "date/station" key per line.
+#                The same command re-run will skip already-completed stations.
+#                Delete data.resume to restart from scratch.
+#
+# data.log     – JSONL event log; one JSON object per line for every station
+#                that is skipped due to missing data or missing/bad location.
+# ---------------------------------------------------------------------------
 
 def load_completed(log_path: Path) -> set:
     """Return the set of 'date_folder/station_folder' keys already completed."""
@@ -180,49 +198,54 @@ def load_completed(log_path: Path) -> set:
             line = line.strip()
             if line and not line.startswith("#"):
                 completed.add(line)
-    print(f"[RESUME] Progress log found: {log_path}")
+    print(f"[RESUME] Checkpoint found: {log_path}")
     print(f"[RESUME] Already completed : {len(completed):,} station-folders — these will be skipped.")
     return completed
 
 
 def mark_completed(log_path: Path, date_folder: str, station_folder: str) -> None:
-    """Append a completed key to the progress log (one line per station-folder)."""
+    """Append a completed key to data.resume (one line per station-folder)."""
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"{date_folder}/{station_folder}\n")
 
 
-def init_progress_log(log_path: Path, source: str, start, end) -> None:
-    """Write a header comment if the log doesn't exist yet."""
+def init_resume_file(log_path: Path, source: str, start, end) -> None:
+    """Write a header comment to data.resume if the file does not yet exist.
+
+    The same --start/--end command can be re-run at any time and will
+    automatically skip every station-folder whose key already appears here.
+    Delete data.resume to restart from scratch.
+    """
     if not log_path.exists():
         with open(log_path, "w", encoding="utf-8") as f:
-            f.write(f"# load_data.py progress log\n")
+            f.write(f"# load_data.py  –  resume checkpoint (data.resume)\n")
             f.write(f"# source : {source}\n")
             f.write(f"# range  : {start or 'beginning'} -> {end or 'end'}\n")
             f.write(f"# started: {datetime.now(timezone.utc).isoformat()}\n")
-            f.write(f"# Each line below is a completed date_folder/station_folder.\n")
-            f.write(f"# Delete this file to restart from scratch.\n")
+            f.write(f"# Each non-comment line is a completed date_folder/station_folder.\n")
+            f.write(f"# Delete this file to restart the entire run from scratch.\n")
 
 
-def error_log_path(source: str, start, end) -> Path:
-    """Return the companion error log path for the same source/date-range."""
-    base = progress_log_path(source, start, end)
-    return base.with_name(base.stem + "_errors.log")
+def init_data_log(log_path: Path, source: str, start, end) -> None:
+    """Write a header comment to data.log if the file does not yet exist.
 
-
-def init_error_log(log_path: Path, source: str, start, end) -> None:
-    """Write a header comment if the error log doesn't exist yet."""
+    Every station skipped due to missing data or a bad/missing location is
+    appended here as a single-line JSON object (JSONL format).
+    """
     if not log_path.exists():
         with open(log_path, "w", encoding="utf-8") as f:
-            f.write(f"# load_data.py station location error log\n")
+            f.write(f"# load_data.py  –  data event log (data.log)\n")
             f.write(f"# source : {source}\n")
             f.write(f"# range  : {start or 'beginning'} -> {end or 'end'}\n")
             f.write(f"# started: {datetime.now(timezone.utc).isoformat()}\n")
-            f.write(f"# Each line below contains a skipped station and its location payload.\n")
-            f.write(f"# Delete this file to restart the log from scratch.\n")
+            f.write(f"# Each non-comment line is a JSON object for a skipped station.\n")
+            f.write(f"# event types: missing_location, bad_location, missing_data\n")
 
 
-def mark_location_error(
+
+def mark_data_log_event(
     log_path: Path,
+    event: str,
     date_folder: str,
     station_folder: str,
     station_folder_path: str,
@@ -230,7 +253,13 @@ def mark_location_error(
     reason: str,
     station_data: dict,
 ) -> None:
-    """Append one station-location failure entry to the error log."""
+    """Append one event to data.log (JSONL).
+
+    event values:
+      "missing_location" – station has no location information at all
+      "bad_location"     – station has location info but coordinates are unusable
+      "missing_data"     – station JSON or sensor CSV could not be read
+    """
     location_snapshot = {
         "loc": station_data.get("loc"),
         "geometry": station_data.get("geometry"),
@@ -244,6 +273,8 @@ def mark_location_error(
         "longitude": station_data.get("longitude"),
     }
     entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
         "date_folder": date_folder,
         "station_folder": station_folder,
         "station_folder_path": station_folder_path,
@@ -253,6 +284,28 @@ def mark_location_error(
     }
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+
+
+# Backward-compatible alias used internally
+def mark_location_error(
+    log_path: Path,
+    date_folder: str,
+    station_folder: str,
+    station_folder_path: str,
+    station_id: str,
+    reason: str,
+    station_data: dict,
+) -> None:
+    """Delegate to mark_data_log_event with the correct event type."""
+    if "no location" in reason:
+        event = "missing_location"
+    else:
+        event = "bad_location"
+    mark_data_log_event(
+        log_path, event,
+        date_folder, station_folder, station_folder_path,
+        station_id, reason, station_data,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -265,10 +318,15 @@ def parse_args() -> argparse.Namespace:
     )
 
     # -- Two mutually exclusive top-level modes ------------------------------
-    mode_group = parser.add_mutually_exclusive_group(required=True)
+    # --source and --import-sql are mutually exclusive but neither is strictly
+    # required: omitting --source defaults to the official OpenSenseMap archive.
+    mode_group = parser.add_mutually_exclusive_group(required=False)
     mode_group.add_argument(
-        "--source",
-        help="Local folder or base URL of the archive to process"
+        "--source", default=None,
+        help=(
+            "Local folder or base URL of the archive to process. "
+            "Defaults to https://archive.opensensemap.org/ when omitted."
+        )
     )
     mode_group.add_argument(
         "--import-sql",
@@ -320,6 +378,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--env", default=".env",
         help="Path to .env file (default: .env)"
+    )
+    parser.add_argument(
+        "--admin-boundary", dest="admin_boundary", default=None, metavar="PATH",
+        help=(
+            "Path to admin_boundary.geojson used for country/region lookup. "
+            f"Defaults to the hard-coded Windows path in ADMIN_BOUNDARY_PATH constant."
+        )
     )
 
     return parser.parse_args()
@@ -546,10 +611,11 @@ def get_existing_station_location(cur, st_id: str) -> tuple[Optional[float], Opt
 # ---------------------------------------------------------------------------
 # DB upsert helpers
 # ---------------------------------------------------------------------------
-def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str], Optional[str]]:
-    """Insert or get st_uuid for a station.
+def upsert_station(cur, data: dict) -> tuple[Optional[str], bool, Optional[str], Optional[str]]:
+    """Insert or update a station row.
 
-    Returns (st_uuid, is_new, country) where is_new=True when freshly inserted.
+    The schema uses st_id (VARCHAR 24) as the natural primary key — no serial
+    integer surrogate.  Returns (st_id, is_new, country, skip_reason).
     """
     station_id = data.get("id")
     has_location_info, lon, lat = station_location_info(data)
@@ -592,7 +658,7 @@ def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str],
                     WHEN EXCLUDED.init_date < stations.init_date THEN EXCLUDED.init_date
                     ELSE stations.init_date
                 END
-        RETURNING st_uuid, (xmax = 0) AS is_new, country
+        RETURNING st_id, (xmax = 0) AS is_new, country
     """, (
         station_id,
         data.get("boxType"),
@@ -605,9 +671,9 @@ def upsert_station(cur, data: dict) -> tuple[Optional[int], bool, Optional[str],
     ))
     row = cur.fetchone()
     if not row:
-        return None, False, None
-    st_uuid, is_new, stored_country = row
-    return st_uuid, is_new, stored_country, None
+        return None, False, None, None
+    st_id_ret, is_new, stored_country = row
+    return st_id_ret, is_new, stored_country, None
 
 
 def classify_sensor(title: str, unit: str) -> str:
@@ -843,20 +909,21 @@ def classify_sensor(title: str, unit: str) -> str:
     return "Other"
 
 
-def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Optional[int], bool]:
-    """Insert or get se_uuid for a sensor.
+def upsert_sensor(cur, sensor: dict, st_id: str, init_date=None) -> tuple[Optional[str], bool]:
+    """Insert or update a sensor row.
 
-    init_date should be the earliest timestamp from the readings CSV for this
-    sensor. Written only on first insert; subsequent runs leave it untouched so
-    the earliest date is always preserved.
+    The schema uses se_id (VARCHAR 24) as the natural primary key and st_id
+    (VARCHAR 24) as the FK to stations — no serial integer surrogates.
 
-    Returns (se_uuid, is_new) where is_new is True when the row was freshly
-    inserted (xmax = 0 means INSERT path, not UPDATE path).
+    init_date is the earliest timestamp from the readings CSV; written only on
+    first insert so the earliest ever date is always preserved.
+
+    Returns (se_id, is_new) where is_new is True when freshly inserted.
     """
     sensor_type = classify_sensor(sensor.get("title", ""), sensor.get("unit", ""))
 
     cur.execute("""
-        INSERT INTO sensors (se_id, st_uuid, title, unit, info, type, init_date)
+        INSERT INTO sensors (se_id, st_id, title, unit, info, type, init_date)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (se_id) DO UPDATE
             SET title     = EXCLUDED.title,
@@ -868,10 +935,10 @@ def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Opti
                     WHEN EXCLUDED.init_date < sensors.init_date THEN EXCLUDED.init_date
                     ELSE sensors.init_date
                 END
-        RETURNING se_uuid, (xmax = 0) AS is_new, init_date
+        RETURNING se_id, (xmax = 0) AS is_new, init_date
     """, (
         sensor.get("id"),
-        st_uuid,
+        st_id,
         sensor.get("title"),
         sensor.get("unit"),
         sensor.get("sensorType"),
@@ -881,18 +948,23 @@ def upsert_sensor(cur, sensor: dict, st_uuid: int, init_date=None) -> tuple[Opti
     row = cur.fetchone()
     if not row:
         return None, False
-    se_uuid, is_new, stored_init_date = row
-    return se_uuid, is_new
+    se_id_ret, is_new, stored_init_date = row
+    return se_id_ret, is_new
 
 
-def insert_readings(cur, se_uuid: int, rows: list[dict]) -> int:
-    """Bulk-insert readings, skip malformed rows. Returns count inserted."""
+def insert_readings(cur, se_id: str, rows: list[dict]) -> int:
+    """Bulk-insert readings, skip malformed rows. Returns count inserted.
+
+    Uses se_id (VARCHAR 24) directly as the FK — schema has no integer surrogate.
+    The unique index is (se_id, time); ON CONFLICT DO NOTHING deduplicates on
+    re-runs (e.g. after a crash and resume).
+    """
     records = []
     for row in rows:
         try:
             t = datetime.fromisoformat(row["createdAt"].replace("Z", "+00:00"))
             v = float(row["value"])
-            records.append((se_uuid, t, v))
+            records.append((se_id, t, v))
         except (KeyError, ValueError):
             continue
 
@@ -902,8 +974,8 @@ def insert_readings(cur, se_uuid: int, rows: list[dict]) -> int:
     psycopg2.extras.execute_values(
         cur,
         """
-        INSERT INTO readings (se_uuid, time, value) VALUES %s
-        ON CONFLICT (se_uuid, time) DO NOTHING
+        INSERT INTO readings (se_id, time, value) VALUES %s
+        ON CONFLICT (se_id, time) DO NOTHING
         """,
         records,
         page_size=2000,
@@ -946,45 +1018,55 @@ def flush_dry_run(buffers: dict) -> None:
 # DDL used to create the tables in the dump (mirrors TimescaleDB schema,
 # but without the hypertable call so the file is also importable into plain
 # PostgreSQL for experimentation).
-_SQL_SCHEMA = """\
--- ============================================================
+_SQL_SCHEMA = """-- ============================================================
 --  OpenSenseMap archive dump
 --  Generated by load_data.py --type sql
+--  Schema mirrors schema.sql: st_id/se_id are the natural PKs
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE IF NOT EXISTS stations (
-    st_uuid   SERIAL PRIMARY KEY,
-    st_id     TEXT UNIQUE NOT NULL,
-    boxtype   TEXT,
-    exposure  TEXT,
-    model     TEXT,
-    geometry  GEOMETRY(Point, 4326),
-    region    TEXT,
-    country   TEXT,
-    init_date TIMESTAMPTZ
+    st_id        VARCHAR(24) NOT NULL,
+    boxtype      TEXT,
+    exposure     TEXT,
+    model        TEXT,
+    geometry     GEOMETRY(Point, 4326) NOT NULL,
+    region       TEXT,
+    country      TEXT,
+    init_date    TIMESTAMPTZ,
+    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT pk_stations PRIMARY KEY (st_id)
 );
 
 CREATE TABLE IF NOT EXISTS sensors (
-    se_uuid   SERIAL PRIMARY KEY,
-    se_id     TEXT UNIQUE NOT NULL,
-    st_uuid   INTEGER REFERENCES stations(st_uuid),
-    title     TEXT,
-    unit      TEXT,
-    info      TEXT,
-    type      TEXT,
-    init_date TIMESTAMPTZ
+    se_id        VARCHAR(24) NOT NULL,
+    st_id        VARCHAR(24) NOT NULL,
+    title        TEXT,
+    unit         TEXT,
+    info         TEXT,
+    type         TEXT,
+    init_date    TIMESTAMPTZ,
+    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT pk_sensors PRIMARY KEY (se_id),
+    CONSTRAINT fk_sensors_st_id
+        FOREIGN KEY (st_id) REFERENCES stations (st_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS readings (
-    se_uuid  INTEGER REFERENCES sensors(se_uuid),
-    time     TIMESTAMPTZ NOT NULL,
-    value    DOUBLE PRECISION NOT NULL,
-    PRIMARY KEY (se_uuid, time)
+    se_id  VARCHAR(24) NOT NULL,
+    time   TIMESTAMPTZ NOT NULL,
+    value  DOUBLE PRECISION NOT NULL,
+    CONSTRAINT fk_readings_se_id
+        FOREIGN KEY (se_id) REFERENCES sensors (se_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_readings ON readings (se_id, time);
+
 """
+
 
 
 def _sql_literal(v) -> str:
@@ -1022,15 +1104,11 @@ def _write_sql_file(
     station_rows: list,
     sensor_rows: list,
     reading_rows: list,
-    station_id_map: dict,
-    sensor_id_map: dict,
     include_schema: bool = True,
 ) -> None:
     """Write a single SQL file containing stations, sensors, and readings.
 
-    station_id_map / sensor_id_map must already be populated (by the caller)
-    before this function is called so that cross-table references are correct
-    even when the data is split across multiple files.
+    Uses st_id/se_id string PKs directly — no integer serial id_maps needed.
     """
     BATCH = 5_000
 
@@ -1044,15 +1122,14 @@ def _write_sql_file(
             f.write("BEGIN;\n")
             for row in station_rows:
                 st_id, boxtype, model, lon, lat, region, country, init_date = row
-                idx = station_id_map[st_id]
                 geom = (
                     f"ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326)"
                     if lon is not None and lat is not None
                     else "NULL"
                 )
                 f.write(
-                    f"INSERT INTO stations (st_uuid, st_id, boxtype, model, geometry, region, country, init_date) "
-                    f"VALUES ({idx}, {_sql_literal(st_id)}, {_sql_literal(boxtype)}, {_sql_literal(model)}, "
+                    f"INSERT INTO stations (st_id, boxtype, model, geometry, region, country, init_date) "
+                    f"VALUES ({_sql_literal(st_id)}, {_sql_literal(boxtype)}, {_sql_literal(model)}, "
                     f"{geom}, {_sql_literal(region)}, {_sql_literal(country)}, "
                     f"{_sql_literal(str(init_date) if init_date else None)}) "
                     f"ON CONFLICT (st_id) DO NOTHING;\n"
@@ -1065,11 +1142,9 @@ def _write_sql_file(
             f.write("BEGIN;\n")
             for row in sensor_rows:
                 se_id, st_id, title, unit, info, stype, init_date = row
-                idx      = sensor_id_map[se_id]
-                st_uuid  = station_id_map.get(st_id, "NULL")
                 f.write(
-                    f"INSERT INTO sensors (se_uuid, se_id, st_uuid, title, unit, info, type, init_date) "
-                    f"VALUES ({idx}, {_sql_literal(se_id)}, {_sql_literal(st_uuid)}, {_sql_literal(title)}, "
+                    f"INSERT INTO sensors (se_id, st_id, title, unit, info, type, init_date) "
+                    f"VALUES ({_sql_literal(se_id)}, {_sql_literal(st_id)}, {_sql_literal(title)}, "
                     f"{_sql_literal(unit)}, {_sql_literal(info)}, {_sql_literal(stype)}, "
                     f"{_sql_literal(str(init_date) if init_date else None)}) "
                     f"ON CONFLICT (se_id) DO NOTHING;\n"
@@ -1083,13 +1158,13 @@ def _write_sql_file(
                 f.write("BEGIN;\n")
                 for row in reading_rows[batch_start : batch_start + BATCH]:
                     se_id, time_str, value = row
-                    se_uuid = sensor_id_map.get(se_id, "NULL")
                     f.write(
-                        f"INSERT INTO readings (se_uuid, time, value) "
-                        f"VALUES ({_sql_literal(se_uuid)}, {_sql_literal(time_str)}, {_sql_literal(value)}) "
-                        f"ON CONFLICT (se_uuid, time) DO NOTHING;\n"
+                        f"INSERT INTO readings (se_id, time, value) "
+                        f"VALUES ({_sql_literal(se_id)}, {_sql_literal(time_str)}, {_sql_literal(value)}) "
+                        f"ON CONFLICT (se_id, time) DO NOTHING;\n"
                     )
                 f.write("COMMIT;\n\n")
+
 
 
 def flush_sql_dump(buffers: dict, start, end, num_parts: Optional[int] = None) -> Path:
@@ -1109,17 +1184,12 @@ def flush_sql_dump(buffers: dict, start, end, num_parts: Optional[int] = None) -
     sensor_rows  = buffers["sensors"]    # [se_id, st_id, title, unit, info, type, init_date]
     reading_rows = buffers["readings"]   # [se_id, time, value]
 
-    # Build global id maps (1-based serials) -- must be consistent across all parts
-    station_id_map: dict[str, int] = {row[0]: idx for idx, row in enumerate(station_rows, start=1)}
-    sensor_id_map:  dict[str, int] = {row[0]: idx for idx, row in enumerate(sensor_rows,  start=1)}
-
     # ------------------------------------------------------------------ single file
     if not num_parts or num_parts <= 1:
         out_path = SQL_DUMP_DIR / f"{base_name}.sql"
         _write_sql_file(
             out_path,
             station_rows, sensor_rows, reading_rows,
-            station_id_map, sensor_id_map,
             include_schema=True,
         )
         print(
@@ -1155,7 +1225,6 @@ def flush_sql_dump(buffers: dict, start, end, num_parts: Optional[int] = None) -
         _write_sql_file(
             part_path,
             s_rows, se_rows, r_chunk,
-            station_id_map, sensor_id_map,
             include_schema=(part_idx == 1),
         )
 
@@ -1401,8 +1470,8 @@ def process_station_folder(
         # Open one cursor for the entire station (station + all sensors + all readings)
         # and commit once at the end -- vastly fewer round-trips vs. per-sensor commits.
         with conn.cursor() as cur:
-            st_uuid, is_new_station, station_country, skip_reason = upsert_station(cur, station_data)
-            if st_uuid is None:
+            st_id_ret, is_new_station, station_country, skip_reason = upsert_station(cur, station_data)
+            if st_id_ret is None:
                 if skip_reason and location_error_log_path is not None:
                     if location_error_lock is not None:
                         with location_error_lock:
@@ -1469,15 +1538,15 @@ def process_station_folder(
                     except (KeyError, ValueError):
                         continue
 
-                se_uuid, is_new_sensor = upsert_sensor(cur, sensor, st_uuid, init_date=sensor_init_date)
-                if se_uuid is None:
+                se_id_ret, is_new_sensor = upsert_sensor(cur, sensor, st_id_ret, init_date=sensor_init_date)
+                if se_id_ret is None:
                     continue
                 if is_new_sensor and sensor_init_date is not None:
                     year = sensor_init_date.year
                     counts["new_sensors_by_year"][year] = counts["new_sensors_by_year"].get(year, 0) + 1
 
                 if rows:
-                    n = insert_readings(cur, se_uuid, rows)
+                    n = insert_readings(cur, se_id_ret, rows)
                     counts["readings"] += n
 
                 counts["sensors"] += 1
@@ -1620,7 +1689,10 @@ def main() -> None:
         return
 
     # -- Archive processing mode ---------------------------------------------
-    source   = args.source
+    OSEM_DEFAULT_URL = "https://archive.opensensemap.org/"
+    source   = args.source or OSEM_DEFAULT_URL
+    if not args.source:
+        print(f"[INFO] No --source given — defaulting to {OSEM_DEFAULT_URL}")
     dry_run  = args.dry_run
     sql_mode = (args.output_type == "sql")
     start    = parse_date(args.start)
@@ -1629,7 +1701,9 @@ def main() -> None:
     num_parts = args.part if sql_mode else None
 
     load_env(args.env)
-    load_admin_boundaries()  # load once into _ADMIN_FEATURES
+    # Resolve admin boundary path: CLI flag > constant default
+    admin_path = Path(args.admin_boundary) if args.admin_boundary else ADMIN_BOUNDARY_PATH
+    load_admin_boundaries(admin_path)  # load once into _ADMIN_FEATURES
 
     is_remote   = is_url(source)
     conn        = None
@@ -1673,12 +1747,14 @@ def main() -> None:
     if start or end:
         print(f"       Range: {start or 'beginning'} -> {end or 'end'}")
 
-    # -- Progress log (resume support) ---------------------------------------
-    log_path = progress_log_path(source, start, end)
-    init_progress_log(log_path, source, start, end)
+    # -- Resume checkpoint (data.resume) + data event log (data.log) --------
+    # Both files are fixed-name so the exact same command always resumes from
+    # where it left off.  Delete data.resume to restart from scratch.
+    log_path = RESUME_FILE
+    init_resume_file(log_path, source, start, end)
     completed = load_completed(log_path)
-    location_error_path = error_log_path(source, start, end)
-    init_error_log(location_error_path, source, start, end)
+    location_error_path = DATA_LOG_FILE
+    init_data_log(location_error_path, source, start, end)
 
     # -- Totals --------------------------------------------------------------
     total = {
@@ -1691,6 +1767,31 @@ def main() -> None:
         "new_sensors_by_year": {},
         "new_stations_by_country": {},
     }
+
+    import threading
+    import time as _time
+
+    run_start_time = _time.monotonic()
+
+    # -- live status line printed after each station -------------------------
+    def _print_status(date_folder: str, day_idx: int, day_total: int,
+                      st_done: int, st_total: int, skipped: int) -> None:
+        """Print a compact one-line status update using tqdm.write so it
+        doesn't collide with the progress bars."""
+        elapsed   = _time.monotonic() - run_start_time
+        h, rem    = divmod(int(elapsed), 3600)
+        m, s      = divmod(rem, 60)
+        elapsed_s = f"{h:02d}:{m:02d}:{s:02d}"
+
+        tqdm.write(
+            f"  [{elapsed_s}] "
+            f"Day {day_idx:>4}/{day_total}  {date_folder}  |  "
+            f"stations {st_done:>4}/{st_total:<4}  "
+            f"skipped {skipped:>3}  |  "
+            f"total → st:{total['stations']:,}  "
+            f"se:{total['sensors']:,}  "
+            f"rd:{total['readings']:,}"
+        )
 
     def _merge_counts(counts: dict) -> None:
         """Merge per-station counts into the running total (called from the main thread)."""
@@ -1705,7 +1806,18 @@ def main() -> None:
         for ctry, cnt in counts["new_stations_by_country"].items():
             total["new_stations_by_country"][ctry] = total["new_stations_by_country"].get(ctry, 0) + cnt
 
-    for date_folder in tqdm(date_folders, desc="Date folders", unit="day"):
+    # outer bar: one tick per date folder
+    date_pbar = tqdm(
+        date_folders,
+        desc="Overall",
+        unit="day",
+        position=0,
+        dynamic_ncols=True,
+    )
+
+    for day_idx, date_folder in enumerate(date_pbar, start=1):
+        date_pbar.set_description(f"Overall  [{date_folder}]")
+
         # Discover station folders
         if is_remote:
             date_url = urljoin(source.rstrip("/") + "/", date_folder + "/")
@@ -1713,17 +1825,36 @@ def main() -> None:
         else:
             station_folders = list_local_subdirs(Path(source) / date_folder)
 
+        # Resume: filter already-completed stations
+        pending_stations = [
+            sf for sf in station_folders
+            if f"{date_folder}/{sf}" not in completed
+        ]
+        skipped_count  = len(station_folders) - len(pending_stations)
+        day_done       = skipped_count   # stations already done this day
+        day_total      = len(station_folders)
+
+        if skipped_count:
+            tqdm.write(
+                f"  [RESUME] {date_folder}: {skipped_count}/{day_total} stations "
+                f"already completed — skipping"
+            )
+
         if workers == 1:
-            # Single-threaded path -- preserves original behaviour exactly
-            for station_folder in tqdm(
-                station_folders,
+            # ----------------------------------------------------------------
+            # Single-threaded path
+            # ----------------------------------------------------------------
+            station_pbar = tqdm(
+                pending_stations,
                 desc=f"  {date_folder}",
-                unit="station",
+                unit="stn",
+                position=1,
                 leave=False,
-            ):
+                dynamic_ncols=True,
+            )
+            for station_folder in station_pbar:
+                station_pbar.set_postfix_str(station_folder[:30], refresh=True)
                 key = f"{date_folder}/{station_folder}"
-                if key in completed:
-                    continue  # already done in a previous run -- skip
                 counts = process_station_folder(
                     source, date_folder, station_folder,
                     is_remote, conn, dry_buffers, sql_buffers,
@@ -1732,52 +1863,46 @@ def main() -> None:
                 _merge_counts(counts)
                 mark_completed(log_path, date_folder, station_folder)
                 completed.add(key)
-        else:
-            # Parallel path -- each station folder processed in its own thread.
-            # DB connections are not thread-safe, so each worker gets its own
-            # connection (or None for dry-run/sql). Buffers are protected by a
-            # lock since multiple threads append to shared lists.
-            import threading
-            buf_lock = threading.Lock() if (dry_buffers is not None or sql_buffers is not None) else None
-            log_lock = threading.Lock()  # protect progress log writes
+                day_done += 1
+                station_pbar.set_postfix(
+                    done=day_done, total=day_total,
+                    rd=total["readings"],
+                    refresh=True,
+                )
+            station_pbar.close()
 
-            # Filter out already-completed station folders before dispatching
-            pending_stations = [
-                sf for sf in station_folders
-                if f"{date_folder}/{sf}" not in completed
-            ]
-            skipped_count = len(station_folders) - len(pending_stations)
-            if skipped_count:
-                tqdm.write(f"  [RESUME] {date_folder}: skipping {skipped_count} already-completed stations")
+        else:
+            # ----------------------------------------------------------------
+            # Parallel path
+            # ----------------------------------------------------------------
+            buf_lock = threading.Lock() if (dry_buffers is not None or sql_buffers is not None) else None
+            log_lock = threading.Lock()
+            counts_lock = threading.Lock()
 
             def _worker(station_folder: str) -> dict:
                 if dry_buffers is not None or sql_buffers is not None:
-                    # Thread-local buffer; merged into shared buffer under lock
-                    local_buf = {"stations": [], "sensors": [], "readings": []}
-                    local_dry = local_buf if dry_buffers is not None else None
-                    local_sql = local_buf if sql_buffers is not None else None
+                    local_buf  = {"stations": [], "sensors": [], "readings": []}
+                    local_dry  = local_buf if dry_buffers is not None else None
+                    local_sql  = local_buf if sql_buffers is not None else None
                     c = process_station_folder(
                         source, date_folder, station_folder,
                         is_remote, None, local_dry, local_sql,
-                        location_error_path,
-                        log_lock,
+                        location_error_path, log_lock,
                     )
                     shared_buf = dry_buffers if dry_buffers is not None else sql_buffers
                     with buf_lock:
-                        for key in local_buf:
-                            shared_buf[key].extend(local_buf[key])
+                        for k in local_buf:
+                            shared_buf[k].extend(local_buf[k])
                     with log_lock:
                         mark_completed(log_path, date_folder, station_folder)
                     return c
                 else:
-                    # Each thread uses its own DB connection (silent -- no log spam)
                     thread_conn = get_db_connection(verbose=False)
                     try:
                         result = process_station_folder(
                             source, date_folder, station_folder,
                             is_remote, thread_conn, None, None,
-                            location_error_path,
-                            log_lock,
+                            location_error_path, log_lock,
                         )
                         with log_lock:
                             mark_completed(log_path, date_folder, station_folder)
@@ -1785,27 +1910,46 @@ def main() -> None:
                     finally:
                         thread_conn.close()
 
+            station_pbar = tqdm(
+                total=len(pending_stations),
+                desc=f"  {date_folder}",
+                unit="stn",
+                position=1,
+                leave=False,
+                dynamic_ncols=True,
+            )
             with ThreadPoolExecutor(max_workers=workers) as executor:
-                futures = {
-                    executor.submit(_worker, sf): sf
-                    for sf in pending_stations
-                }
-                pbar = tqdm(
-                    total=len(pending_stations),
-                    desc=f"  {date_folder}",
-                    unit="station",
-                    leave=False,
-                )
+                futures = {executor.submit(_worker, sf): sf for sf in pending_stations}
                 for future in as_completed(futures):
                     try:
-                        counts = future.result()
-                        _merge_counts(counts)
+                        c = future.result()
+                        with counts_lock:
+                            _merge_counts(c)
+                            day_done += 1
                     except Exception as exc:
                         sf = futures[future]
-                        print(f"\n  [ERROR] {sf}: {exc}")
+                        tqdm.write(f"\n  [ERROR] {sf}: {exc}")
                     finally:
-                        pbar.update(1)
-                pbar.close()
+                        station_pbar.set_postfix(
+                            done=day_done, total=day_total,
+                            rd=total["readings"],
+                            refresh=True,
+                        )
+                        station_pbar.update(1)
+            station_pbar.close()
+
+        # -- per-day summary line -------------------------------------------
+        _print_status(date_folder, day_idx, len(date_folders),
+                      day_done, day_total,
+                      total["skipped_no_location"] + total["skipped_bad_location"])
+        date_pbar.set_postfix(
+            st=total["stations"],
+            se=total["sensors"],
+            rd=total["readings"],
+            refresh=True,
+        )
+
+    date_pbar.close()
 
     # -- SQL dump output -----------------------------------------------------
     if sql_mode:
@@ -1821,26 +1965,28 @@ def main() -> None:
         flush_dry_run(dry_buffers)
 
     # -- Summary -------------------------------------------------------------
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("  Load complete")
-    print("=" * 50)
+    print("=" * 60)
     print(f"  Stations added     : {total['stations']:>10,}")
     print(f"  Sensors added      : {total['sensors']:>10,}")
     print(f"  Readings added     : {total['readings']:>10,}")
     print(f"  CSVs not found     : {total['skipped_csv']:>10,}")
-    print(f"  No location       : {total['skipped_no_location']:>10,}")
-    print(f"  Bad location      : {total['skipped_bad_location']:>10,}")
-    print(f"  Logged errors     : {location_error_path}")
-    print("=" * 50)
+    print(f"  No location        : {total['skipped_no_location']:>10,}")
+    print(f"  Bad location       : {total['skipped_bad_location']:>10,}")
+    print("=" * 60)
+    print(f"  Resume checkpoint  : {log_path}")
+    print(f"  Data event log     : {location_error_path}")
+    print("=" * 60)
+    print(f"  Re-run the same command to continue from the last checkpoint.")
+    print(f"  Delete {log_path} to restart from scratch.")
+    print("=" * 60)
 
     if conn:
         conn.close()
 
     print_sensor_year_chart(total["new_sensors_by_year"])
     print_station_country_chart(total["new_stations_by_country"])
-
-    print(f"\n[RESUME] Progress log : {log_path}")
-    print(f"[RESUME] To restart from scratch, delete that file and re-run.")
 
 
 if __name__ == "__main__":

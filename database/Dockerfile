@@ -10,6 +10,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
+        tzdata \
+    && ln -snf /usr/share/zoneinfo/Europe/Berlin /etc/localtime \
+    && echo "Europe/Berlin" > /etc/timezone \
     && curl -fsSL https://install.timescale.com/timescaledb-apt-repo.gpg \
         | gpg --dearmor -o /usr/share/keyrings/timescaledb.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/timescaledb.gpg arch=$(dpkg --print-architecture)] \
@@ -23,3 +26,5 @@ RUN apt-get update \
 
 # Preload TimescaleDB (required)
 RUN echo "shared_preload_libraries = 'timescaledb'" >> /usr/share/postgresql/16/postgresql.conf.sample
+
+ENV TZ=Europe/Berlin
