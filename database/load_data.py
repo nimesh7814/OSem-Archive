@@ -5,7 +5,7 @@ load_data.py
 Loads OpenSenseMap archive data into TimescaleDB running in Docker.
 
 Schema (schema.sql):
-  stations  – PK: st_i`d VARCHAR(24)  (no serial UUID)
+  stations  – PK: st_id VARCHAR(24)  (no serial UUID)
   sensors   – PK: se_id VARCHAR(24), FK → stations.st_id
   readings  – FK: se_id VARCHAR(24), FK → sensors.se_id  (TimescaleDB hypertable)
 
@@ -113,7 +113,7 @@ ADMIN_BOUNDARY_PATH = Path(
     r"D:\Lectures\University of Munster\SoSem 2026\Study Project OpenSenseMap"
     r"\OSem-Archive\index\data\admin_boundary.geojson"
 )
-WORKER_THREADS      = 8   # parallel station folders per date folder
+WORKER_THREADS      = 1   # 1 avoids deadlocks on chunk creation; increase after initial load
 # Fixed checkpoint/log file names (written next to the script)
 RESUME_FILE         = Path("data.resume")   # completed station keys → resumable on re-run
 DATA_LOG_FILE       = Path("data.log")      # JSONL log of missing-data / missing-location events
@@ -151,7 +151,7 @@ def load_admin_boundaries(geojson_path: Path = ADMIN_BOUNDARY_PATH) -> None:
         from shapely.strtree import STRtree
         _ADMIN_TREE = STRtree([geom for geom, _, _ in _ADMIN_FEATURES])
 
-    print(f"[INFO] Loaded {len(_ADMIN_FEATURES):,} admin boundary polygons from {geojson_path}")
+    pass  # admin boundaries loaded silently
 
 
 def lookup_admin(lon: float, lat: float) -> tuple[Optional[str], Optional[str]]:
@@ -188,42 +188,32 @@ def lookup_admin(lon: float, lat: float) -> tuple[Optional[str], Optional[str]]:
 #                that is skipped due to missing data or missing/bad location.
 # ---------------------------------------------------------------------------
 
-def load_completed(log_path: Path) -> set:
-    """Return the set of 'date_folder/station_folder' keys already completed."""
+def load_last_completed_date(log_path):
+    """Return the last successfully completed date (YYYY-MM-DD), or None."""
     if not log_path.exists():
-        return set()
-    completed = set()
-    with open(log_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                completed.add(line)
-    print(f"[RESUME] Checkpoint found: {log_path}")
-    print(f"[RESUME] Already completed : {len(completed):,} station-folders — these will be skipped.")
-    return completed
+        return None
+    text = log_path.read_text(encoding="utf-8").strip()
+    return text if text else None
 
 
-def mark_completed(log_path: Path, date_folder: str, station_folder: str) -> None:
-    """Append a completed key to data.resume (one line per station-folder)."""
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"{date_folder}/{station_folder}\n")
+def load_completed(log_path):
+    """Kept for compat — resume is now date-based."""
+    return set()
 
 
-def init_resume_file(log_path: Path, source: str, start, end) -> None:
-    """Write a header comment to data.resume if the file does not yet exist.
+def mark_date_completed(log_path, date_folder):
+    """Overwrite data.resume with the last successfully completed date."""
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(date_folder + "\n")
 
-    The same --start/--end command can be re-run at any time and will
-    automatically skip every station-folder whose key already appears here.
-    Delete data.resume to restart from scratch.
-    """
-    if not log_path.exists():
-        with open(log_path, "w", encoding="utf-8") as f:
-            f.write(f"# load_data.py  –  resume checkpoint (data.resume)\n")
-            f.write(f"# source : {source}\n")
-            f.write(f"# range  : {start or 'beginning'} -> {end or 'end'}\n")
-            f.write(f"# started: {datetime.now(timezone.utc).isoformat()}\n")
-            f.write(f"# Each non-comment line is a completed date_folder/station_folder.\n")
-            f.write(f"# Delete this file to restart the entire run from scratch.\n")
+
+def mark_completed(log_path, date_folder, station_folder):
+    """No-op — resume is now date-based."""
+    pass
+
+
+def init_resume_file(log_path, source, start, end):
+    pass  # created/overwritten by mark_date_completed
 
 
 def init_data_log(log_path: Path, source: str, start, end) -> None:
@@ -396,7 +386,7 @@ def parse_args() -> argparse.Namespace:
 def load_env(env_path: str) -> None:
     if os.path.exists(env_path):
         load_dotenv(env_path)
-        print(f"[INFO] Loaded env from '{env_path}'")
+        pass  # env loaded silently
     else:
         print(f"[WARN] .env not found at '{env_path}', using shell environment")
 
@@ -417,11 +407,7 @@ def get_db_connection(verbose: bool = True):
         sys.exit(1)
     try:
         conn = psycopg2.connect(**params)
-        if verbose:
-            print(
-                f"[INFO] Connected -> {params['user']}@"
-                f"{params['host']}:{params['port']}/{params['dbname']}"
-            )
+        pass  # connection confirmed
         return conn
     except psycopg2.OperationalError as e:
         print(f"[ERROR] DB connection failed:\n  {e}")
@@ -462,7 +448,9 @@ def list_url_subdirs(base_url: str) -> list[str]:
     dirs = []
     for a in soup.find_all("a", href=True):
         href = a["href"].rstrip("/")
-        if href and not href.startswith(("?", "/")):
+        if href.startswith("./"):
+            href = href[2:]
+        if href and not href.startswith(("?", "/", ".")):
             dirs.append(href)
     return sorted(set(dirs))
 
@@ -510,7 +498,7 @@ def parse_station_json(raw: bytes) -> Optional[dict]:
     try:
         return json.loads(raw.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        print(f"  [WARN] Could not parse JSON: {e}")
+        tqdm.write(f"  [WARN] Could not parse JSON: {e}")
         return None
 
 
@@ -523,7 +511,7 @@ def parse_sensor_csv(raw: bytes) -> list[dict]:
         for row in reader:
             rows.append(row)
     except Exception as e:
-        print(f"  [WARN] Could not parse CSV: {e}")
+        tqdm.write(f"  [WARN] Could not parse CSV: {e}")
     return rows
 
 
@@ -1388,8 +1376,13 @@ def process_station_folder(
         if not listing_raw:
             return counts
         soup = BeautifulSoup(listing_raw.decode("utf-8"), "html.parser")
-        files = [a["href"] for a in soup.find_all("a", href=True)
-                 if not a["href"].startswith(("?", "/", "."))]
+        raw_files = [a["href"] for a in soup.find_all("a", href=True)]
+        files = []
+        for f in raw_files:
+            if f.startswith("./"):
+                f = f[2:]
+            if f and not f.startswith(("?", "/", "..")):
+                files.append(f)
     else:
         folder_path = Path(source) / date_folder / station_folder
         station_folder_path = str(folder_path.resolve())
@@ -1398,7 +1391,6 @@ def process_station_folder(
     # Find the station JSON file (first 24 chars = station id, ends with .json)
     json_files = [f for f in files if f.endswith(".json")]
     if not json_files:
-        print(f"  [WARN] No .json found in {station_folder}")
         return counts
 
     json_filename = json_files[0]
@@ -1408,7 +1400,7 @@ def process_station_folder(
         raw_json = read_local_file(folder_path / json_filename)
 
     if not raw_json:
-        print(f"  [WARN] Could not read {json_filename}")
+        tqdm.write(f"  [WARN] Could not read {json_filename}")
         return counts
 
     station_data = parse_station_json(raw_json)
@@ -1691,8 +1683,7 @@ def main() -> None:
     # -- Archive processing mode ---------------------------------------------
     OSEM_DEFAULT_URL = "https://archive.opensensemap.org/"
     source   = args.source or OSEM_DEFAULT_URL
-    if not args.source:
-        print(f"[INFO] No --source given — defaulting to {OSEM_DEFAULT_URL}")
+
     dry_run  = args.dry_run
     sql_mode = (args.output_type == "sql")
     start    = parse_date(args.start)
@@ -1743,18 +1734,15 @@ def main() -> None:
         print("[WARN] No date folders found matching the given range.")
         sys.exit(0)
 
-    print(f"[INFO] Date folders to process: {len(date_folders)}")
-    if start or end:
-        print(f"       Range: {start or 'beginning'} -> {end or 'end'}")
-
-    # -- Resume checkpoint (data.resume) + data event log (data.log) --------
-    # Both files are fixed-name so the exact same command always resumes from
-    # where it left off.  Delete data.resume to restart from scratch.
     log_path = RESUME_FILE
-    init_resume_file(log_path, source, start, end)
-    completed = load_completed(log_path)
+    last_done = load_last_completed_date(log_path)
+    if last_done:
+        date_folders = [d for d in date_folders if d > last_done]
     location_error_path = DATA_LOG_FILE
     init_data_log(location_error_path, source, start, end)
+
+    resume_msg = f"resuming after {last_done}" if last_done else "fresh start"
+    print(f"[INFO] {len(date_folders)} days to process  ({start or 'beginning'} -> {end or 'today'})  |  {resume_msg}")
 
     # -- Totals --------------------------------------------------------------
     total = {
@@ -1825,20 +1813,9 @@ def main() -> None:
         else:
             station_folders = list_local_subdirs(Path(source) / date_folder)
 
-        # Resume: filter already-completed stations
-        pending_stations = [
-            sf for sf in station_folders
-            if f"{date_folder}/{sf}" not in completed
-        ]
-        skipped_count  = len(station_folders) - len(pending_stations)
-        day_done       = skipped_count   # stations already done this day
-        day_total      = len(station_folders)
-
-        if skipped_count:
-            tqdm.write(
-                f"  [RESUME] {date_folder}: {skipped_count}/{day_total} stations "
-                f"already completed — skipping"
-            )
+        pending_stations = station_folders
+        day_done  = 0
+        day_total = len(station_folders)
 
         if workers == 1:
             # ----------------------------------------------------------------
@@ -1854,15 +1831,12 @@ def main() -> None:
             )
             for station_folder in station_pbar:
                 station_pbar.set_postfix_str(station_folder[:30], refresh=True)
-                key = f"{date_folder}/{station_folder}"
                 counts = process_station_folder(
                     source, date_folder, station_folder,
                     is_remote, conn, dry_buffers, sql_buffers,
                     location_error_path,
                 )
                 _merge_counts(counts)
-                mark_completed(log_path, date_folder, station_folder)
-                completed.add(key)
                 day_done += 1
                 station_pbar.set_postfix(
                     done=day_done, total=day_total,
@@ -1893,8 +1867,6 @@ def main() -> None:
                     with buf_lock:
                         for k in local_buf:
                             shared_buf[k].extend(local_buf[k])
-                    with log_lock:
-                        mark_completed(log_path, date_folder, station_folder)
                     return c
                 else:
                     thread_conn = get_db_connection(verbose=False)
@@ -1904,8 +1876,6 @@ def main() -> None:
                             is_remote, thread_conn, None, None,
                             location_error_path, log_lock,
                         )
-                        with log_lock:
-                            mark_completed(log_path, date_folder, station_folder)
                         return result
                     finally:
                         thread_conn.close()
@@ -1938,14 +1908,11 @@ def main() -> None:
                         station_pbar.update(1)
             station_pbar.close()
 
-        # -- per-day summary line -------------------------------------------
-        _print_status(date_folder, day_idx, len(date_folders),
-                      day_done, day_total,
-                      total["skipped_no_location"] + total["skipped_bad_location"])
+        mark_date_completed(log_path, date_folder)
         date_pbar.set_postfix(
-            st=total["stations"],
-            se=total["sensors"],
-            rd=total["readings"],
+            st=f"{total['stations']:,}",
+            se=f"{total['sensors']:,}",
+            rd=f"{total['readings']:,}",
             refresh=True,
         )
 

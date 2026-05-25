@@ -4,3 +4,7 @@ tqdm
 requests
 beautifulsoup4
 shapely
+fastapi==0.136.3
+uvicorn==0.47.0
+psycopg2-binary==2.9.12
+python-dotenv==1.2.2

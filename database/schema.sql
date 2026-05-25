@@ -72,31 +72,34 @@ ALTER TABLE readings SET (
 CREATE MATERIALIZED VIEW IF NOT EXISTS readings_daily
 WITH (timescaledb.continuous) AS
 SELECT
-    se_id,                                              
-    time_bucket('1 day',  time) AS bucket,
-    AVG(value) AS avg_value
+    se_id,
+    time_bucket('1 day', time) AS bucket,
+    AVG(value) AS avg_value,
+    COUNT(value) AS reading_count
 FROM readings
-GROUP BY se_id, time_bucket('1 day', time) 
+GROUP BY se_id, time_bucket('1 day', time)
 WITH NO DATA;
 
 -- Monthly summary
 CREATE MATERIALIZED VIEW IF NOT EXISTS readings_monthly
 WITH (timescaledb.continuous) AS
 SELECT
-    se_id, 
+    se_id,
     time_bucket('1 month', time) AS bucket,
-    AVG(value) AS avg_value
+    AVG(value) AS avg_value,
+    COUNT(value) AS reading_count
 FROM readings
-GROUP BY se_id, time_bucket('1 month', time) 
+GROUP BY se_id, time_bucket('1 month', time)
 WITH NO DATA;
 
 -- Yearly summary
 CREATE MATERIALIZED VIEW IF NOT EXISTS readings_yearly
 WITH (timescaledb.continuous) AS
 SELECT
-    se_id,                               
+    se_id,
     time_bucket('1 year', time) AS bucket,
-    AVG(value) AS avg_value
+    AVG(value) AS avg_value,
+    COUNT(value) AS reading_count
 FROM readings
 GROUP BY se_id, time_bucket('1 year', time)
 WITH NO DATA;
