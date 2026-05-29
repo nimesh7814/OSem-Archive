@@ -128,6 +128,9 @@ CREATE INDEX IF NOT EXISTS idx_sensor_files_date
 CREATE INDEX IF NOT EXISTS idx_readings_date
     ON readings(date);
 
+CREATE INDEX IF NOT EXISTS idx_readings_se_id_date
+    ON readings (se_id, date DESC);
+
 CREATE INDEX IF NOT EXISTS idx_readings_sensor_date
     ON readings(se_id, date);
 
