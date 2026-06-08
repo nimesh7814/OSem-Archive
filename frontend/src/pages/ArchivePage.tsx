@@ -360,7 +360,7 @@ const ArchivePage = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[#F5F5F7] flex flex-col font-sans antialiased">
+    <div className="h-screen overflow-hidden bg-[#d4f1db] flex flex-col font-sans antialiased">
       <input
         type="file"
         ref={fileInputRef}
