@@ -38,3 +38,32 @@ pnpm build
 # preview the production bundle locally
 pnpm preview
 ```
+
+Docker
+
+```powershell
+# build the image
+docker build -t osem-archive-frontend .
+
+# run it on port 8080
+docker run --rm -p 8080:80 osem-archive-frontend
+```
+
+Or use Docker Compose:
+
+```powershell
+docker compose up --build
+```
+
+By default Compose publishes the app on port 8081 to avoid conflicts with other local services. If you want a different host port, set `HOST_PORT` before starting Compose:
+
+```powershell
+$env:HOST_PORT=8080
+docker compose up --build
+```
+
+If the frontend should talk to an API on another host, set `VITE_API_BASE_URL` at build time:
+
+```powershell
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com -t osem-archive-frontend .
+```
