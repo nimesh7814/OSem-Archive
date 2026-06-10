@@ -64,6 +64,7 @@ _countries_cache = TTLCache(ttl_seconds=300)
 _regions_cache = TTLCache(ttl_seconds=300)
 _categories_cache = TTLCache(ttl_seconds=300)
 _stations_cache = TTLCache(ttl_seconds=120)
+_country_region_cache = TTLCache(ttl_seconds=600)
 
 app = FastAPI(title="OpenSenseMap Index API")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -91,6 +92,11 @@ def _run_query_one(sql: str, params=None):
         return row
     finally:
         release_conn(conn)
+
+def _split_csv_filter(value: Optional[str]) -> List[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 # Health check endpoint
 @app.get("/")
@@ -295,8 +301,8 @@ def station_readings(
             chart_data[category]["data"].append({
                 "day": day,
                 "avg": float(avg) if avg is not None else None,
-                "min": float(mn)  if mn  is not None else None,
-                "max": float(mx)  if mx  is not None else None,
+                "min": float(mn) if mn is not None else None,
+                "max": float(mx) if mx is not None else None,
             })
  
         # sensor summary
@@ -314,7 +320,7 @@ def station_readings(
             JOIN sensors se ON re.se_id = se.se_id
             WHERE se.st_id = %s
               AND EXTRACT(MONTH FROM re.date) = %s
-              AND EXTRACT(YEAR  FROM re.date) = %s
+              AND EXTRACT(YEAR FROM re.date) = %s
             ORDER BY se.se_id, re.date DESC;
         """, (st_id, month, year))
  
@@ -351,74 +357,88 @@ def country_region_data(
     region: Optional[str] = Query(None),
 ):
     output_types: List[OutputType] = type if type else ["csv"]
+
+    categories = _split_csv_filter(category) if category and category.lower() != "all" else []
+    countries = _split_csv_filter(country)
+    regions = _split_csv_filter(region)
+
+    if not download:
+        cache_key = json.dumps({
+            "from_date": from_date.isoformat() if from_date else None,
+            "to_date": to_date.isoformat() if to_date else None,
+            "categories": categories,
+            "countries": countries,
+            "regions": regions,
+        }, sort_keys=True)
+        cached = _country_region_cache.get(cache_key)
+        if cached:
+            return cached
  
     conn = get_db_connection()
     try:
         cur = conn.cursor()
  
-        sf_filters, sf_params = [], []
+        sf_filters = []
+        sf_params = []
         if from_date:
-            sf_filters.append("date >= %s"); sf_params.append(from_date)
+            sf_filters.append("date >= %s")
+            sf_params.append(from_date)
         if to_date:
-            sf_filters.append("date <= %s"); sf_params.append(to_date)
+            sf_filters.append("date <= %s")
+            sf_params.append(to_date)
         sf_where = ("WHERE " + " AND ".join(sf_filters)) if sf_filters else ""
- 
+
         query = f'''
             SELECT
                 st.country,
                 st.region,
                 COUNT(DISTINCT st.st_id) AS total_stations,
-                COUNT(DISTINCT se.se_id) AS total_sensors,
-                COALESCE(SUM(sf_agg.size_mb), 0) AS estimated_size
-            FROM stations st
-            INNER JOIN sensors se ON st.st_id = se.st_id
-            INNER JOIN (
-                SELECT se_id, SUM(size_mb) AS size_mb
+                COUNT(*) AS total_sensors
+            FROM (
+                SELECT DISTINCT se_id
                 FROM sensor_files
                 {sf_where}
-                GROUP BY se_id
-            ) sf_agg ON se.se_id = sf_agg.se_id
+            ) sf_agg
+            INNER JOIN sensors se ON se.se_id = sf_agg.se_id
+            INNER JOIN stations st ON st.st_id = se.st_id
             WHERE st.country IS NOT NULL
         '''
-        params = sf_params[:]
- 
-        if category and category.lower() != "all":
-            cats = [c.strip() for c in category.split(",")]
-            query += f" AND se.category IN ({','.join(['%s']*len(cats))})"
-            params.extend(cats)
-        if country:
-            clist = [c.strip() for c in country.split(",")]
-            query += f" AND st.country IN ({','.join(['%s']*len(clist))})"
-            params.extend(clist)
-        if region:
-            rlist = [r.strip() for r in region.split(",")]
-            query += f" AND st.region IN ({','.join(['%s']*len(rlist))})"
-            params.extend(rlist)
+        params = sf_params
+
+        if categories:
+            query += f" AND se.category IN ({','.join(['%s']*len(categories))})"
+            params.extend(categories)
+        if countries:
+            query += f" AND st.country IN ({','.join(['%s']*len(countries))})"
+            params.extend(countries)
+        if regions:
+            query += f" AND st.region IN ({','.join(['%s']*len(regions))})"
+            params.extend(regions)
  
         query += " GROUP BY st.country, st.region ORDER BY st.country, st.region"
         cur.execute(query, tuple(params))
         rows = cur.fetchall()
- 
+
         result = [
             {
                 "country": r[0], 
                 "region": r[1],
                 "total_stations": r[2], 
                 "total_sensors": r[3],
-                "estimated_size_mb": float(r[4]),
             }
             for r in rows
         ]
- 
+
         if not download:
             cur.close()
+            _country_region_cache.set(cache_key, result)
             return result
- 
+
         # Download
         cur.close()
         dl_cur = conn.cursor(name="crd_download_cursor")
         dl_cur.itersize = 2000
- 
+
         url_query = '''
             SELECT
                 st.st_id, st.name, st.exposure, st.model,
@@ -433,23 +453,20 @@ def country_region_data(
             WHERE st.country IS NOT NULL
         '''
         url_params = []
- 
+
         if from_date:
             url_query += " AND sf.date >= %s"; url_params.append(from_date)
         if to_date:
             url_query += " AND sf.date <= %s"; url_params.append(to_date)
-        if category and category.lower() != "all":
-            cats = [c.strip() for c in category.split(",")]
-            url_query += f" AND se.category IN ({','.join(['%s']*len(cats))})"
-            url_params.extend(cats)
-        if country:
-            clist = [c.strip() for c in country.split(",")]
-            url_query += f" AND st.country IN ({','.join(['%s']*len(clist))})"
-            url_params.extend(clist)
-        if region:
-            rlist = [r.strip() for r in region.split(",")]
-            url_query += f" AND st.region IN ({','.join(['%s']*len(rlist))})"
-            url_params.extend(rlist)
+        if categories:
+            url_query += f" AND se.category IN ({','.join(['%s']*len(categories))})"
+            url_params.extend(categories)
+        if countries:
+            url_query += f" AND st.country IN ({','.join(['%s']*len(countries))})"
+            url_params.extend(countries)
+        if regions:
+            url_query += f" AND st.region IN ({','.join(['%s']*len(regions))})"
+            url_params.extend(regions)
  
         url_query += " ORDER BY sf.date"
         dl_cur.execute(url_query, tuple(url_params))
@@ -470,7 +487,7 @@ def country_region_data(
     country_str = country.replace(",", "-").replace(" ", "_") if country else "all"
     region_str = region.replace(",", "-").replace(" ", "_")  if region  else "all"
     from_str = from_date.strftime("%Y%m%d") if from_date else "start"
-    to_str = to_date.strftime("%Y%m%d")   if to_date   else date.today().strftime("%Y%m%d")
+    to_str = to_date.strftime("%Y%m%d") if to_date else date.today().strftime("%Y%m%d")
     num_days = ((to_date - from_date).days if (to_date and from_date) else (date.today() - from_date).days if from_date else 0)
     base_filename = f"{country_str}_{region_str}_{from_str}_{to_str}_{num_days}d"
  
