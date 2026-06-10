@@ -112,14 +112,14 @@ const CustomModeView = ({
       exit={{ opacity: 0, x: -20 }}
       className="flex-1 min-h-0 flex overflow-hidden"
     >
-      <div className="w-[420px] h-full bg-white border-r border-gray-100 flex flex-col z-10 shadow-xl overflow-hidden">
+      <div className="w-[420px] h-full bg-white border-r border-[#d4f1db] flex flex-col z-10 shadow-xl overflow-hidden">
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-10 space-y-10">
             <div>
-              <h3 className="text-2xl font-extrabold mb-2 text-gray-900 tracking-tight">
+              <h3 className="text-2xl font-extrabold mb-2 text-[#152729] tracking-tight">
                 Custom Selection
               </h3>
-              <p className="text-base text-gray-600 font-medium">
+              <p className="text-base text-[#152729]/60 font-medium">
                 Define an area to retrieve specific data for particular time
                 range.
               </p>
@@ -127,7 +127,7 @@ const CustomModeView = ({
 
             <div className="space-y-8">
               <div className="space-y-3">
-                <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">
+                <Label className="text-xs font-bold text-[#152729]/50 uppercase tracking-widest ml-1">
                   Area of Interest (AOI)
                 </Label>
                 <div className="grid grid-cols-2 gap-4">
@@ -136,8 +136,8 @@ const CustomModeView = ({
                     className={cn(
                       "h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 transition-all group",
                       drawingMode === "rectangle"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-500 hover:bg-blue-50",
+                        ? "border-[#387218] bg-[#d4f1db]"
+                        : "border-[#d4f1db] hover:border-[#387218] hover:bg-[#d4f1db]",
                     )}
                     onClick={() => {
                       const nextMode =
@@ -154,44 +154,44 @@ const CustomModeView = ({
                       className={cn(
                         "w-6 h-6 transition-transform group-hover:scale-110",
                         drawingMode === "rectangle"
-                          ? "text-blue-600"
-                          : "text-gray-400",
+                          ? "text-[#387218]"
+                          : "text-[#152729]/40",
                       )}
                     />
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-[#152729]">
                       Draw Area
                     </span>
                   </Button>
 
                   <Button
                     variant="outline"
-                    className="h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
+                    className="h-24 rounded-2xl flex flex-col gap-3 border-dashed border-2 border-[#d4f1db] hover:border-[#387218] hover:bg-[#d4f1db] transition-all group"
                     onClick={() => {
                       setDrawingMode("none");
                       onImportClick();
                     }}
                   >
-                    <Upload className="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-gray-600">
+                    <Upload className="w-6 h-6 text-[#387218] group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-[#152729]">
                       Import KML
                     </span>
                   </Button>
                 </div>
 
                 {importedFileName && (
-                  <div className="flex items-center justify-between rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3">
+                  <div className="flex items-center justify-between rounded-2xl border border-[#d4f1db] bg-[#d4f1db]/50 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-500">
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#387218]">
                         Imported file
                       </p>
-                      <p className="mt-1 truncate text-sm font-bold text-indigo-900">
+                      <p className="mt-1 truncate text-sm font-bold text-[#152729]">
                         {importedFileName}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-full text-indigo-700 hover:bg-indigo-100"
+                      className="h-9 w-9 rounded-full text-[#387218] hover:bg-[#d4f1db]"
                       onClick={onRemoveImportedFile}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -201,7 +201,7 @@ const CustomModeView = ({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">
+                <Label className="text-xs font-bold text-[#152729]/50 uppercase tracking-widest ml-1">
                   Sensors
                 </Label>
                 <SensorSelector
@@ -213,26 +213,26 @@ const CustomModeView = ({
 
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">
+                  <Label className="text-xs font-bold text-[#152729]/50 uppercase tracking-widest ml-1">
                     From
                   </Label>
                   <Input
                     type="date"
                     value={filters.fromDate}
-                    className="rounded-xl h-14 bg-gray-50 border-none text-sm font-bold focus:ring-2 focus:ring-blue-500"
+                    className="rounded-xl h-14 bg-[#d4f1db]/30 border-none text-sm font-bold focus:ring-2 focus:ring-[#387218]"
                     onChange={(e) =>
                       onFilterChange({ ...filters, fromDate: e.target.value })
                     }
                   />
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">
+                  <Label className="text-xs font-bold text-[#152729]/50 uppercase tracking-widest ml-1">
                     To
                   </Label>
                   <Input
                     type="date"
                     value={filters.toDate}
-                    className="rounded-xl h-14 bg-gray-50 border-none text-sm font-bold focus:ring-2 focus:ring-blue-500"
+                    className="rounded-xl h-14 bg-[#d4f1db]/30 border-none text-sm font-bold focus:ring-2 focus:ring-[#387218]"
                     onChange={(e) =>
                       onFilterChange({ ...filters, toDate: e.target.value })
                     }
@@ -246,7 +246,7 @@ const CustomModeView = ({
                   onSearch();
                 }}
                 disabled={queryDisabled}
-                className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-lg shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-16 rounded-2xl bg-[#387218] hover:bg-[#2d5a12] text-white font-extrabold text-lg shadow-xl shadow-[#d4f1db] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSearching ? (
                   <Loader2 className="w-6 h-6 animate-spin mr-3" />
@@ -263,7 +263,7 @@ const CustomModeView = ({
                   ref={resultSectionRef}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-10 pt-6 border-t border-gray-100"
+                  className="space-y-10 pt-6 border-t border-[#d4f1db]"
                 >
                   {hasSearchData ? (
                     <>
@@ -280,23 +280,23 @@ const CustomModeView = ({
                       />
 
                       {isExporting && (
-                        <div className="flex items-center justify-between rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+                        <div className="flex items-center justify-between rounded-2xl border border-[#d4f1db] bg-[#d4f1db]/40 px-4 py-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                            <Loader2 className="h-4 w-4 animate-spin text-[#387218]" />
                             <div className="min-w-0">
-                              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-500">
+                              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#387218]">
                                 Downloading
                               </p>
-                              <p className="truncate text-sm font-bold text-blue-900">
+                              <p className="truncate text-sm font-bold text-[#152729]">
                                 {currentExportingSensor
                                   ? `${currentExportingSensor}...`
                                   : "Preparing export..."}
                               </p>
                             </div>
                           </div>
-                          <div className="h-2 w-20 overflow-hidden rounded-full bg-blue-100">
+                          <div className="h-2 w-20 overflow-hidden rounded-full bg-[#d4f1db]">
                             <motion.div
-                              className="h-full w-full rounded-full bg-blue-500"
+                              className="h-full w-full rounded-full bg-[#387218]"
                               animate={{ x: ["-60%", "120%"] }}
                               transition={{
                                 duration: 1.2,
@@ -309,11 +309,11 @@ const CustomModeView = ({
                       )}
                     </>
                   ) : (
-                    <div className="rounded-[32px] border border-gray-100 bg-gray-50/80 p-6 text-center shadow-sm">
-                      <p className="text-xs font-black uppercase tracking-[0.24em] text-gray-400">
+                    <div className="rounded-[32px] border border-[#d4f1db] bg-[#d4f1db]/30 p-6 text-center shadow-sm">
+                      <p className="text-xs font-black uppercase tracking-[0.24em] text-[#152729]/50">
                         No data available
                       </p>
-                      <p className="mt-2 text-sm font-medium text-gray-600">
+                      <p className="mt-2 text-sm font-medium text-[#152729]/70">
                         The selected area and filters returned no matching
                         records.
                       </p>
