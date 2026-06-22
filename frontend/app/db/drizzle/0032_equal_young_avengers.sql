@@ -1,1 +1,0 @@
-ALTER TABLE "integration" ALTER COLUMN "order" SET NOT NULL;
