@@ -1,0 +1,52 @@
+Looking at your output, with 1 worker it's doing about 1 day every ~0.5 seconds for early years (small data), but as the dataset grows (more stations/sensors/readings per day), it'll slow down significantly.
+Here's how to speed it up without the deadlock issue:
+
+Best approach: Drop FK constraint during load, then restore it
+sql-- Run this BEFORE starting load_data.py
+ALTER TABLE readings DROP CONSTRAINT fk_readings_se_id;
+Then run with more workers:
+bashpython load_data.py --start 2014-06-03 --end 2026-05-22 --workers 4 --way hybrid
+Then restore after:
+sql-- Run this AFTER load completes
+ALTER TABLE readings ADD CONSTRAINT fk_readings_se_id
+    FOREIGN KEY (se_id) REFERENCES sensors(se_id)
+    ON UPDATE CASCADE ON DELETE CASCADE;
+The FK constraint was the root cause of the deadlocks — without it, multiple workers can create chunks simultaneously without locking conflicts.
+
+Additional speedups to consider:
+sql-- Temporarily disable autovacuum during bulk load
+ALTER TABLE readings SET (autovacuum_enabled = false);
+ALTER TABLE sensors SET (autovacuum_enabled = false);
+ALTER TABLE stations SET (autovacuum_enabled = false);
+
+-- Re-enable after load
+ALTER TABLE readings SET (autovacuum_enabled = true);
+ALTER TABLE sensors SET (autovacuum_enabled = true);
+ALTER TABLE stations SET (autovacuum_enabled = true);
+
+-- Then manually vacuum
+VACUUM ANALYZE readings;
+
+Summary of recommended steps:
+StepAction1Drop FK on readings2Disable autovacuum on all 3 tables3Run with --workers 44Re-enable autovacuum5Restore FK constraint6VACUUM ANALYZE readings
+This should give you close to 4x the speed without any deadlocks.You said: By doing these how fast can I make this approachBy doing these how fast can I make this approach12:59 PMClaude responded: Looking at your data, let me estimate:Looking at your data, let me estimate:
+Current speed (1 worker):
+
+Early years (2014): ~0.5 sec/day → small data
+Later years (2020+): likely 5–30 sec/day → much more stations/readings
+
+You have 3,123 days to process. The bottleneck grows over time as more stations join OpenSenseMap.
+
+Realistic estimate with all optimizations applied:
+ConfigEstimated Time1 worker (current)~40–80 hours4 workers + FK dropped + autovacuum off~12–20 hours8 workers + FK dropped + autovacuum off~8–12 hours
+
+The honest truth is the main bottleneck won't be your workers — it'll be:
+
+Download speed from archive.opensensemap.org — you're fetching 3,123 days of files sequentially with only 2-day lookahead
+Later years have exponentially more data — 2024/2025 days likely have 10–50x more readings than 2014 days
+
+To go faster, check if your load_data.py supports increasing lookahead:
+bashpython load_data.py --start 2014-06-03 --end 2026-05-22 --workers 4 --lookahead 5 --way hybrid
+A larger lookahead means more files are pre-downloaded while the current day is being inserted, reducing the ● Waiting for local copy idle time you see in the logs.
+
+Bottom line: With FK dropped + 4 workers + larger lookahead, realistically ~12–15 hours is achievable. Beyond that, you're limited by network download speed from the archive source.

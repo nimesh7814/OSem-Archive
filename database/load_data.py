@@ -5,9 +5,9 @@ load_data.py
 Loads OpenSenseMap archive data into TimescaleDB running in Docker.
 
 Schema (schema.sql):
-  stations  – PK: st_id VARCHAR(24)  (no serial UUID)
+  stations  – PK: st_id VARCHAR(24)
   sensors   – PK: se_id VARCHAR(24), FK → stations.st_id
-  readings  – FK: se_id VARCHAR(24), FK → sensors.se_id  (TimescaleDB hypertable)
+  readings  – FK: se_id → sensors.se_id, st_id → stations.st_id  (TimescaleDB hypertable)
 
 The script connects to the database using the values in your .env file.
 As long as Docker is running and the container is healthy, the script will
@@ -107,6 +107,9 @@ except ImportError:
 DATE_FOLDER_RE      = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DRY_RUN_DIR         = Path("dry_run_output")
 SQL_DUMP_DIR        = Path("sql")          # all .sql dumps live here
+DOWNLOAD_DIR        = Path(".download")    # hybrid mode: staging folder for downloaded date folders
+HYBRID_LOOKAHEAD    = 20                    # number of date folders to pre-fetch ahead of processing
+SEPARATE_BATCH_SIZE = 100                  # stations per batch in --method separate hybrid mode
 STATION_ID_LEN      = 24
 # Default admin boundary – can be overridden with --admin-boundary CLI flag
 ADMIN_BOUNDARY_PATH = Path(
@@ -117,6 +120,57 @@ WORKER_THREADS      = 1   # 1 avoids deadlocks on chunk creation; increase after
 # Fixed checkpoint/log file names (written next to the script)
 RESUME_FILE         = Path("data.resume")   # completed station keys → resumable on re-run
 DATA_LOG_FILE       = Path("data.log")      # JSONL log of missing-data / missing-location events
+
+# ---------------------------------------------------------------------------
+# Sensor category lookup table  (loaded once from sensor_types.csv)
+# ---------------------------------------------------------------------------
+# Maps (title_lower, unit_lower) → category string.
+# Built at startup by load_sensor_types_csv(); used by get_sensor_category().
+_SENSOR_TYPE_CATEGORY: dict[tuple[str, str], str] = {}
+
+
+def load_sensor_types_csv(csv_path: Optional[Path] = None) -> None:
+    """Load sensor_types.csv into _SENSOR_TYPE_CATEGORY for fast (title, unit) lookups.
+
+    The CSV must have columns 'title' and 'unit'.  A third column 'category' is
+    optional; if absent the built-in classify_sensor() heuristic is used to derive
+    the category so that every row in the file still gets an entry in the map.
+
+    csv_path defaults to sensor_types.csv in the same folder as load_data.py.
+    """
+    global _SENSOR_TYPE_CATEGORY
+    if csv_path is None:
+        csv_path = Path(__file__).parent / "sensor_types.csv"
+    if not csv_path.exists():
+        print(f"[WARN] sensor_types.csv not found at {csv_path}; "
+              "category will be derived by keyword heuristic only.")
+        return
+
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            title = (row.get("title") or "").strip()
+            unit  = (row.get("unit")  or "").strip()
+            if not title and not unit:
+                continue
+            # Use explicit category column if present, otherwise fall back to heuristic
+            category = (row.get("category") or "").strip()
+            if not category:
+                category = classify_sensor(title, unit)
+            _SENSOR_TYPE_CATEGORY[(title.lower(), unit.lower())] = category
+
+
+def get_sensor_category(title: str, unit: str) -> str:
+    """Return the category for a sensor, preferring the CSV lookup table.
+
+    Falls back to classify_sensor() if the exact (title, unit) pair is not in
+    the table (e.g. sensors from future archive dates not yet in the CSV).
+    """
+    key = ((title or "").strip().lower(), (unit or "").strip().lower())
+    category = _SENSOR_TYPE_CATEGORY.get(key)
+    if category is not None:
+        return category
+    return classify_sensor(title, unit)
 
 # ---------------------------------------------------------------------------
 # Admin boundary spatial index (loaded once at startup)
@@ -364,6 +418,24 @@ def parse_args() -> argparse.Namespace:
         )
     )
 
+    parser.add_argument(
+        "--way", dest="way", default=None, choices=["hybrid"],
+        help=(
+            "Download strategy. 'hybrid': pre-fetch date folders into .download/ "
+            "ahead of processing (lookahead=%d) and delete each folder once "
+            "ingested. Requires --source to be a remote URL." % HYBRID_LOOKAHEAD
+        )
+    )
+    parser.add_argument(
+        "--method", dest="method", default=None, choices=["separate"],
+        help=(
+            "Ingest strategy. 'separate': first insert ALL stations and sensors "
+            "across every date folder, then do a second full pass to insert all "
+            "readings. Ensures FK constraints are satisfied before any reading "
+            "is written and allows the readings pass to run with parallelism."
+        )
+    )
+
     # -- Shared options ------------------------------------------------------
     parser.add_argument(
         "--env", default=".env",
@@ -441,7 +513,16 @@ def list_local_subdirs(folder: Path) -> list[str]:
 
 
 def list_url_subdirs(base_url: str) -> list[str]:
-    """Parse an Apache/Nginx directory listing for subdirectory hrefs."""
+    """Parse an Apache/Nginx directory listing for subdirectory hrefs.
+
+    Filters out:
+    - Absolute URLs (contain "://"), e.g. https://caddyserver.com injected by
+      the server's navigation/footer HTML — these would become invalid path
+      components on Windows and cause OSError [WinError 123].
+    - Parent/query/fragment hrefs (starting with ?, /, ., #).
+    - Any href containing path separators (\\) or colons (:) which are illegal
+      on Windows file systems.
+    """
     resp = _SESSION.get(base_url, timeout=30)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -450,8 +531,18 @@ def list_url_subdirs(base_url: str) -> list[str]:
         href = a["href"].rstrip("/")
         if href.startswith("./"):
             href = href[2:]
-        if href and not href.startswith(("?", "/", ".")):
-            dirs.append(href)
+        # Skip empty, navigation hrefs, and absolute URLs
+        if not href:
+            continue
+        if href.startswith(("?", "/", ".", "#")):
+            continue
+        # Reject anything that contains "://" (absolute URL) or a colon (Windows-illegal)
+        if "://" in href or ":" in href:
+            continue
+        # Reject anything with backslashes or forward-slash (not a simple name)
+        if "\\" in href or "/" in href:
+            continue
+        dirs.append(href)
     return sorted(set(dirs))
 
 
@@ -602,8 +693,8 @@ def get_existing_station_location(cur, st_id: str) -> tuple[Optional[float], Opt
 def upsert_station(cur, data: dict) -> tuple[Optional[str], bool, Optional[str], Optional[str]]:
     """Insert or update a station row.
 
-    The schema uses st_id (VARCHAR 24) as the natural primary key — no serial
-    integer surrogate.  Returns (st_id, is_new, country, skip_reason).
+    The schema uses st_id VARCHAR(24) as the primary key.
+    Returns (st_id, is_new, country, skip_reason).
     """
     station_id = data.get("id")
     has_location_info, lon, lat = station_location_info(data)
@@ -628,24 +719,19 @@ def upsert_station(cur, data: dict) -> tuple[Optional[str], bool, Optional[str],
         country, region = lookup_admin(lon, lat)
 
     cur.execute("""
-        INSERT INTO stations (st_id, boxtype, exposure, model, geometry, region, country, init_date)
+        INSERT INTO stations (st_id, boxtype, exposure, model, geometry, region, country)
         VALUES (
             %s, %s, %s, %s,
             ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-            %s, %s, %s
+            %s, %s
         )
         ON CONFLICT (st_id) DO UPDATE
-            SET boxtype   = EXCLUDED.boxtype,
-                exposure  = EXCLUDED.exposure,
-                model     = EXCLUDED.model,
-                geometry  = EXCLUDED.geometry,
-                country   = EXCLUDED.country,
-                region    = EXCLUDED.region,
-                init_date = CASE
-                    WHEN stations.init_date IS NULL THEN EXCLUDED.init_date
-                    WHEN EXCLUDED.init_date < stations.init_date THEN EXCLUDED.init_date
-                    ELSE stations.init_date
-                END
+            SET boxtype  = EXCLUDED.boxtype,
+                exposure = EXCLUDED.exposure,
+                model    = EXCLUDED.model,
+                geometry = EXCLUDED.geometry,
+                country  = EXCLUDED.country,
+                region   = EXCLUDED.region
         RETURNING st_id, (xmax = 0) AS is_new, country
     """, (
         station_id,
@@ -655,7 +741,6 @@ def upsert_station(cur, data: dict) -> tuple[Optional[str], bool, Optional[str],
         lon, lat,
         region,
         country,
-        data.get("_init_date"),  # injected by caller from the date_folder
     ))
     row = cur.fetchone()
     if not row:
@@ -897,53 +982,48 @@ def classify_sensor(title: str, unit: str) -> str:
     return "Other"
 
 
-def upsert_sensor(cur, sensor: dict, st_id: str, init_date=None) -> tuple[Optional[str], bool]:
+def upsert_sensor(cur, sensor: dict, st_id: str) -> tuple[Optional[str], bool]:
     """Insert or update a sensor row.
 
-    The schema uses se_id (VARCHAR 24) as the natural primary key and st_id
-    (VARCHAR 24) as the FK to stations — no serial integer surrogates.
-
-    init_date is the earliest timestamp from the readings CSV; written only on
-    first insert so the earliest ever date is always preserved.
+    The schema uses se_id VARCHAR(24) as the primary key and st_id VARCHAR(24)
+    as the FK to stations.  sensor_type is the raw sensorType from the JSON;
+    category is derived from sensor_types.csv (with classify_sensor fallback).
 
     Returns (se_id, is_new) where is_new is True when freshly inserted.
     """
-    sensor_type = classify_sensor(sensor.get("title", ""), sensor.get("unit", ""))
+    title       = sensor.get("title", "")
+    unit        = sensor.get("unit", "")
+    sensor_type = sensor.get("sensorType") or None
+    category    = get_sensor_category(title, unit)
 
     cur.execute("""
-        INSERT INTO sensors (se_id, st_id, title, unit, info, type, init_date)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO sensors (se_id, st_id, title, unit, sensor_type, category)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ON CONFLICT (se_id) DO UPDATE
-            SET title     = EXCLUDED.title,
-                unit      = EXCLUDED.unit,
-                info      = EXCLUDED.info,
-                type      = EXCLUDED.type,
-                init_date = CASE
-                    WHEN sensors.init_date IS NULL THEN EXCLUDED.init_date
-                    WHEN EXCLUDED.init_date < sensors.init_date THEN EXCLUDED.init_date
-                    ELSE sensors.init_date
-                END
-        RETURNING se_id, (xmax = 0) AS is_new, init_date
+            SET title       = EXCLUDED.title,
+                unit        = EXCLUDED.unit,
+                sensor_type = EXCLUDED.sensor_type,
+                category    = EXCLUDED.category
+        RETURNING se_id, (xmax = 0) AS is_new
     """, (
         sensor.get("id"),
         st_id,
-        sensor.get("title"),
-        sensor.get("unit"),
-        sensor.get("sensorType"),
-        sensor_type,          # classified category replaces raw sensorType
-        init_date,
+        title or None,
+        unit or None,
+        sensor_type,
+        category,
     ))
     row = cur.fetchone()
     if not row:
         return None, False
-    se_id_ret, is_new, stored_init_date = row
+    se_id_ret, is_new = row
     return se_id_ret, is_new
 
 
-def insert_readings(cur, se_id: str, rows: list[dict]) -> int:
+def insert_readings(cur, se_id: str, st_id: str, rows: list[dict]) -> int:
     """Bulk-insert readings, skip malformed rows. Returns count inserted.
 
-    Uses se_id (VARCHAR 24) directly as the FK — schema has no integer surrogate.
+    Uses se_id and st_id as FKs — matching the schema natural primary keys.
     The unique index is (se_id, time); ON CONFLICT DO NOTHING deduplicates on
     re-runs (e.g. after a crash and resume).
     """
@@ -952,7 +1032,7 @@ def insert_readings(cur, se_id: str, rows: list[dict]) -> int:
         try:
             t = datetime.fromisoformat(row["createdAt"].replace("Z", "+00:00"))
             v = float(row["value"])
-            records.append((se_id, t, v))
+            records.append((se_id, st_id, t, v))
         except (KeyError, ValueError):
             continue
 
@@ -962,7 +1042,7 @@ def insert_readings(cur, se_id: str, rows: list[dict]) -> int:
     psycopg2.extras.execute_values(
         cur,
         """
-        INSERT INTO readings (se_id, time, value) VALUES %s
+        INSERT INTO readings (se_id, st_id, time, value) VALUES %s
         ON CONFLICT (se_id, time) DO NOTHING
         """,
         records,
@@ -986,9 +1066,9 @@ def init_dry_run() -> dict:
 
 def flush_dry_run(buffers: dict) -> None:
     headers = {
-        "stations": ["st_id", "boxtype", "model", "lon", "lat", "region", "country", "init_date"],
-        "sensors":  ["se_id", "st_id", "title", "unit", "info", "type", "init_date"],
-        "readings": ["se_id", "time", "value"],
+        "stations": ["st_id", "boxtype", "model", "lon", "lat", "region", "country"],
+        "sensors":  ["se_id", "st_id", "title", "unit", "sensor_type", "category"],
+        "readings": ["se_id", "st_id", "time", "value"],
     }
     for name, rows in buffers.items():
         out_path = DRY_RUN_DIR / f"{name}.csv"
@@ -1009,7 +1089,7 @@ def flush_dry_run(buffers: dict) -> None:
 _SQL_SCHEMA = """-- ============================================================
 --  OpenSenseMap archive dump
 --  Generated by load_data.py --type sql
---  Schema mirrors schema.sql: st_id/se_id are the natural PKs
+--  Schema mirrors schema.sql: st_id/se_id are the natural VARCHAR(24) PKs.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -1022,9 +1102,9 @@ CREATE TABLE IF NOT EXISTS stations (
     geometry     GEOMETRY(Point, 4326) NOT NULL,
     region       TEXT,
     country      TEXT,
-    init_date    TIMESTAMPTZ,
     refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT pk_stations PRIMARY KEY (st_id)
+    CONSTRAINT pk_stations PRIMARY KEY (st_id),
+    CONSTRAINT uq_stations_id UNIQUE (st_id)
 );
 
 CREATE TABLE IF NOT EXISTS sensors (
@@ -1032,22 +1112,27 @@ CREATE TABLE IF NOT EXISTS sensors (
     st_id        VARCHAR(24) NOT NULL,
     title        TEXT,
     unit         TEXT,
-    info         TEXT,
-    type         TEXT,
-    init_date    TIMESTAMPTZ,
+    sensor_type  TEXT,
+    category     TEXT,
     refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_sensors PRIMARY KEY (se_id),
+    CONSTRAINT uq_sensors UNIQUE (se_id),
     CONSTRAINT fk_sensors_st_id
         FOREIGN KEY (st_id) REFERENCES stations (st_id)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS readings (
-    se_id  VARCHAR(24) NOT NULL,
-    time   TIMESTAMPTZ NOT NULL,
-    value  DOUBLE PRECISION NOT NULL,
+    se_id        VARCHAR(24) NOT NULL,
+    st_id        VARCHAR(24) NOT NULL,
+    time         TIMESTAMPTZ NOT NULL,
+    value        DOUBLE PRECISION NOT NULL,
+    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT fk_readings_se_id
         FOREIGN KEY (se_id) REFERENCES sensors (se_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_readings_st_id
+        FOREIGN KEY (st_id) REFERENCES stations (st_id)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -1096,7 +1181,8 @@ def _write_sql_file(
 ) -> None:
     """Write a single SQL file containing stations, sensors, and readings.
 
-    Uses st_id/se_id string PKs directly — no integer serial id_maps needed.
+    Stations are keyed by st_id (natural VARCHAR primary key); sensors reference
+    stations via st_id directly; readings reference sensors via se_id and st_id.
     """
     BATCH = 5_000
 
@@ -1109,32 +1195,31 @@ def _write_sql_file(
             f.write("-- stations\n")
             f.write("BEGIN;\n")
             for row in station_rows:
-                st_id, boxtype, model, lon, lat, region, country, init_date = row
+                st_id, boxtype, model, lon, lat, region, country = row
                 geom = (
                     f"ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326)"
                     if lon is not None and lat is not None
                     else "NULL"
                 )
                 f.write(
-                    f"INSERT INTO stations (st_id, boxtype, model, geometry, region, country, init_date) "
+                    f"INSERT INTO stations (st_id, boxtype, model, geometry, region, country) "
                     f"VALUES ({_sql_literal(st_id)}, {_sql_literal(boxtype)}, {_sql_literal(model)}, "
-                    f"{geom}, {_sql_literal(region)}, {_sql_literal(country)}, "
-                    f"{_sql_literal(str(init_date) if init_date else None)}) "
+                    f"{geom}, {_sql_literal(region)}, {_sql_literal(country)}) "
                     f"ON CONFLICT (st_id) DO NOTHING;\n"
                 )
             f.write("COMMIT;\n\n")
 
         # -- Sensors ---------------------------------------------------------
+        # FK st_id resolved at import time (it's the natural PK).
         if sensor_rows:
             f.write("-- sensors\n")
             f.write("BEGIN;\n")
             for row in sensor_rows:
-                se_id, st_id, title, unit, info, stype, init_date = row
+                se_id, st_id, title, unit, sensor_type, category = row
                 f.write(
-                    f"INSERT INTO sensors (se_id, st_id, title, unit, info, type, init_date) "
+                    f"INSERT INTO sensors (se_id, st_id, title, unit, sensor_type, category) "
                     f"VALUES ({_sql_literal(se_id)}, {_sql_literal(st_id)}, {_sql_literal(title)}, "
-                    f"{_sql_literal(unit)}, {_sql_literal(info)}, {_sql_literal(stype)}, "
-                    f"{_sql_literal(str(init_date) if init_date else None)}) "
+                    f"{_sql_literal(unit)}, {_sql_literal(sensor_type)}, {_sql_literal(category)}) "
                     f"ON CONFLICT (se_id) DO NOTHING;\n"
                 )
             f.write("COMMIT;\n\n")
@@ -1145,10 +1230,11 @@ def _write_sql_file(
             for batch_start in range(0, len(reading_rows), BATCH):
                 f.write("BEGIN;\n")
                 for row in reading_rows[batch_start : batch_start + BATCH]:
-                    se_id, time_str, value = row
+                    se_id, st_id, time_str, value = row
                     f.write(
-                        f"INSERT INTO readings (se_id, time, value) "
-                        f"VALUES ({_sql_literal(se_id)}, {_sql_literal(time_str)}, {_sql_literal(value)}) "
+                        f"INSERT INTO readings (se_id, st_id, time, value) "
+                        f"VALUES ({_sql_literal(se_id)}, {_sql_literal(st_id)}, "
+                        f"{_sql_literal(time_str)}, {_sql_literal(value)}) "
                         f"ON CONFLICT (se_id, time) DO NOTHING;\n"
                     )
                 f.write("COMMIT;\n\n")
@@ -1168,9 +1254,9 @@ def flush_sql_dump(buffers: dict, start, end, num_parts: Optional[int] = None) -
     Returns the path of the single file written, or the parts sub-folder.
     """
     base_name    = _build_base_name(start, end)
-    station_rows = buffers["stations"]   # [st_id, boxtype, model, lon, lat, region, country, init_date]
-    sensor_rows  = buffers["sensors"]    # [se_id, st_id, title, unit, info, type, init_date]
-    reading_rows = buffers["readings"]   # [se_id, time, value]
+    station_rows = buffers["stations"]   # [st_id, boxtype, model, lon, lat, region, country]
+    sensor_rows  = buffers["sensors"]    # [se_id, st_id, title, unit, sensor_type, category]
+    reading_rows = buffers["readings"]   # [se_id, st_id, time, value]
 
     # ------------------------------------------------------------------ single file
     if not num_parts or num_parts <= 1:
@@ -1337,6 +1423,1022 @@ def import_sql_file(sql_path: Path, env_path: str) -> None:
     conn.close()
 
 
+
+# ---------------------------------------------------------------------------
+# Hybrid mode helpers  (--hybrid)
+# ---------------------------------------------------------------------------
+def _download_date_folder(source: str, date_folder: str, dest_root: Path) -> Path:
+    """Download all files for one date folder from a remote source into
+    dest_root/<date_folder>/ and return the local path.
+
+    Each station subfolder and its files are fetched:
+      <source>/<date_folder>/<station>/  ->  dest_root/<date_folder>/<station>/
+    """
+    date_dest = dest_root / date_folder
+    date_dest.mkdir(parents=True, exist_ok=True)
+
+    date_url      = urljoin(source.rstrip("/") + "/", date_folder + "/")
+    station_names = list_url_subdirs(date_url)
+
+    for station_name in station_names:
+        st_dest = date_dest / station_name
+        st_dest.mkdir(parents=True, exist_ok=True)
+
+        st_url   = urljoin(date_url.rstrip("/") + "/", station_name + "/")
+        listing  = read_url_file(st_url)
+        if not listing:
+            continue
+
+        soup  = BeautifulSoup(listing.decode("utf-8"), "html.parser")
+        files = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if href.startswith("./"):
+                href = href[2:]
+            if href and not href.startswith(("?", "/", "..", "#")):
+                files.append(href)
+
+        for fname in files:
+            if not (fname.endswith(".json") or fname.endswith(".csv")):
+                continue
+            dest_file = st_dest / fname
+            if dest_file.exists():
+                continue   # already fetched (e.g. partial re-run)
+            data = read_url_file(urljoin(st_url.rstrip("/") + "/", fname))
+            if data:
+                dest_file.write_bytes(data)
+
+    return date_dest
+
+
+def _download_station_json_files(
+    source: str, date_folder: str, station_names: list, dest_root: Path
+) -> None:
+    """Download only the .json files for a list of station folders.
+
+    Used in --method separate hybrid mode so the metadata pass can start as
+    soon as the first batch of JSONs arrives, without waiting for all CSVs.
+    """
+    date_url  = urljoin(source.rstrip("/") + "/", date_folder + "/")
+    date_dest = dest_root / date_folder
+
+    for station_name in station_names:
+        st_dest = date_dest / station_name
+        st_dest.mkdir(parents=True, exist_ok=True)
+
+        st_url  = urljoin(date_url.rstrip("/") + "/", station_name + "/")
+        listing = read_url_file(st_url)
+        if not listing:
+            continue
+
+        soup = BeautifulSoup(listing.decode("utf-8"), "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if href.startswith("./"):
+                href = href[2:]
+            if not href or href.startswith(("?", "/", "..", "#")):
+                continue
+            if "://" in href or ":" in href or "\\" in href or "/" in href:
+                continue
+            if not href.endswith(".json"):
+                continue
+            dest_file = st_dest / href
+            if dest_file.exists():
+                continue
+            data = read_url_file(urljoin(st_url.rstrip("/") + "/", href))
+            if data:
+                dest_file.write_bytes(data)
+
+
+def _download_station_csv_files(
+    source: str, date_folder: str, station_names: list, dest_root: Path
+) -> None:
+    """Download only the .csv files for a list of station folders.
+
+    Called after the JSON/metadata batch has been inserted into the DB so that
+    readings can be ingested immediately, then the batch deleted to free disk.
+    """
+    date_url  = urljoin(source.rstrip("/") + "/", date_folder + "/")
+    date_dest = dest_root / date_folder
+
+    for station_name in station_names:
+        st_dest = date_dest / station_name
+        st_dest.mkdir(parents=True, exist_ok=True)
+
+        st_url  = urljoin(date_url.rstrip("/") + "/", station_name + "/")
+        listing = read_url_file(st_url)
+        if not listing:
+            continue
+
+        soup = BeautifulSoup(listing.decode("utf-8"), "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if href.startswith("./"):
+                href = href[2:]
+            if not href or href.startswith(("?", "/", "..", "#")):
+                continue
+            if "://" in href or ":" in href or "\\" in href or "/" in href:
+                continue
+            if not href.endswith(".csv"):
+                continue
+            dest_file = st_dest / href
+            if dest_file.exists():
+                continue
+            data = read_url_file(urljoin(st_url.rstrip("/") + "/", href))
+            if data:
+                dest_file.write_bytes(data)
+
+
+def _delete_station_batch(date_dest: Path, station_names: list) -> None:
+    """Delete a batch of station subdirectories from a date folder on disk."""
+    import shutil
+    for station_name in station_names:
+        st_path = date_dest / station_name
+        try:
+            shutil.rmtree(st_path)
+        except Exception as exc:
+            tqdm.write(f"  [WARN] Could not delete {st_path}: {exc}")
+
+
+def _delete_date_folder(date_dest: Path) -> None:
+    """Recursively delete a downloaded date folder after successful processing."""
+    import shutil
+    try:
+        shutil.rmtree(date_dest)
+    except Exception as exc:
+        tqdm.write(f"  [WARN] Could not delete {date_dest}: {exc}")
+
+
+def run_hybrid(
+    source: str,
+    date_folders: list,
+    conn,
+    dry_buffers,
+    sql_buffers,
+    workers: int,
+    log_path: Path,
+    location_error_path: Path,
+    total: dict,
+    run_start_time: float,
+    separate: bool = False,
+) -> None:
+    """--way hybrid main loop.
+
+    Background threads pre-fetch the next HYBRID_LOOKAHEAD date folders from
+    the remote source into .download/<date>/ while the current day is being
+    processed.  All DB work is done against the *local* copy so there are no
+    per-file HTTP round-trips during ingestion.
+
+    With --method separate the metadata (station+sensor) pass runs first for
+    every day; the readings pass follows after all metadata is committed.
+    """
+    import threading
+    import time as _time
+    from concurrent.futures import ThreadPoolExecutor as _TPE, Future
+
+    # ── ANSI colour helpers ─────────────────────────────────────────────────
+    R  = "\033[0m"          # reset
+    BOLD   = "\033[1m"
+    CYAN   = "\033[96m"
+    GREEN  = "\033[92m"
+    YELLOW = "\033[93m"
+    RED    = "\033[91m"
+    BLUE   = "\033[94m"
+    MAGENTA= "\033[95m"
+    DIM    = "\033[2m"
+
+    def clr(text, *codes): return "".join(codes) + str(text) + R
+
+    # ── setup ───────────────────────────────────────────────────────────────
+    dest_root  = DOWNLOAD_DIR
+    dest_root.mkdir(parents=True, exist_ok=True)
+
+    day_total  = len(date_folders)
+    lookahead  = HYBRID_LOOKAHEAD
+
+    # Populated during metadata pass when separate=True so readings pass
+    # knows which folders+stations to revisit.
+    _meta_done: list = []   # [(date_folder, local_date_path, station_folders)]
+
+    # ── download helpers ────────────────────────────────────────────────────
+    fetch_executor   = _TPE(max_workers=lookahead, thread_name_prefix="dl")
+    pending_fetches: dict[str, Future] = {}
+    dl_status: dict[str, str] = {}   # date_folder -> "queued"|"downloading"|"ready"
+
+    def _submit_fetch(df: str) -> None:
+        if df not in pending_fetches:
+            dl_status[df] = "downloading"
+            pending_fetches[df] = fetch_executor.submit(
+                _download_date_folder, source, df, dest_root
+            )
+
+    for df in date_folders[:lookahead]:
+        if not separate:
+            _submit_fetch(df)
+
+    # ── merge helper ────────────────────────────────────────────────────────
+    def _merge(counts: dict) -> None:
+        total["stations"]    += 1
+        total["sensors"]     += counts["sensors"]
+        total["readings"]    += counts["readings"]
+        total["skipped_csv"] += counts["skipped_csv"]
+        total["skipped_no_location"]  += counts["skipped_no_location"]
+        total["skipped_bad_location"] += counts["skipped_bad_location"]
+        for yr, cnt in counts["new_sensors_by_year"].items():
+            total["new_sensors_by_year"][yr] = total["new_sensors_by_year"].get(yr, 0) + cnt
+        for ctry, cnt in counts["new_stations_by_country"].items():
+            total["new_stations_by_country"][ctry] = (
+                total["new_stations_by_country"].get(ctry, 0) + cnt
+            )
+
+    # ── status line ─────────────────────────────────────────────────────────
+    def _status(phase: str, date_folder: str, day_idx: int,
+                st_done: int, st_total: int, skipped: int) -> None:
+        elapsed = _time.monotonic() - run_start_time
+        h, rem  = divmod(int(elapsed), 3600)
+        m, s    = divmod(rem, 60)
+
+        phase_col = {
+            "FULL":  GREEN,
+            "META":  CYAN,
+            "RDGS":  MAGENTA,
+        }.get(phase, CYAN)
+
+        tqdm.write(
+            clr(f" ✔ [{h:02d}:{m:02d}:{s:02d}] ", BOLD, GREEN) +
+            clr(f"[{phase}]", BOLD, phase_col) +
+            clr(f"  Day {day_idx:>4}/{day_total}", BOLD) +
+            clr(f"  {date_folder}", CYAN) +
+            clr(f"  stations {st_done:>4}/{st_total:<4}", BLUE) +
+            clr(f"  skipped {skipped:>3}", YELLOW if skipped else DIM) +
+            clr("  ▶ ", DIM) +
+            clr(f"st:{total['stations']:,}", GREEN) +
+            clr("  ", DIM) +
+            clr(f"se:{total['sensors']:,}", CYAN) +
+            clr("  ", DIM) +
+            clr(f"rd:{total['readings']:,}", MAGENTA)
+        )
+
+    def _warn(msg: str) -> None:
+        tqdm.write(clr(f"  ⚠  {msg}", YELLOW))
+
+    def _err(msg: str) -> None:
+        tqdm.write(clr(f"  ✖  {msg}", RED, BOLD))
+
+    def _info(msg: str) -> None:
+        tqdm.write(clr(f"  ●  {msg}", CYAN))
+
+    def _ok(msg: str) -> None:
+        tqdm.write(clr(f"  ✔  {msg}", GREEN))
+
+    # ── header ───────────────────────────────────────────────────────────────
+    mode_label = "hybrid + separate" if separate else "hybrid"
+    tqdm.write("")
+    tqdm.write(clr(f"  ╔══ {mode_label.upper()} MODE ", BOLD, CYAN) +
+               clr(f"{'═' * max(0, 54 - len(mode_label))}╗", BOLD, CYAN))
+    tqdm.write(clr(f"  ║  Source   : {source}", CYAN))
+    tqdm.write(clr(f"  ║  Staging  : {dest_root}/", CYAN))
+    tqdm.write(clr(f"  ║  Lookahead: {lookahead} day(s)  │  Workers: {workers}", CYAN))
+    tqdm.write(clr(f"  ║  Days     : {day_total}", CYAN))
+    if separate:
+        tqdm.write(clr(f"  ║  Strategy : Pass 1 → stations+sensors  │  Pass 2 → readings", CYAN))
+    tqdm.write(clr(f"  ╚{'═' * 58}╝", BOLD, CYAN))
+    tqdm.write("")
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # PASS 1  (or only pass when separate=False)
+    # ═══════════════════════════════════════════════════════════════════════
+    pass1_label = "Pass 1/2 — stations+sensors" if separate else "Ingesting"
+    date_pbar = tqdm(
+        date_folders,
+        desc=clr(f" ⬇ {pass1_label}", BOLD, CYAN),
+        unit="day",
+        position=0,
+        dynamic_ncols=True,
+        colour="cyan",
+    )
+
+    for day_idx, date_folder in enumerate(date_pbar, start=1):
+        # Queue next lookahead download (non-separate mode only)
+        if not separate:
+            future_idx = day_idx - 1 + lookahead
+            if future_idx < day_total:
+                _submit_fetch(date_folders[future_idx])
+
+        # Show what is currently being fetched in the background
+        fetching = [df for df, st in dl_status.items()
+                    if st == "downloading" and df != date_folder]
+        if fetching:
+            date_pbar.set_description(
+                clr(f" ⬇ {pass1_label}", BOLD, CYAN) +
+                clr(f"  [prefetching: {', '.join(fetching[:2])}]", DIM)
+            )
+
+        # Wait for this day's download (non-separate mode only —
+        # separate mode fetches per-batch inside its own block below)
+        if not separate:
+            _info(f"Waiting for local copy: {clr(date_folder, BOLD)}")
+            local_date_path = pending_fetches.pop(date_folder).result()
+            dl_status[date_folder] = "ready"
+            _ok(f"Downloaded → {clr(str(local_date_path), BOLD)}  "
+                f"(reading from local disk)")
+
+        # ── IMPORTANT: always use local path for DB ingestion ──────────────
+        local_source = str(dest_root)   # process_station_folder joins dest_root/date/station
+        if not separate:
+            station_folders = list_local_subdirs(local_date_path)
+            day_total_st    = len(station_folders)
+        else:
+            station_folders = []   # separate mode sets day_total_st itself
+            day_total_st    = 0
+
+        day_done     = 0
+        skipped      = 0
+        log_lock     = threading.Lock()
+        counts_lock  = threading.Lock()
+
+        if separate:
+            # ── batched metadata + readings pass (SEPARATE_BATCH_SIZE at a time) ──
+            #
+            # For each batch of up to SEPARATE_BATCH_SIZE station folders:
+            #   1. Download .json files only  → insert stations+sensors (META)
+            #   2. Download .csv files only   → insert readings         (RDGS)
+            #   3. Delete that batch from disk to free space
+            #   4. Move to the next batch
+            #
+            # This keeps at most SEPARATE_BATCH_SIZE stations' worth of files
+            # on disk at any one time, rather than the entire date folder.
+
+            # Discover station names from the remote listing (no full download yet)
+            date_url_remote = urljoin(source.rstrip("/") + "/", date_folder + "/")
+            all_station_names = list_url_subdirs(date_url_remote)
+            day_total_st = len(all_station_names)
+            local_date_path = dest_root / date_folder
+            local_date_path.mkdir(parents=True, exist_ok=True)
+            local_source = str(dest_root)
+
+            st_pbar = tqdm(
+                total=day_total_st,
+                desc=clr(f"   ├─ {date_folder} [SEPARATE]", CYAN),
+                unit="stn", position=1, leave=False, dynamic_ncols=True,
+                colour="cyan",
+            )
+
+            def _meta_w(sf: str) -> dict:
+                tconn = get_db_connection(verbose=False)
+                try:
+                    return process_station_folder_metadata(
+                        local_source, date_folder, sf, False,
+                        tconn, location_error_path, log_lock,
+                    )
+                finally:
+                    tconn.close()
+
+            def _rdg_w(sf: str) -> dict:
+                tconn = get_db_connection(verbose=False)
+                try:
+                    return process_station_folder_readings(
+                        local_source, date_folder, sf, False, tconn,
+                    )
+                finally:
+                    tconn.close()
+
+            # Slice into batches of SEPARATE_BATCH_SIZE
+            batch_size = SEPARATE_BATCH_SIZE
+            for batch_start in range(0, day_total_st, batch_size):
+                batch = all_station_names[batch_start: batch_start + batch_size]
+                batch_num = batch_start // batch_size + 1
+                batch_total = (day_total_st + batch_size - 1) // batch_size
+
+                _info(
+                    f"{date_folder}  batch {batch_num}/{batch_total}  "
+                    f"({len(batch)} stations)  — downloading JSON…"
+                )
+
+                # Step 1: download .json files for this batch
+                _download_station_json_files(source, date_folder, batch, dest_root)
+
+                # Step 2: insert metadata (stations + sensors)
+                if workers == 1:
+                    for sf in batch:
+                        c = _meta_w(sf)
+                        if c["station_ok"]:
+                            _merge(c); day_done += 1
+                        skipped += c["skipped_no_location"] + c["skipped_bad_location"]
+                        st_pbar.set_postfix(
+                            batch=clr(f"{batch_num}/{batch_total}", DIM),
+                            done=clr(day_done, GREEN),
+                            se=clr(f"{total['sensors']:,}", CYAN),
+                            skip=clr(skipped, YELLOW) if skipped else skipped,
+                            refresh=True,
+                        )
+                        st_pbar.update(1)
+                else:
+                    with _TPE(max_workers=workers) as ex:
+                        futs = {ex.submit(_meta_w, sf): sf for sf in batch}
+                        for fut in as_completed(futs):
+                            try:
+                                c = fut.result()
+                                with counts_lock:
+                                    if c["station_ok"]:
+                                        _merge(c); day_done += 1
+                                    skipped += c["skipped_no_location"] + c["skipped_bad_location"]
+                            except Exception as exc:
+                                _err(f"{futs[fut]}: {exc}")
+                            finally:
+                                st_pbar.set_postfix(
+                                    batch=clr(f"{batch_num}/{batch_total}", DIM),
+                                    done=clr(day_done, GREEN),
+                                    se=clr(f"{total['sensors']:,}", CYAN),
+                                    skip=clr(skipped, YELLOW) if skipped else skipped,
+                                    refresh=True,
+                                )
+                                st_pbar.update(1)
+
+                _info(
+                    f"{date_folder}  batch {batch_num}/{batch_total}  "
+                    f"— downloading CSV…"
+                )
+
+                # Step 3: download .csv files for this batch
+                _download_station_csv_files(source, date_folder, batch, dest_root)
+
+                # Step 4: insert readings
+                rd_done = 0
+                if workers == 1:
+                    for sf in batch:
+                        c = _rdg_w(sf)
+                        total["readings"]    += c["readings"]
+                        total["skipped_csv"] += c["skipped_csv"]
+                        rd_done += 1
+                else:
+                    cl2 = threading.Lock()
+                    with _TPE(max_workers=workers) as ex:
+                        futs2 = {ex.submit(_rdg_w, sf): sf for sf in batch}
+                        for fut in as_completed(futs2):
+                            try:
+                                c = fut.result()
+                                with cl2:
+                                    total["readings"]    += c["readings"]
+                                    total["skipped_csv"] += c["skipped_csv"]
+                                    rd_done += 1
+                            except Exception as exc:
+                                _err(f"{futs2[fut]}: {exc}")
+
+                # Step 5: delete this batch from disk
+                _delete_station_batch(local_date_path, batch)
+                _ok(
+                    f"Batch {batch_num}/{batch_total} complete  "
+                    f"({rd_done} readings stations)  — local files deleted"
+                )
+
+            st_pbar.close()
+
+            # Clean up the (now-empty) date folder itself
+            _delete_date_folder(local_date_path)
+
+            _status("META", date_folder, day_idx, day_done, day_total_st, skipped)
+            mark_date_completed(log_path, date_folder)
+            date_pbar.set_postfix(
+                st=clr(f"{total['stations']:,}", GREEN),
+                se=clr(f"{total['sensors']:,}", CYAN),
+                rd=clr(f"{total['readings']:,}", MAGENTA),
+                skip=clr(skipped, YELLOW) if skipped else skipped,
+                refresh=True,
+            )
+
+        else:
+            # ── full ingest pass ───────────────────────────────────────────
+            def _full_w(sf: str) -> dict:
+                tconn = get_db_connection(verbose=False)
+                try:
+                    return process_station_folder(
+                        local_source, date_folder, sf, False,
+                        tconn, None, None, location_error_path, log_lock,
+                    )
+                finally:
+                    tconn.close()
+
+            st_pbar = tqdm(
+                total=day_total_st,
+                desc=clr(f"   ├─ {date_folder} [INGEST]", GREEN),
+                unit="stn", position=1, leave=False, dynamic_ncols=True,
+                colour="green",
+            )
+            if workers == 1:
+                for sf in station_folders:
+                    c = _full_w(sf)
+                    _merge(c); day_done += 1
+                    skipped += c["skipped_no_location"] + c["skipped_bad_location"]
+                    st_pbar.set_postfix(
+                        done=clr(day_done, GREEN),
+                        rd=clr(f"{total['readings']:,}", MAGENTA),
+                        skip=clr(skipped, YELLOW) if skipped else skipped,
+                        refresh=True,
+                    )
+                    st_pbar.update(1)
+            else:
+                with _TPE(max_workers=workers) as ex:
+                    futs = {ex.submit(_full_w, sf): sf for sf in station_folders}
+                    for fut in as_completed(futs):
+                        try:
+                            c = fut.result()
+                            with counts_lock:
+                                _merge(c); day_done += 1
+                                skipped += c["skipped_no_location"] + c["skipped_bad_location"]
+                        except Exception as exc:
+                            _err(f"{futs[fut]}: {exc}")
+                        finally:
+                            st_pbar.set_postfix(
+                                done=clr(day_done, GREEN),
+                                rd=clr(f"{total['readings']:,}", MAGENTA),
+                                skip=clr(skipped, YELLOW) if skipped else skipped,
+                                refresh=True,
+                            )
+                            st_pbar.update(1)
+            st_pbar.close()
+
+            _status("FULL", date_folder, day_idx, day_done, day_total_st, skipped)
+            mark_date_completed(log_path, date_folder)
+            _delete_date_folder(local_date_path)
+            _ok(f"Deleted local copy: {clr(str(local_date_path), DIM)}")
+            date_pbar.set_postfix(
+                st=clr(f"{total['stations']:,}", GREEN),
+                se=clr(f"{total['sensors']:,}", CYAN),
+                rd=clr(f"{total['readings']:,}", MAGENTA),
+                skip=clr(skipped, YELLOW) if skipped else skipped,
+                refresh=True,
+            )
+
+    date_pbar.close()
+    fetch_executor.shutdown(wait=False)
+
+    if not separate:
+        return
+
+    # In batched separate mode all readings are inserted inline (per batch),
+    # so _meta_done is empty and there is nothing more to do.
+    tqdm.write("")
+    tqdm.write(clr(
+        f"  ✔  Separate mode complete — "
+        f"{total['readings']:,} readings inserted  "
+        f"({total['skipped_csv']:,} CSVs missing)", BOLD, GREEN
+    ))
+
+
+
+# ---------------------------------------------------------------------------
+# Separate method helpers  (--method separate)
+# ---------------------------------------------------------------------------
+
+def process_station_folder_metadata(
+    source: str,
+    date_folder: str,
+    station_folder: str,
+    is_remote: bool,
+    conn,
+    location_error_log_path: Optional[Path] = None,
+    location_error_lock=None,
+) -> dict:
+    """Pass 1 of --method separate: insert/upsert station + sensors only.
+
+    Returns counts dict with 'sensors', 'skipped_*' keys and a 'station_id'
+    entry so pass 2 can skip stations that were rejected here.
+    """
+    counts = {
+        "sensors": 0,
+        "readings": 0,
+        "skipped_csv": 0,
+        "skipped_no_location": 0,
+        "skipped_bad_location": 0,
+        "new_sensors_by_year": {},
+        "new_stations_by_country": {},
+        "station_ok": False,   # True when the station was accepted
+    }
+
+    # -- Locate files (same logic as process_station_folder) -----------------
+    if is_remote:
+        base = urljoin(source.rstrip("/") + "/", f"{date_folder}/{station_folder}/")
+        station_folder_path = base
+        listing_raw = read_url_file(base)
+        if not listing_raw:
+            return counts
+        soup  = BeautifulSoup(listing_raw.decode("utf-8"), "html.parser")
+        raw_files = [a["href"] for a in soup.find_all("a", href=True)]
+        files = []
+        for f in raw_files:
+            if f.startswith("./"):
+                f = f[2:]
+            if f and not f.startswith(("?", "/", "..")):
+                files.append(f)
+    else:
+        folder_path = Path(source) / date_folder / station_folder
+        station_folder_path = str(folder_path.resolve())
+        files = [f.name for f in folder_path.iterdir() if f.is_file()]
+
+    json_files = [f for f in files if f.endswith(".json")]
+    if not json_files:
+        return counts
+
+    json_filename = json_files[0]
+    if is_remote:
+        raw_json = read_url_file(urljoin(base, json_filename))
+    else:
+        raw_json = read_local_file(folder_path / json_filename)
+
+    if not raw_json:
+        return counts
+
+    station_data = parse_station_json(raw_json)
+    if not station_data:
+        return counts
+
+    station_id = station_data.get("id", "")
+    has_location_info, lon, lat = station_location_info(station_data)
+
+    if lon is None or lat is None:
+        skip_reason = "location info but no usable coordinates" if has_location_info else "no location information"
+        if location_error_log_path is not None:
+            def _log():
+                mark_location_error(
+                    location_error_log_path, date_folder, station_folder,
+                    station_folder_path, station_id, skip_reason, station_data,
+                )
+            if location_error_lock:
+                with location_error_lock:
+                    _log()
+            else:
+                _log()
+        if has_location_info:
+            counts["skipped_bad_location"] += 1
+        else:
+            counts["skipped_no_location"] += 1
+        return counts
+
+    with conn.cursor() as cur:
+        st_id_ret, is_new_station, station_country, skip_reason = upsert_station(cur, station_data)
+        if st_id_ret is None:
+            conn.rollback()
+            if skip_reason == "no location information":
+                counts["skipped_no_location"] += 1
+            elif skip_reason == "location info but no usable coordinates":
+                counts["skipped_bad_location"] += 1
+            return counts
+
+        if is_new_station:
+            key = station_country or "Unknown"
+            counts["new_stations_by_country"][key] = counts["new_stations_by_country"].get(key, 0) + 1
+
+        for sensor in station_data.get("sensors", []):
+            se_id_ret, is_new_sensor = upsert_sensor(cur, sensor, st_id_ret)
+            if se_id_ret is None:
+                continue
+            counts["sensors"] += 1
+
+        conn.commit()
+
+    counts["station_ok"] = True
+    return counts
+
+
+def process_station_folder_readings(
+    source: str,
+    date_folder: str,
+    station_folder: str,
+    is_remote: bool,
+    conn,
+) -> dict:
+    """Pass 2 of --method separate: insert readings only (station+sensors already exist).
+
+    Also handles sensors whose CSV files exist in the archive but whose se_id was
+    not listed in the station JSON for this date (e.g. sensors added later and
+    back-populated, or sensors removed from the station metadata but whose
+    historical CSVs are still present).  For such orphan CSVs the se_id is
+    derived from the filename prefix; if the sensor row is missing from the DB
+    it is auto-inserted as a minimal stub so the FK constraint is satisfied.
+    """
+    counts = {
+        "sensors": 0,
+        "readings": 0,
+        "skipped_csv": 0,
+        "skipped_no_location": 0,
+        "skipped_bad_location": 0,
+        "new_sensors_by_year": {},
+        "new_stations_by_country": {},
+    }
+
+    if is_remote:
+        base = urljoin(source.rstrip("/") + "/", f"{date_folder}/{station_folder}/")
+        listing_raw = read_url_file(base)
+        if not listing_raw:
+            return counts
+        soup  = BeautifulSoup(listing_raw.decode("utf-8"), "html.parser")
+        raw_files = [a["href"] for a in soup.find_all("a", href=True)]
+        files = []
+        for f in raw_files:
+            if f.startswith("./"):
+                f = f[2:]
+            if f and not f.startswith(("?", "/", "..")):
+                files.append(f)
+    else:
+        folder_path = Path(source) / date_folder / station_folder
+        if not folder_path.exists():
+            return counts
+        files = [f.name for f in folder_path.iterdir() if f.is_file()]
+
+    json_files = [f for f in files if f.endswith(".json")]
+    if not json_files:
+        return counts
+
+    json_filename = json_files[0]
+    raw_json = (
+        read_url_file(urljoin(base, json_filename))
+        if is_remote
+        else read_local_file(folder_path / json_filename)
+    )
+    if not raw_json:
+        return counts
+
+    station_data = parse_station_json(raw_json)
+    if not station_data:
+        return counts
+
+    # st_id is the 24-char hex prefix of the station folder name
+    st_id = station_data.get("id", station_folder[:STATION_ID_LEN])
+
+    # Build a map of se_id -> sensor dict from the JSON listing
+    sensors_by_id: dict[str, dict] = {
+        s.get("id", ""): s
+        for s in station_data.get("sensors", [])
+        if s.get("id")
+    }
+
+    # All CSV files on disk/remote, keyed by the se_id prefix in their filename
+    csv_files_map: dict[str, str] = {
+        f[:STATION_ID_LEN]: f for f in files if f.endswith(".csv")
+    }
+
+    # Union: sensors from JSON + any extra CSV files not in the JSON
+    all_se_ids = set(sensors_by_id) | set(csv_files_map)
+
+    with conn.cursor() as cur:
+        # Check whether the parent station was accepted in the metadata pass.
+        # Stations with no usable location are intentionally excluded from the
+        # stations table; trying to insert sensors or readings for them would
+        # just produce FK violations.  Skip silently.
+        cur.execute("SELECT st_id FROM stations WHERE st_id = %s", (st_id,))
+        row = cur.fetchone()
+        if row is None:
+            return counts
+        st_id_db = row[0]
+
+        for se_id in all_se_ids:
+            csv_filename = csv_files_map.get(se_id)
+            if not csv_filename:
+                # sensor listed in JSON but no CSV on disk — nothing to insert
+                counts["skipped_csv"] += 1
+                continue
+
+            raw_csv = (
+                read_url_file(urljoin(base, csv_filename))
+                if is_remote
+                else read_local_file(folder_path / csv_filename)
+            )
+            if not raw_csv:
+                counts["skipped_csv"] += 1
+                continue
+
+            rows = parse_sensor_csv(raw_csv)
+            if not rows:
+                continue
+
+            # Ensure the sensor row exists before inserting readings.
+            # Sensors listed in the JSON were upserted in the metadata pass, but
+            # CSV files can reference sensor IDs that were added to the station
+            # *after* the date snapshot — those IDs are absent from the sensors
+            # table and would cause an FK violation.  We do a lightweight
+            # INSERT … ON CONFLICT DO NOTHING so the FK is always satisfied.
+            sensor_meta = sensors_by_id.get(se_id, {})
+            sensor_type = sensor_meta.get("sensorType") or None
+            title       = sensor_meta.get("title") or sensor_meta.get("sensorType") or None
+            unit        = sensor_meta.get("unit") or None
+            category    = get_sensor_category(title or "", unit or "") if (title or unit) else None
+            cur.execute(
+                """
+                INSERT INTO sensors (se_id, st_id, title, unit, sensor_type, category)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (se_id) DO NOTHING
+                RETURNING se_id
+                """,
+                (
+                    se_id,
+                    st_id_db,
+                    title,
+                    unit,
+                    sensor_type,
+                    category,
+                ),
+            )
+            inserted = cur.fetchone()
+            if not inserted:
+                # Sensor already existed — verify it's there
+                cur.execute("SELECT se_id FROM sensors WHERE se_id = %s", (se_id,))
+                se_row = cur.fetchone()
+                if se_row is None:
+                    continue
+
+            try:
+                cur.execute("SAVEPOINT rdg_insert")
+                n = insert_readings(cur, se_id, st_id_db, rows)
+                cur.execute("RELEASE SAVEPOINT rdg_insert")
+                counts["readings"] += n
+            except psycopg2.Error as exc:
+                # Roll back only this sensor's work; keep the transaction alive
+                # for the remaining sensors in this station.
+                cur.execute("ROLLBACK TO SAVEPOINT rdg_insert")
+                cur.execute("RELEASE SAVEPOINT rdg_insert")
+                tqdm.write(
+                    f"  [WARN] Skipping readings for {se_id} in {station_folder}: {exc}"
+                )
+                continue
+
+        conn.commit()
+
+    return counts
+
+
+def run_separate_passes(
+    source: str,
+    date_folders: list,
+    is_remote: bool,
+    conn,
+    workers: int,
+    log_path: Path,
+    location_error_path: Path,
+    total: dict,
+    run_start_time: float,
+) -> None:
+    """Two-pass ingest for --method separate.
+
+    Pass 1: walk every date folder, upsert all stations + sensors.
+    Pass 2: walk every date folder again, insert all readings.
+    Both passes respect --workers parallelism.
+    """
+    import threading
+    import time as _time
+
+    day_total = len(date_folders)
+
+    def _merge(counts: dict) -> None:
+        total["stations"]    += 1
+        total["sensors"]     += counts["sensors"]
+        total["readings"]    += counts["readings"]
+        total["skipped_csv"] += counts["skipped_csv"]
+        total["skipped_no_location"]  += counts["skipped_no_location"]
+        total["skipped_bad_location"] += counts["skipped_bad_location"]
+        for yr, cnt in counts["new_sensors_by_year"].items():
+            total["new_sensors_by_year"][yr] = total["new_sensors_by_year"].get(yr, 0) + cnt
+        for ctry, cnt in counts["new_stations_by_country"].items():
+            total["new_stations_by_country"][ctry] = total["new_stations_by_country"].get(ctry, 0) + cnt
+
+    # -----------------------------------------------------------------------
+    # PASS 1 — stations + sensors
+    # -----------------------------------------------------------------------
+    print("\n[SEPARATE] Pass 1/2 — inserting stations and sensors...")
+
+    pass1_pbar = tqdm(date_folders, desc="Pass 1 (meta)", unit="day", position=0, dynamic_ncols=True)
+
+    for day_idx, date_folder in enumerate(pass1_pbar, start=1):
+        pass1_pbar.set_description(f"Pass1  [{date_folder}]")
+
+        if is_remote:
+            station_folders = list_url_subdirs(
+                urljoin(source.rstrip("/") + "/", date_folder + "/")
+            )
+        else:
+            station_folders = list_local_subdirs(Path(source) / date_folder)
+
+        counts_lock  = threading.Lock()
+        log_lock     = threading.Lock()
+        day_done     = 0
+        day_total_st = len(station_folders)
+
+        def _meta_worker(sf: str) -> dict:
+            tconn = get_db_connection(verbose=False)
+            try:
+                return process_station_folder_metadata(
+                    source, date_folder, sf, is_remote,
+                    tconn, location_error_path, log_lock,
+                )
+            finally:
+                tconn.close()
+
+        if workers == 1:
+            st_pbar = tqdm(station_folders, desc=f"  {date_folder}", unit="stn",
+                           position=1, leave=False, dynamic_ncols=True)
+            for sf in st_pbar:
+                c = _meta_worker(sf)
+                if c["station_ok"]:
+                    with counts_lock:
+                        _merge(c)
+                        day_done += 1
+                st_pbar.set_postfix(done=day_done, se=total["sensors"], refresh=True)
+            st_pbar.close()
+        else:
+            from concurrent.futures import ThreadPoolExecutor as _TPE, as_completed as _ac
+            st_pbar = tqdm(total=day_total_st, desc=f"  {date_folder}", unit="stn",
+                           position=1, leave=False, dynamic_ncols=True)
+            with _TPE(max_workers=workers) as ex:
+                futs = {ex.submit(_meta_worker, sf): sf for sf in station_folders}
+                for fut in _ac(futs):
+                    try:
+                        c = fut.result()
+                        if c["station_ok"]:
+                            with counts_lock:
+                                _merge(c)
+                                day_done += 1
+                    except Exception as exc:
+                        tqdm.write(f"  [ERROR] {futs[fut]}: {exc}")
+                    finally:
+                        st_pbar.update(1)
+                        st_pbar.set_postfix(done=day_done, se=total["sensors"], refresh=True)
+            st_pbar.close()
+
+        pass1_pbar.set_postfix(st=f"{total['stations']:,}", se=f"{total['sensors']:,}", refresh=True)
+
+    pass1_pbar.close()
+    print(f"[SEPARATE] Pass 1 complete — {total['stations']:,} stations, {total['sensors']:,} sensors.")
+
+    # -----------------------------------------------------------------------
+    # PASS 2 — readings
+    # -----------------------------------------------------------------------
+    print("\n[SEPARATE] Pass 2/2 — inserting readings...")
+
+    # Reset total readings counter (stations/sensors already counted in pass 1)
+    total["readings"]    = 0
+    total["skipped_csv"] = 0
+
+    pass2_pbar = tqdm(date_folders, desc="Pass 2 (rdgs)", unit="day", position=0, dynamic_ncols=True)
+
+    for day_idx, date_folder in enumerate(pass2_pbar, start=1):
+        pass2_pbar.set_description(f"Pass2  [{date_folder}]")
+
+        if is_remote:
+            station_folders = list_url_subdirs(
+                urljoin(source.rstrip("/") + "/", date_folder + "/")
+            )
+        else:
+            station_folders = list_local_subdirs(Path(source) / date_folder)
+
+        rd_lock  = threading.Lock()
+        day_done = 0
+
+        def _rdg_worker(sf: str) -> dict:
+            tconn = get_db_connection(verbose=False)
+            try:
+                return process_station_folder_readings(
+                    source, date_folder, sf, is_remote, tconn,
+                )
+            finally:
+                tconn.close()
+
+        if workers == 1:
+            st_pbar = tqdm(station_folders, desc=f"  {date_folder}", unit="stn",
+                           position=1, leave=False, dynamic_ncols=True)
+            for sf in st_pbar:
+                c = _rdg_worker(sf)
+                with rd_lock:
+                    total["readings"]    += c["readings"]
+                    total["skipped_csv"] += c["skipped_csv"]
+                    day_done += 1
+                st_pbar.set_postfix(done=day_done, rd=total["readings"], refresh=True)
+            st_pbar.close()
+        else:
+            from concurrent.futures import ThreadPoolExecutor as _TPE, as_completed as _ac
+            st_pbar = tqdm(total=len(station_folders), desc=f"  {date_folder}", unit="stn",
+                           position=1, leave=False, dynamic_ncols=True)
+            with _TPE(max_workers=workers) as ex:
+                futs = {ex.submit(_rdg_worker, sf): sf for sf in station_folders}
+                for fut in _ac(futs):
+                    try:
+                        c = fut.result()
+                        with rd_lock:
+                            total["readings"]    += c["readings"]
+                            total["skipped_csv"] += c["skipped_csv"]
+                            day_done += 1
+                    except Exception as exc:
+                        tqdm.write(f"  [ERROR] {futs[fut]}: {exc}")
+                    finally:
+                        st_pbar.update(1)
+                        st_pbar.set_postfix(done=day_done, rd=total["readings"], refresh=True)
+            st_pbar.close()
+
+        mark_date_completed(log_path, date_folder)
+        pass2_pbar.set_postfix(rd=f"{total['readings']:,}", refresh=True)
+
+    pass2_pbar.close()
+    print(f"[SEPARATE] Pass 2 complete — {total['readings']:,} readings inserted.")
+
 # ---------------------------------------------------------------------------
 # Core processing
 # ---------------------------------------------------------------------------
@@ -1441,10 +2543,6 @@ def process_station_folder(
             counts["skipped_no_location"] += 1
         return counts
 
-    # Inject the archive folder date as the station's init_date (first-seen date)
-    folder_date = datetime.strptime(date_folder, "%Y-%m-%d").date()
-    station_data["_init_date"] = folder_date
-
     # -- DB or buffer: station -----------------------------------------------
     if dry_buffers is not None or sql_buffers is not None:
         active_buf = dry_buffers if dry_buffers is not None else sql_buffers
@@ -1456,7 +2554,6 @@ def process_station_folder(
             lon, lat,
             region,
             country,
-            folder_date,
         ])
     else:
         # Open one cursor for the entire station (station + all sensors + all readings)
@@ -1503,7 +2600,6 @@ def process_station_folder(
             for sensor in sensors:
                 se_id = sensor.get("id", "")
 
-                # -- Readings CSV -- parse early to extract earliest timestamp -
                 csv_filename = csv_files.get(se_id)
                 if not csv_filename:
                     counts["skipped_csv"] += 1
@@ -1520,25 +2616,12 @@ def process_station_folder(
                     else:
                         rows = parse_sensor_csv(raw_csv)
 
-                # Derive sensor init_date from the earliest timestamp in the CSV
-                sensor_init_date = None
-                for row in rows:
-                    try:
-                        t = datetime.fromisoformat(row["createdAt"].replace("Z", "+00:00"))
-                        if sensor_init_date is None or t < sensor_init_date:
-                            sensor_init_date = t
-                    except (KeyError, ValueError):
-                        continue
-
-                se_id_ret, is_new_sensor = upsert_sensor(cur, sensor, st_id_ret, init_date=sensor_init_date)
+                se_id_ret, is_new_sensor = upsert_sensor(cur, sensor, st_id_ret)
                 if se_id_ret is None:
                     continue
-                if is_new_sensor and sensor_init_date is not None:
-                    year = sensor_init_date.year
-                    counts["new_sensors_by_year"][year] = counts["new_sensors_by_year"].get(year, 0) + 1
 
                 if rows:
-                    n = insert_readings(cur, se_id_ret, rows)
+                    n = insert_readings(cur, se_id_ret, st_id_ret, rows)
                     counts["readings"] += n
 
                 counts["sensors"] += 1
@@ -1570,28 +2653,18 @@ def process_station_folder(
             else:
                 rows = parse_sensor_csv(raw_csv)
 
-        sensor_init_date = None
-        for row in rows:
-            try:
-                t = datetime.fromisoformat(row["createdAt"].replace("Z", "+00:00"))
-                if sensor_init_date is None or t < sensor_init_date:
-                    sensor_init_date = t
-            except (KeyError, ValueError):
-                continue
-
         active_buf["sensors"].append([
             se_id,
             station_data.get("id"),
             sensor.get("title"),
             sensor.get("unit"),
-            sensor.get("sensorType"),
-            classify_sensor(sensor.get("title", ""), sensor.get("unit", "")),
-            sensor_init_date,
+            sensor.get("sensorType") or None,
+            get_sensor_category(sensor.get("title", ""), sensor.get("unit", "")),
         ])
 
         if rows:
             for row in rows:
-                active_buf["readings"].append([se_id, row.get("createdAt"), row.get("value")])
+                active_buf["readings"].append([se_id, station_data.get("id"), row.get("createdAt"), row.get("value")])
             counts["readings"] += len(rows)
 
         counts["sensors"] += 1
@@ -1684,17 +2757,33 @@ def main() -> None:
     OSEM_DEFAULT_URL = "https://archive.opensensemap.org/"
     source   = args.source or OSEM_DEFAULT_URL
 
-    dry_run  = args.dry_run
-    sql_mode = (args.output_type == "sql")
-    start    = parse_date(args.start)
-    end      = parse_date(args.end)
-    workers  = args.workers
+    dry_run   = args.dry_run
+    sql_mode  = (args.output_type == "sql")
+    way       = args.way        # None | "hybrid"
+    method    = args.method     # None | "separate"
+    hybrid    = (way == "hybrid")
+    separate  = (method == "separate")
+    start     = parse_date(args.start)
+    end       = parse_date(args.end)
+    workers   = args.workers
     num_parts = args.part if sql_mode else None
+
+    if hybrid and not is_url(source):
+        print("[ERROR] --way hybrid requires a remote --source URL "
+              f"(got: '{source}'). Omit --source to use the default archive URL.")
+        sys.exit(1)
+    if hybrid and (dry_run or sql_mode):
+        print("[ERROR] --way hybrid cannot be combined with --dry-run or --type sql.")
+        sys.exit(1)
+    if separate and (dry_run or sql_mode):
+        print("[ERROR] --method separate cannot be combined with --dry-run or --type sql.")
+        sys.exit(1)
 
     load_env(args.env)
     # Resolve admin boundary path: CLI flag > constant default
     admin_path = Path(args.admin_boundary) if args.admin_boundary else ADMIN_BOUNDARY_PATH
     load_admin_boundaries(admin_path)  # load once into _ADMIN_FEATURES
+    load_sensor_types_csv()            # load sensor_types.csv for category lookup
 
     is_remote   = is_url(source)
     conn        = None
@@ -1744,6 +2833,18 @@ def main() -> None:
     resume_msg = f"resuming after {last_done}" if last_done else "fresh start"
     print(f"[INFO] {len(date_folders)} days to process  ({start or 'beginning'} -> {end or 'today'})  |  {resume_msg}")
 
+    # ── ANSI helpers (same palette as run_hybrid) ───────────────────────────
+    _R = "\033[0m"
+    _BOLD = "\033[1m"; _CYAN = "\033[96m"; _GREEN = "\033[92m"
+    _YELLOW = "\033[93m"; _MAGENTA = "\033[95m"; _DIM = "\033[2m"
+    def _c(t, *codes): return "".join(codes) + str(t) + _R
+
+    if hybrid:
+        print(_c(f"  [HYBRID] Staging folder : {DOWNLOAD_DIR}/", _CYAN))
+        print(_c(f"  [HYBRID] Lookahead      : {HYBRID_LOOKAHEAD} day(s)  │  Workers: {workers}", _CYAN))
+    if separate:
+        print(_c("  [SEPARATE] Strategy: Pass 1 → stations+sensors  │  Pass 2 → readings", _MAGENTA))
+
     # -- Totals --------------------------------------------------------------
     total = {
         "stations": 0,
@@ -1760,6 +2861,70 @@ def main() -> None:
     import time as _time
 
     run_start_time = _time.monotonic()
+
+    # -- Hybrid mode: hand off to dedicated runner ---------------------------
+    if hybrid:
+        run_hybrid(
+            source=source,
+            date_folders=date_folders,
+            conn=conn,
+            dry_buffers=dry_buffers,
+            sql_buffers=sql_buffers,
+            workers=workers,
+            log_path=log_path,
+            location_error_path=location_error_path,
+            total=total,
+            run_start_time=run_start_time,
+            separate=separate,
+        )
+        # Summary (hybrid path)
+        sep = _c("  " + "═" * 58, _BOLD, _CYAN)
+        mode_tag = "hybrid + separate" if separate else "hybrid"
+        print("")
+        print(sep)
+        print(_c(f"  ✔  Load complete  [{mode_tag}]", _BOLD, _GREEN))
+        print(sep)
+        print(_c(f"  Stations added     : {total['stations']:>10,}", _GREEN))
+        print(_c(f"  Sensors added      : {total['sensors']:>10,}", _CYAN))
+        print(_c(f"  Readings added     : {total['readings']:>10,}", _MAGENTA))
+        print(_c(f"  CSVs not found     : {total['skipped_csv']:>10,}", _YELLOW if total['skipped_csv'] else _DIM))
+        print(_c(f"  No location        : {total['skipped_no_location']:>10,}", _YELLOW if total['skipped_no_location'] else _DIM))
+        print(_c(f"  Bad location       : {total['skipped_bad_location']:>10,}", _YELLOW if total['skipped_bad_location'] else _DIM))
+        print(sep)
+        if conn:
+            conn.close()
+        print_sensor_year_chart(total["new_sensors_by_year"])
+        print_station_country_chart(total["new_stations_by_country"])
+        return
+
+    # -- Separate method (non-hybrid): two-pass ingest -----------------------
+    if separate:
+        run_separate_passes(
+            source=source,
+            date_folders=date_folders,
+            is_remote=is_remote,
+            conn=conn,
+            workers=workers,
+            log_path=log_path,
+            location_error_path=location_error_path,
+            total=total,
+            run_start_time=run_start_time,
+        )
+        print("\n" + "=" * 60)
+        print("  Load complete  [separate method]")
+        print("=" * 60)
+        print(f"  Stations added     : {total['stations']:>10,}")
+        print(f"  Sensors added      : {total['sensors']:>10,}")
+        print(f"  Readings added     : {total['readings']:>10,}")
+        print(f"  CSVs not found     : {total['skipped_csv']:>10,}")
+        print(f"  No location        : {total['skipped_no_location']:>10,}")
+        print(f"  Bad location       : {total['skipped_bad_location']:>10,}")
+        print("=" * 60)
+        if conn:
+            conn.close()
+        print_sensor_year_chart(total["new_sensors_by_year"])
+        print_station_country_chart(total["new_stations_by_country"])
+        return
 
     # -- live status line printed after each station -------------------------
     def _print_status(date_folder: str, day_idx: int, day_total: int,

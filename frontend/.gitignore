@@ -1,26 +1,31 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ignore VS Code json files
+.vscode
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+node_modules
 
-AI_RULES.md
+/build
+/public/build
+.env
+.cache
+
+/postgres-data
+/pgdata
+
+/db/imports/*.csv
+measurements.csv
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+.react-router/
+
+/coverage
+
+/minio-data
+/rustfs-data
+
+.github
+.agents
+.vscode

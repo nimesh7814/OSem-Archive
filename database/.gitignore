@@ -7,3 +7,5 @@ sql
 data.resume
 data.log
 servers.json
+.docker
+__pycache__

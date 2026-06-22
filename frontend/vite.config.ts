@@ -1,56 +1,41 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
+import { reactRouter } from '@react-router/dev/vite'
+import tailwindcss from '@tailwindcss/vite'
+import preserveDirectives from 'rollup-preserve-directives'
+import { defineConfig, loadEnv } from 'vite'
 
-export default defineConfig(() => ({
-  server: {
-    host: "127.0.0.1",
-    port: 5173,
-    strictPort: false,
-    proxy: {
-      "/summary": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/sensor_categories": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/countries": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/regions": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/country_region_data": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/get_stations": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/bbox_data": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/station_data": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-      "/station_readings": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-      },
-    },
-  },
+export default defineConfig(({ mode }) => {
+	// Make .env variables available in tests
+	// Might be required only because reactRouter() is disabled in test mode
+	if (mode === 'test') {
+		// Loads .env, .env.test, etc.
+		const env = loadEnv(mode, process.cwd(), '')
+		Object.assign(process.env, env)
+	}
 
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-}));
+	return {
+		server: {
+			port: 3000,
+		},
+		plugins: [
+			tailwindcss(),
+			// https://github.com/remix-run/remix/issues/9871 prevents this from
+			// being enabled in test mode...
+			mode === 'test' ? null : reactRouter(),
+			preserveDirectives(), // makes sure directives such as "use client" are present in the output bundle
+		],
+		test: {
+			globals: true,
+			environment: 'jsdom',
+			setupFiles: ['./vitest.setup.ts'],
+			include: ['**/*.{test,spec}.{ts,tsx}'],
+			coverage: {
+				reporter: ['text', 'json-summary', 'json'],
+			},
+			testTimeout: 10_000,
+			hookTimeout: process.env.CI ? 30_000 : 10_000,
+		},
+		resolve: {
+			tsconfigPaths: true,
+		},
+	}
+})

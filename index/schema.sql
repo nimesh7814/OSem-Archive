@@ -106,51 +106,29 @@ CREATE TABLE IF NOT EXISTS countries (
 );
 
 CREATE TABLE IF NOT EXISTS summary (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    stations INT,
-    sensor_types INT,
-    readings INT,
-    countries INT,
-    regions INT,
-    last_updated TIMESTAMPTZ DEFAULT now()
+    id BIGINT PRIMARY KEY DEFAULT 1,
+    stations BIGINT,
+    sensors BIGINT,
+    readings BIGINT,
+    countries BIGINT,
+    regions BIGINT,
+    last_updated TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT single_row CHECK (id = 1)
 );
-
-
 
 -- Indexes
 
-CREATE INDEX IF NOT EXISTS idx_station_dates_date
-    ON station_dates(date);
-
-CREATE INDEX IF NOT EXISTS idx_sensor_files_date
-    ON sensor_files(date);
-
-CREATE INDEX IF NOT EXISTS idx_readings_date
-    ON readings(date);
-
-CREATE INDEX IF NOT EXISTS idx_readings_se_id_date
-    ON readings (se_id, date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_readings_sensor_date
-    ON readings(se_id, date);
-
-CREATE INDEX IF NOT EXISTS idx_readings_station_date
-    ON readings(st_id, date);
-
-CREATE INDEX IF NOT EXISTS idx_stations_country
-    ON stations(country);
-
-CREATE INDEX IF NOT EXISTS idx_stations_region
-    ON stations(country, region);
-
-CREATE INDEX IF NOT EXISTS idx_stations_location
-    ON stations USING GIST (location);
-
-CREATE INDEX IF NOT EXISTS idx_country_location
-    ON countries USING GIST (geometry);
-
-CREATE INDEX IF NOT EXISTS idx_sensors_station
-    ON sensors(st_id);
-
-CREATE INDEX IF NOT EXISTS idx_sensors_category
-    ON sensors(category);
+CREATE INDEX IF NOT EXISTS idx_station_dates_date ON station_dates(date);
+CREATE INDEX IF NOT EXISTS idx_sensor_files_date ON sensor_files(date);
+CREATE INDEX IF NOT EXISTS idx_readings_date ON readings(date);
+CREATE INDEX IF NOT EXISTS idx_readings_se_id_date ON readings (se_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_readings_sensor_date ON readings(se_id, date);
+CREATE INDEX IF NOT EXISTS idx_readings_station_date ON readings(st_id, date);
+CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);
+CREATE INDEX IF NOT EXISTS idx_stations_region ON stations(country, region);
+CREATE INDEX IF NOT EXISTS idx_stations_location ON stations USING GIST (location);
+CREATE INDEX IF NOT EXISTS idx_country_location ON countries USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_sensors_station ON sensors(st_id);
+CREATE INDEX IF NOT EXISTS idx_sensors_category ON sensors(category);
+CREATE INDEX IF NOT EXISTS idx_sensor_files_date_covering ON sensor_files (date, se_id) INCLUDE (size_mb);
+CREATE INDEX IF NOT EXISTS idx_sensor_files_st_id_date ON sensor_files (st_id, date) INCLUDE (se_id, size_mb);

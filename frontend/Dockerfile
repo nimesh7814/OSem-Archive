@@ -1,25 +1,55 @@
-FROM node:24-alpine AS build
+ARG NODE_VERSION=current
 
-WORKDIR /app
+# base node image
+FROM node:${NODE_VERSION}-slim AS base
 
-RUN corepack enable
-RUN corepack prepare pnpm@10.16.1 --activate
+# set for base and all layer that inherit from it
+ENV NODE_ENV=production
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Update system and install some stuff
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init
 
-COPY . .
+# Install all node_modules, including dev dependencies
+FROM base AS deps
 
-ARG VITE_API_BASE_URL=
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+WORKDIR /myapp
 
-RUN pnpm build
+ADD package.json package-lock.json ./
+RUN npm install --include=dev
 
-FROM nginx:1.27-alpine
+# Setup production node_modules
+FROM base AS production-deps
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /myapp
 
-EXPOSE 80
+COPY --from=deps /myapp/node_modules /myapp/node_modules
+ADD package.json package-lock.json ./
+RUN npm prune --omit=dev
 
-CMD ["nginx", "-g", "daemon off;"]
+# Build the app
+FROM base AS build
+
+WORKDIR /myapp
+
+COPY --from=deps /myapp/node_modules /myapp/node_modules
+ADD . .
+
+RUN npm run build
+
+# Finally, build the production image with minimal footprint
+FROM base
+
+WORKDIR /myapp
+
+COPY --from=production-deps /myapp/node_modules /myapp/node_modules
+COPY --from=build /myapp/build /myapp/build
+
+# Not sure if we really need this or if we should move all our /public folder to /app/assets
+COPY --from=build /myapp/public /myapp/public
+
+COPY ./entrypoint.sh /myapp/entrypoint.sh
+
+ADD . .
+RUN chmod +x ./entrypoint.sh
+
+ENTRYPOINT ["./entrypoint.sh"]
