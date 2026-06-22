@@ -1,0 +1,16 @@
+{
+	"back_to_dashboard": "Back to Dashboard",
+	"device_overview": "Device overview",
+	"show_details": "Device details and sensors.",
+	"device": "Device",
+	"exposure": "Exposure",
+	"sensors": "Sensors",
+	"name_label": "Name",
+	"model_label": "Model",
+	"tags_label": "Tags",
+	"api_key_label": "API Key",
+	"device_settings": "Device settings",
+	"manage_device_data": "Manage your device data.",
+	"device_updated": "Device successfully updated",
+	"view": "View"
+}
