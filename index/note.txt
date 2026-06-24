@@ -1,4 +1,0 @@
-python indexer.py --start 2014-06-03 --end 2023-12-31
-python indexer.py --start 2024-01-01 --end 2024-12-31 --log2
-python indexer.py --start 2025-01-01 --end 2025-12-31 --log3
-python indexer.py --start 2026-01-01 --end 2026-05-17 --log4
