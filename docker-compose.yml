@@ -75,10 +75,14 @@ services:
     environment:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
+      EXPORT_DIR: /app/jobs
     ports:
       - "8001:8000"
+    volumes:
+      - export_jobs:/app/jobs
     restart: unless-stopped
 
 volumes:
   timescale_data:
   pgadmin_data:
+  export_jobs:
