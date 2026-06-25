@@ -374,15 +374,24 @@ python -m jobs.export_worker
 ## Running with Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This starts:
 - `timescaledb` — PostgreSQL + TimescaleDB + PostGIS
-- `api` — FastAPI app
-- `ingest-worker` — scheduled archive sync
-- `export-worker` — background download job processor
-- `object-storage` — MinIO (S3-compatible) for export files
+- `pgadmin` — local database administration UI at `http://localhost:5050`
+
+Run the ingest worker from the root directory:
+
+```bash
+docker compose up -d ingest --build
+```
+
+By default the worker reads the archive index and ingests from the first
+available archive date through the latest available archive date. To load a
+specific range, set `INGEST_DATE_FROM` and `INGEST_DATE_TO` in the shell or
+`backend/.env`. Supported values are `YYYY-MM-DD`, `first`, `latest`/`present`,
+`today`, and `yesterday`.
 
 ---
 

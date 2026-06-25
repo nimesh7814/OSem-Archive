@@ -1,0 +1,11 @@
+fastapi==0.136.3
+uvicorn==0.47.0
+asyncpg==0.30.0
+psycopg2-binary==2.9.12
+sqlalchemy==2.0.36
+python-dotenv==1.2.2
+requests==2.32.3
+tqdm==4.67.1
+geopandas==1.0.1
+shapely==2.0.6
+httpx==0.28.1

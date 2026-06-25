@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "OSeM_Archive",
+      "Group": "Servers",
+      "Host": "timescaledb",
+      "Port": 5432,
+      "MaintenanceDB": "osem_archive",
+      "Username": "osem",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass",
+      "Comment": "Local development database for the openSenseMap Archive project"
+    }
+  }
+}

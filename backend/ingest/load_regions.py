@@ -15,7 +15,7 @@ load_dotenv(dotenv_path=env_path)
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_USER = os.getenv("POSTGRES_USER")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-DB_HOST = "localhost"
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 
 
@@ -63,7 +63,8 @@ with engine.begin() as conn:
     conn.execute(
         text(
             "INSERT INTO regions (country, region, geometry) "
-            "VALUES (:country, :region, ST_GeogFromText(:geom_wkt))"
+            "VALUES (:country, :region, ST_GeogFromText(:geom_wkt)) "
+            "ON CONFLICT (country, region) DO UPDATE SET geometry = EXCLUDED.geometry"
         ),
         rows,
     )
