@@ -10,7 +10,9 @@ from datetime import date, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
+from requests.adapters import HTTPAdapter
 from tqdm import tqdm
+from urllib3.util import Retry
 
 
 # Setup database connection
@@ -30,14 +32,26 @@ conn = psycopg2.connect(
     host=DB_HOST,
     port=DB_PORT,
 )
+
 conn.autocommit = False
 print(f"Connected to database: {DB_NAME} at {DB_HOST}:{DB_PORT} as user {DB_USER}\n")
 
 URL = "https://archive.opensensemap.org"
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-CHECKPOINT_PATH = Path(__file__).resolve().parent / ".scrape_checkpoint.json"
+CHECKPOINT_PATH = Path(__file__).resolve().parent / ".ingest_checkpoint.json"
 
+# Handle HTTP requests with retries
+session = requests.Session()
+retry = Retry(
+    total=5,
+    backoff_factor=2,
+    status_forcelist=(500, 502, 503, 504),
+)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount("https://", adapter)
+session.mount("http://", adapter)
 
+# Load the last completed day
 def load_checkpoint() -> date | None:
     if not CHECKPOINT_PATH.exists():
         return None
@@ -47,14 +61,14 @@ def load_checkpoint() -> date | None:
     except (json.JSONDecodeError, KeyError, ValueError):
         return None
 
-
+# Save the Last Completed Day
 def save_checkpoint(day: date) -> None:
     CHECKPOINT_PATH.write_text(
         json.dumps({"last_completed_day": day.isoformat()}),
         encoding="utf-8",
     )
 
-
+# Get the available date range
 def get_available_date_range() -> tuple[date, date]:
     dirs = list_dirs(f"{URL}/")
     valid_dates = sorted(
@@ -66,7 +80,7 @@ def get_available_date_range() -> tuple[date, date]:
 
 
 def list_dirs(index_url: str) -> list[str]:
-    resp = requests.get(index_url, timeout=30)
+    resp = session.get(index_url, timeout=30)
     resp.raise_for_status()
     hrefs = re.findall(r'href="([^"]+/)"', resp.text)
     names = [h.strip("/").split("/")[-1] for h in hrefs]
@@ -74,7 +88,7 @@ def list_dirs(index_url: str) -> list[str]:
 
 
 def list_files(index_url: str) -> dict:
-    resp = requests.get(index_url, timeout=30)
+    resp = session.get(index_url, timeout=30)
     resp.raise_for_status()
     hrefs = re.findall(r'href="([^"]+\.(?:csv|json))"', resp.text)
 
@@ -248,7 +262,7 @@ def scrape_day(day: date) -> None:
                 conn.commit()
                 continue
 
-            box_json = requests.get(files["json"], timeout=30).json()
+            box_json = session.get(files["json"], timeout=30).json()
 
             upsert_box(box_id, box_json)
             conn.commit()
@@ -259,7 +273,7 @@ def scrape_day(day: date) -> None:
             total_rows = 0
             for csv_url in files["csv"]:
                 sensor_id = csv_url.split("/")[-1].split("-", 1)[0]
-                csv_text = requests.get(csv_url, timeout=30).text
+                csv_text = session.get(csv_url, timeout=30).text
                 total_rows += load_sensor_csv(sensor_id, day, csv_text)
 
             mark_ingest_log(box_id, day, status="done", row_count=total_rows)
