@@ -19,7 +19,11 @@ services:
       - ./backend/db/migrations/00002_regions.sql:/docker-entrypoint-initdb.d/02_regions.sql:ro
       - ./backend/data/admin_boundary.geojson:/docker-entrypoint-initdb.d/admin_boundary.geojson:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
