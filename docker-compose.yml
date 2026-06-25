@@ -62,6 +62,23 @@ services:
     command: ["python", "ingest/load_archive.py"]
     restart: "no"
 
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+
 volumes:
   timescale_data:
   pgadmin_data:

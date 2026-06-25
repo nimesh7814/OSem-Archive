@@ -107,19 +107,23 @@ def upsert_box(box_id: str, box_json: dict) -> None:
     if exposure not in ("indoor", "outdoor", "mobile"):
         exposure = None
 
+    coordinates = ((box_json.get("loc") or {}).get("geometry") or {}).get("coordinates")
+    location_wkt = f"POINT({coordinates[0]} {coordinates[1]})" if coordinates and len(coordinates) >= 2 else None
+
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO boxes (id, name, box_type, exposure, model, updated_at)
-            VALUES (%s, %s, %s, %s, %s, now())
+            INSERT INTO boxes (id, name, box_type, exposure, model, location, updated_at)
+            VALUES (%s, %s, %s, %s, %s, ST_GeogFromText(%s), now())
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 box_type = EXCLUDED.box_type,
                 exposure = EXCLUDED.exposure,
                 model = EXCLUDED.model,
+                location = COALESCE(EXCLUDED.location, boxes.location),
                 updated_at = now()
             """,
-            (box_id, box_json.get("name", box_id), None, exposure, box_json.get("model")),
+            (box_id, box_json.get("name", box_id), None, exposure, box_json.get("model"), location_wkt),
         )
 
 

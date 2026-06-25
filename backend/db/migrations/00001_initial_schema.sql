@@ -12,7 +12,7 @@ CREATE TABLE regions (
     id SERIAL PRIMARY KEY,
     country TEXT NOT NULL,
     region TEXT NOT NULL,
-    geometry GEOGRAPHY(MULTIPOLYGON, 4326),
+    geometry GEOMETRY(MULTIPOLYGON, 4326),
     CONSTRAINT uq_country_region UNIQUE (country, region)
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE boxes (
     box_type TEXT,
     exposure TEXT,
     model TEXT,
-    location GEOGRAPHY(POINT, 4326),
+    location GEOMETRY(POINT, 4326),
     region_id INT REFERENCES regions(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
