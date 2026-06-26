@@ -10,6 +10,8 @@ async def boxes_by_aoi(
     filters: BoxQueryParams,
 ):
     geom = await load_aoi_geometry(file, geometry)
+    aggregate = filters.aggregate if filters.download else "monthly"
+
     rows = await query_boxes_aggregated(
         geometry_wkt=geom.wkt,
         country=None,
@@ -19,6 +21,6 @@ async def boxes_by_aoi(
         sensor_type=filters.sensor_type,
         from_date=filters.from_date,
         to_date=filters.to_date,
-        aggregate=filters.aggregate,
+        aggregate=aggregate,
     )
     return respond(rows, filters.download, filters.file_type, "boxes_aoi")

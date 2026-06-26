@@ -11,6 +11,8 @@ async def list_boxes_by_region(
     if not country and not region:
         raise HTTPException(400, "Provide at least one of 'country' or 'region'")
 
+    aggregate = filters.aggregate if filters.download else "monthly"
+
     rows = await query_boxes_aggregated(
         geometry_wkt=None,
         country=country,
@@ -20,6 +22,6 @@ async def list_boxes_by_region(
         sensor_type=filters.sensor_type,
         from_date=filters.from_date,
         to_date=filters.to_date,
-        aggregate=filters.aggregate,
+        aggregate=aggregate,
     )
     return respond(rows, filters.download, filters.file_type, "boxes_region")

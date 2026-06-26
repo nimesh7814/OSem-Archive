@@ -364,8 +364,10 @@ def respond(rows: list[dict], download: bool, file_type: str, base_filename: str
 
 
 async def list_boxes(box_id: str | None) -> list[dict]:
+    aggregate = "monthly" if box_id else "raw"
+
     return await query_boxes_aggregated(
         geometry_wkt=None,
         box_id=box_id,
-        aggregate="raw",
+        aggregate=aggregate,
     )
