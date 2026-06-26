@@ -126,17 +126,33 @@ services:
       - export_jobs:/app/jobs
     restart: unless-stopped
 
-  wrk_front:
+  # Newly Designed Frontend
+  designed_frontend:
     build:
-      context: ./wrk_front
+      context: ./front_designed
       args:
         VITE_API_BASE_URL: /api
-    container_name: wrk_front
+    container_name: designed_frontend
     depends_on:
       api:
         condition: service_started
     ports:
       - "3000:80"
+    restart: unless-stopped
+
+  staging_frontend:
+    build:
+      context: ./front_staging
+      dockerfile: Dockerfile
+    container_name: staging_frontend
+    env_file:
+      - ./front_staging/.env
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      OSEM_API_URL: "https://api.opensensemap.org/"
+    ports:
+      - "3010:3000"
     restart: unless-stopped
 
 volumes:
