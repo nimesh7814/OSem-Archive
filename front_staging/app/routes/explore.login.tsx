@@ -26,8 +26,8 @@ import {
 } from '~/components/ui/card'
 import { Checkbox } from '~/components/ui/checkbox'
 import { toast } from '~/components/ui/use-toast'
-import { verifyLogin } from '~/db/models/user.server'
-import { createUserSession, getUserId } from '~/services/session-service.server'
+import { signInPublicUser } from '~/lib/opensensemap-api.server'
+import { getUserId } from '~/services/session-service.server'
 import { safeRedirect } from '~/utils'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -51,7 +51,6 @@ export async function action({ request }: Route.ActionArgs) {
 	const identifier = formData.get('identifier')
 	const password = formData.get('password')
 	const redirectTo = safeRedirect(formData.get('redirectTo'), '/explore')
-	const remember = formData.get('remember')
 
 	if (typeof identifier !== 'string' || identifier.trim().length === 0) {
 		return data(
@@ -89,12 +88,16 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	const user = await verifyLogin(identifier, password)
-	if (!user) {
+	const result = await signInPublicUser({
+		email: identifier,
+		password,
+	})
+
+	if (!result.ok) {
 		return data(
 			{
 				errors: {
-					identifier: 'Invalid email, username or password',
+					identifier: result.message || 'Invalid email, username or password',
 					password: null,
 				},
 			},
@@ -102,12 +105,7 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	return createUserSession({
-		request,
-		userId: user.id,
-		remember: remember === 'on',
-		redirectTo,
-	})
+	return redirect(redirectTo)
 }
 
 export const meta: MetaFunction = () => {

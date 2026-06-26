@@ -10,7 +10,6 @@ import {
 	useNavigation,
 	useSearchParams,
 } from 'react-router'
-import invariant from 'tiny-invariant'
 import { type Route } from './+types/explore.register'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,11 +23,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from '~/components/ui/card'
-import { getCurrentEffectiveTos } from '~/db/models/tos.server'
-import { getUserByEmail, getUserByUsername } from '~/db/models/user.server'
+import { registerPublicUser } from '~/lib/opensensemap-api.server'
 import { getLocale } from '~/middleware/i18next'
-import { createUserSession, getUserId } from '~/services/session-service.server'
-import { registerUser } from '~/services/user-service.server'
+import { getUserId } from '~/services/session-service.server'
 import { safeRedirect, validateEmail, validateName } from '~/utils'
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -41,7 +38,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const { username, email, password, tosAccepted } =
 		Object.fromEntries(formData)
-	const redirectTo = safeRedirect(formData.get('redirectTo'), '/explore')
+	const redirectTo = safeRedirect(formData.get('redirectTo'), '/explore/login')
 
 	if (!username || typeof username !== 'string') {
 		return data(
@@ -72,20 +69,6 @@ export async function action({ context, request }: Route.ActionArgs) {
 			{ status: 400 },
 		)
 	}
-
-	const existingUsername = await getUserByUsername(username)
-	if (existingUsername)
-		return data(
-			{
-				errors: {
-					username: 'username_already_taken',
-					email: null,
-					password: null,
-					tosAccepted: null,
-				},
-			},
-			{ status: 400 },
-		)
 
 	if (!validateEmail(email)) {
 		return data(
@@ -129,22 +112,6 @@ export async function action({ context, request }: Route.ActionArgs) {
 		)
 	}
 
-	//* check if user exists by email
-	const existingUserByEmail = await getUserByEmail(email)
-	if (existingUserByEmail) {
-		return data(
-			{
-				errors: {
-					username: null,
-					email: 'email_already_taken',
-					password: null,
-					tosAccepted: null,
-				},
-			},
-			{ status: 400 },
-		)
-	}
-
 	if (tosAccepted !== 'on') {
 		return data(
 			{
@@ -159,60 +126,42 @@ export async function action({ context, request }: Route.ActionArgs) {
 		)
 	}
 
-	const tos = await getCurrentEffectiveTos()
-	if (!tos) {
-		return data(
-			{
-				errors: {
-					username: null,
-					email: null,
-					password: null,
-					tosAccepted: 'tos_unavailable',
-				},
-			},
-			{ status: 500 },
-		)
-	}
-
-	invariant(typeof username === 'string', 'username must be a string')
-
 	//* get current locale
 	const locale = getLocale(context)
 	const language = locale === 'de' ? 'de_DE' : 'en_US'
 
-	const result = await registerUser(
-		username,
+	const result = await registerPublicUser({
+		name: username,
 		email,
 		password,
 		language,
-		tosAccepted === 'on',
-	)
+	})
 
 	if (!result.ok) {
+		const message = result.message.toLowerCase()
+		const field = message.includes('email')
+			? 'email'
+			: message.includes('user') || message.includes('name')
+				? 'username'
+				: message.includes('password')
+					? 'password'
+					: 'form'
+
 		return data(
 			{
 				errors: {
-					username: result.field === 'username' ? result.code : null,
-					email: result.field === 'email' ? result.code : null,
-					password: result.field === 'password' ? result.code : null,
-					tosAccepted: result.field === 'tos' ? result.code : null,
-					form: result.field === 'form' ? result.code : null,
+					username: field === 'username' ? result.message : null,
+					email: field === 'email' ? result.message : null,
+					password: field === 'password' ? result.message : null,
+					tosAccepted: null,
+					form: field === 'form' ? result.message : null,
 				},
 			},
 			{ status: 400 },
 		)
 	}
 
-	if (!result.emailSent) {
-		return data({ emailDeliveryFailed: true }, { status: 200 })
-	}
-
-	return createUserSession({
-		request,
-		userId: result.user.id,
-		remember: false,
-		redirectTo,
-	})
+	return redirect(redirectTo)
 }
 
 export const meta: MetaFunction = () => {

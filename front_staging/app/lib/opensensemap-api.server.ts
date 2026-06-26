@@ -24,6 +24,12 @@ type PublicApiTags = {
 	data?: string[]
 }
 
+type PublicApiError = {
+	code?: string
+	message?: string
+	error?: string
+}
+
 type PublicApiSensor = {
 	_id?: string
 	id?: string
@@ -97,6 +103,54 @@ async function fetchJson<T>(path: string): Promise<T> {
 	}
 
 	return response.json() as Promise<T>
+}
+
+async function postPublicApi<T>(
+	path: string,
+	body: Record<string, unknown>,
+): Promise<
+	| {
+			ok: true
+			data: T
+	  }
+	| {
+			ok: false
+			status: number
+			message: string
+	  }
+> {
+	const response = await fetch(`${getApiBaseUrl()}${path}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+	})
+
+	let payload: PublicApiError | T | undefined
+	try {
+		payload = (await response.json()) as PublicApiError | T
+	} catch {
+		payload = undefined
+	}
+
+	if (!response.ok) {
+		const errorPayload = payload as PublicApiError | undefined
+		return {
+			ok: false,
+			status: response.status,
+			message:
+				errorPayload?.message ??
+				errorPayload?.error ??
+				`openSenseMap API request failed with status ${response.status}`,
+		}
+	}
+
+	return {
+		ok: true,
+		data: payload as T,
+	}
 }
 
 function getStatus(lastMeasurementAt: string | undefined) {
@@ -240,4 +294,20 @@ export async function getPublicDevice(deviceId: string) {
 	)
 
 	return normalizeDevice(device)
+}
+
+export function registerPublicUser(input: {
+	name: string
+	email: string
+	password: string
+	language: 'de_DE' | 'en_US'
+}) {
+	return postPublicApi('/users/register', input)
+}
+
+export function signInPublicUser(input: {
+	email: string
+	password: string
+}) {
+	return postPublicApi('/users/sign-in', input)
 }
