@@ -4,11 +4,11 @@ from fastapi import Depends, FastAPI, File, Form, Query, UploadFile
 from fastapi.responses import PlainTextResponse
 
 if __package__:
-    from .functions import boxes, boxes_aoi, boxes_region, exports, phenomena, regions, root
+    from .functions import boxes, boxes_aoi, boxes_region, exports, exposures, phenomena, regions, root, stats
     from .functions.boxes import BoxQueryParams, box_query_params
     from .functions.db_con import close_pool
 else:
-    from functions import boxes, boxes_aoi, boxes_region, exports, phenomena, regions, root
+    from functions import boxes, boxes_aoi, boxes_region, exports, exposures, phenomena, regions, root, stats
     from functions.boxes import BoxQueryParams, box_query_params
     from functions.db_con import close_pool
 
@@ -25,6 +25,11 @@ app = FastAPI(title="openSenseMap Archive API", lifespan=lifespan)
 @app.get("/", response_class=PlainTextResponse)
 async def root_endpoint():
     return root.list_routes(app)
+
+
+@app.get("/stats")
+async def get_stats():
+    return await stats.get_stats()
 
 
 @app.get("/regions")
@@ -62,8 +67,15 @@ async def list_phenomena():
     return await phenomena.list_phenomena()
 
 
+@app.get("/exposures")
+async def list_exposures():
+    return await exposures.list_exposures()
+
+
 @app.post("/exports", status_code=202)
 async def create_export(
+    file: UploadFile | None = File(None),
+    geometry: str | None = Form(None),
     file_type: str = Query("geojson", description="'geojson' or 'csv'"),
     country: str | None = Query(None),
     region: str | None = Query(None),
@@ -74,11 +86,10 @@ async def create_export(
     to_date: str | None = Query(None),
     aggregate: str = Query("hourly"),
     box_id: str | None = Query(None, description="Comma-separated box IDs"),
-    geometry_wkt: str | None = Query(None, description="WKT geometry for spatial filter"),
 ):
     return await exports.create_export(
-        file_type, country, region, exposure, phenomenon, sensor_type,
-        from_date, to_date, aggregate, box_id, geometry_wkt,
+        file, geometry, file_type, country, region, exposure, phenomenon, sensor_type,
+        from_date, to_date, aggregate, box_id,
     )
 
 

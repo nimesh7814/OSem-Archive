@@ -8,12 +8,13 @@ from datetime import datetime
 from enum import Enum
 
 from celery import Celery
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from psycopg2.extras import Json
 
-from .boxes import VALID_AGGREGATES, query_boxes_aggregated, to_csv, to_geojson
+from .boxes import VALID_AGGREGATES, query_boxes_for_aggregate, to_csv, to_geojson
 from .db_con import get_db_connection
+from .upload_aoi import load_aoi_geometry
 
 EXPORT_DIR = os.getenv("EXPORT_DIR", "/tmp/osem_exports")
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -192,7 +193,7 @@ def delete_job(job_id: str) -> bool:
 
 
 def _query_rows(params: dict) -> list[dict]:
-    return asyncio.run(query_boxes_aggregated(**params))
+    return asyncio.run(query_boxes_for_aggregate(**params))
 
 
 def write_export_file(params: dict, file_type: str, file_path: str) -> int:
@@ -230,6 +231,8 @@ def run_export_task(job_id: str) -> None:
 
 
 async def create_export(
+    file: UploadFile | None,
+    geometry: str | None,
     file_type: str,
     country: str | None,
     region: str | None,
@@ -240,7 +243,6 @@ async def create_export(
     to_date: str | None,
     aggregate: str,
     box_id: str | None,
-    geometry_wkt: str | None,
 ) -> dict:
     if file_type not in ("geojson", "csv"):
         raise HTTPException(400, "file_type must be 'geojson' or 'csv'")
@@ -251,6 +253,11 @@ async def create_export(
         )
     if to_date and not from_date:
         raise HTTPException(400, "from_date is required when to_date is provided")
+
+    geometry_wkt = None
+    if file or geometry:
+        geom = await load_aoi_geometry(file, geometry)
+        geometry_wkt = geom.wkt
 
     params = {
         "geometry_wkt": geometry_wkt,

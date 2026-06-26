@@ -1,0 +1,100 @@
+services:
+  frontend:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+      rustfs:
+        condition: service_started
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/postgres"
+      PG_CLIENT_SSL: "false"
+      SESSION_SECRET: "super-duper-s3cret"
+      JWT_SECRET: "OH GOD THIS IS SO INSECURE PLS CHANGE ME"
+      JWT_ALGORITHM: "HS256"
+      JWT_ISSUER: "http://localhost:3000"
+      JWT_VALIDITY_MS: "3600000"
+      REFRESH_TOKEN_SECRET: "I ALSO WANT TO BE CHANGED"
+      REFRESH_TOKEN_ALGORITHM: "sha256"
+      REFRESH_TOKEN_VALIDITY_MS: "604800000"
+      NOMINATIM_SEARCH_API: "https://nominatim.openstreetmap.org/search"
+      OSEM_GITHUB_URL: "https://github.com/openSenseMap/frontend"
+      OSEM_API_URL: "http://host.docker.internal:8001/"
+      DIRECTUS_URL: "https://coelho.opensensemap.org"
+      SENSORWIKI_API_URL: "https://api.sensors.wiki/"
+      INGRESS_DOMAIN: "ingress.opensensemap.org"
+      MQTT_SERVICE_URL: "http://localhost:3001"
+      MQTT_SERVICE_KEY: "dev-service-key-change-in-production"
+      MYBADGES_API_URL: "https://api.v2.mybadges.org/"
+      MYBADGES_URL: "https://mybadges.org/"
+      MYBADGES_SERVERADMIN_USERNAME: ""
+      MYBADGES_SERVERADMIN_PASSWORD: ""
+      MYBADGES_ISSUERID_OSEM: ""
+      MYBADGES_CLIENT_ID: ""
+      MYBADGES_CLIENT_SECRET: ""
+      DISABLE_MAILING: "false"
+      SMTP_HOST: "mailhog"
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_USERNAME: "ignored"
+      SMTP_PASSWORD: "ignored"
+      S3_ENDPOINT: "http://rustfs:9000"
+      S3_REGION: "eu-north-1"
+      S3_BUCKET: "device-images"
+      S3_ACCESS_KEY: "rustfsadmin"
+      S3_SECRET_KEY: "rustfsadmin123"
+      DISCOURSE_URL: "https://community.opensensemap.org"
+      DISCOURSE_CONNECT_SECRET: "iamverysecure"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+
+  postgres:
+    image: timescale/timescaledb-ha:pg18
+    # Preload pg_cron extension
+    # https://github.com/timescale/timescaledb-docker-ha/issues/293
+    command:
+      - -cshared_preload_libraries=timescaledb,pg_cron
+      - -ccron.database_name=postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      # - ./pgdata:/home/postgres/pgdata
+      - ./db/imports:/home/postgres/imports
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin123
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ADDRESS: ":9000"
+    ports:
+      - "9010:9000" # S3 API
+      - "9005:9001" # Admin UI
+    volumes:
+      - ./rustfs-data:/data
+    command: ["/data"]

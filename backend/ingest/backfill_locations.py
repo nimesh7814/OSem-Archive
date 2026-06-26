@@ -51,7 +51,7 @@ def backfill() -> None:
         lon, lat = coordinates[0], coordinates[1]
         with la.conn.cursor() as cur:
             cur.execute(
-                "UPDATE boxes SET location = ST_GeogFromText(%s) WHERE id = %s",
+                "UPDATE boxes SET location = ST_GeomFromText(%s, 4326) WHERE id = %s",
                 (f"POINT({lon} {lat})", box_id),
             )
         la.assign_region(box_id)

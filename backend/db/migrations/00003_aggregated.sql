@@ -9,7 +9,7 @@ BEGIN;
 
 -- Hourly (reads from raw measurements — value column exists here)
 CREATE MATERIALIZED VIEW reading_hourly
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = true) AS
 SELECT
     sensor_id,
     time_bucket('1 hour', time) AS bucket,
@@ -33,7 +33,7 @@ CREATE INDEX idx_reading_hourly_sensor_bucket
 
 -- Daily (rolls up from reading_hourly)
 CREATE MATERIALIZED VIEW reading_daily
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = true) AS
 SELECT
     sensor_id,
     time_bucket('1 day', bucket) AS bucket,
@@ -57,7 +57,7 @@ CREATE INDEX idx_reading_daily_sensor_bucket
 
 -- Monthly (rolls up from reading_daily)
 CREATE MATERIALIZED VIEW reading_monthly
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = true) AS
 SELECT
     sensor_id,
     time_bucket('1 month', bucket) AS bucket,
@@ -81,7 +81,7 @@ CREATE INDEX idx_reading_monthly_sensor_bucket
 
 -- Yearly (rolls up from reading_monthly)
 CREATE MATERIALIZED VIEW reading_yearly
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = true) AS
 SELECT
     sensor_id,
     time_bucket('1 year', bucket) AS bucket,

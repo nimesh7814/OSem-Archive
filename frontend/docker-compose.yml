@@ -1,9 +1,0 @@
-services:
-  frontend:
-    build:
-      context: .
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-    image: osem-archive-frontend:latest
-    ports:
-      - "${HOST_PORT:-8081}:80"

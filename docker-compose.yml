@@ -11,12 +11,16 @@ services:
     environment:
       TZ: Europe/Berlin
       PGTZ: Europe/Berlin
+    command:
+      - -cshared_preload_libraries=timescaledb,pg_cron
+      - -ccron.database_name=osem_archive
     ports:
       - "5433:5432"
     volumes:
-      - timescale_data:/var/lib/postgresql/data
+      - timescale_data:/home/postgres/pgdata
       - ./backend/db/migrations/00001_initial_schema.sql:/docker-entrypoint-initdb.d/01_initial_schema.sql:ro
       - ./backend/db/migrations/00002_regions.sql:/docker-entrypoint-initdb.d/02_regions.sql:ro
+      - ./backend/db/migrations/00003_aggregated.sql:/docker-entrypoint-initdb.d/03_aggregated.sql:ro
       - ./backend/data/admin_boundary.geojson:/docker-entrypoint-initdb.d/admin_boundary.geojson:ro
     healthcheck:
       test:
@@ -116,9 +120,23 @@ services:
         "api.functions.exports.celery_app",
         "worker",
         "--loglevel=info",
+        "--concurrency=4",
       ]
     volumes:
       - export_jobs:/app/jobs
+    restart: unless-stopped
+
+  wrk_front:
+    build:
+      context: ./wrk_front
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: wrk_front
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3000:80"
     restart: unless-stopped
 
 volumes:

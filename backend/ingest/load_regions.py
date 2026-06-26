@@ -53,7 +53,6 @@ gdf["geometry"] = gdf["geometry"].apply(
     lambda g: MultiPolygon([g]) if isinstance(g, Polygon) else g
 )
 
-# The regions table stores `geometry` as a geography column
 rows = [
     {"country": country, "region": region, "geom_wkt": geometry.wkt}
     for country, region, geometry in zip(gdf["country"], gdf["region"], gdf["geometry"])
@@ -63,7 +62,7 @@ with engine.begin() as conn:
     conn.execute(
         text(
             "INSERT INTO regions (country, region, geometry) "
-            "VALUES (:country, :region, ST_GeogFromText(:geom_wkt)) "
+            "VALUES (:country, :region, ST_GeomFromText(:geom_wkt, 4326)) "
             "ON CONFLICT (country, region) DO UPDATE SET geometry = EXCLUDED.geometry"
         ),
         rows,

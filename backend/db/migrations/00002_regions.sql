@@ -13,7 +13,7 @@ WITH features AS (
     ) AS feature
 )
 INSERT INTO regions (country, region, geometry)
-SELECT country, region, ST_Multi(ST_Union(geom))::geography
+SELECT country, region, ST_Multi(ST_Union(geom))
 FROM features
 WHERE country IS NOT NULL AND region IS NOT NULL
 GROUP BY country, region

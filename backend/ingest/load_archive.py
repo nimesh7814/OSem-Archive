@@ -114,7 +114,7 @@ def upsert_box(box_id: str, box_json: dict) -> None:
         cur.execute(
             """
             INSERT INTO boxes (id, name, box_type, exposure, model, location, updated_at)
-            VALUES (%s, %s, %s, %s, %s, ST_GeogFromText(%s), now())
+            VALUES (%s, %s, %s, %s, %s, ST_GeomFromText(%s, 4326), now())
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 box_type = EXCLUDED.box_type,
@@ -233,6 +233,12 @@ def mark_ingest_log(box_id: str, day: date, status: str, row_count: int = 0) -> 
         )
 
 
+def refresh_summary() -> None:
+    with conn.cursor() as cur:
+        cur.execute("SELECT refresh_summary()")
+    conn.commit()
+
+
 def scrape_day(day: date) -> None:
     day_url = f"{URL}/{day.isoformat()}/"
 
@@ -329,5 +335,6 @@ def scrape_range(date_from: date | None = None, date_to: date | None = None) -> 
 
 if __name__ == "__main__":
     scrape_range()
+    refresh_summary()
     conn.close()
     print("\nDone.")

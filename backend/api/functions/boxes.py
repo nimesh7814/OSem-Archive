@@ -14,6 +14,50 @@ AGGREGATE_TABLES = {
     "monthly": "reading_monthly",
     "yearly": "reading_yearly",
 }
+AGGREGATE_BUCKET_INTERVALS = {
+    "hourly": "1 hour",
+    "daily": "1 day",
+    "monthly": "1 month",
+    "yearly": "1 year",
+}
+
+
+def _split_csv(value: str | None) -> list[str] | None:
+    if not value:
+        return None
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    return items or None
+
+
+async def get_archive_summary() -> dict:
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT stations, sensors, readings, countries, updated_at
+                FROM summary
+                ORDER BY summary_date DESC, updated_at DESC NULLS LAST
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return {
+            "total_stations": 0,
+            "total_sensors": 0,
+            "total_readings": 0,
+            "total_countries": 0,
+            "updated_at": None,
+        }
+
+    return {
+        "total_stations": int(row[0] or 0),
+        "total_sensors": int(row[1] or 0),
+        "total_readings": int(row[2] or 0),
+        "total_countries": int(row[3] or 0),
+        "updated_at": row[4].isoformat() if row[4] else None,
+    }
 
 
 @dataclass(frozen=True)
@@ -118,12 +162,14 @@ async def query_boxes(
             if exposure:
                 query += " AND b.exposure = %s"
                 params.append(exposure)
-            if phenomenon:
-                query += " AND s.title = %s"
-                params.append(phenomenon)
-            if sensor_type:
-                query += " AND s.sensor_type = %s"
-                params.append(sensor_type)
+            phenomenon_list = _split_csv(phenomenon)
+            if phenomenon_list:
+                query += " AND s.title = ANY(%s)"
+                params.append(phenomenon_list)
+            sensor_type_list = _split_csv(sensor_type)
+            if sensor_type_list:
+                query += " AND s.sensor_type = ANY(%s)"
+                params.append(sensor_type_list)
 
             if from_date and to_date:
                 query += """
@@ -254,14 +300,20 @@ async def query_boxes_aggregated(
             if exposure:
                 query += " AND b.exposure = %s"
                 params.append(exposure)
-            if phenomenon:
-                query += " AND s.title = %s"
-                params.append(phenomenon)
-            if sensor_type:
-                query += " AND s.sensor_type = %s"
-                params.append(sensor_type)
+            phenomenon_list = _split_csv(phenomenon)
+            if phenomenon_list:
+                query += " AND s.title = ANY(%s)"
+                params.append(phenomenon_list)
+            sensor_type_list = _split_csv(sensor_type)
+            if sensor_type_list:
+                query += " AND s.sensor_type = ANY(%s)"
+                params.append(sensor_type_list)
+            bucket_interval = AGGREGATE_BUCKET_INTERVALS[aggregate]
             if from_date:
-                query += " AND agg.bucket >= %s"
+                # Overlap test against the bucket's period, not just its start,
+                # so e.g. a yearly bucket dated 2014-01-01 still matches a
+                # requested range starting mid-year like 2014-06-01.
+                query += f" AND agg.bucket + INTERVAL '{bucket_interval}' > %s"
                 params.append(from_date)
             if to_date:
                 query += " AND agg.bucket < %s::date + INTERVAL '1 day'"
@@ -291,13 +343,161 @@ async def query_boxes_aggregated(
             "aggregate": aggregate,
             "bucket": r[13].isoformat() if r[13] else None,
             "sumValue": float(r[14]) if r[14] is not None else None,
-            "measurementCount": r[15],
+            "measurementCount": int(r[15]) if r[15] is not None else None,
             "avgValue": float(r[16]) if r[16] is not None else None,
             "minValue": float(r[17]) if r[17] is not None else None,
             "maxValue": float(r[18]) if r[18] is not None else None,
         }
         for r in rows
     ]
+
+
+async def query_measurements_raw(
+    geometry_wkt: str | None,
+    box_id: str | None = None,
+    country: str | None = None,
+    region: str | None = None,
+    exposure: str | None = None,
+    phenomenon: str | None = None,
+    sensor_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[dict]:
+    """Every individual measurement row (no bucketing/aggregation), for
+    downloads. Distinct from query_boxes' "raw" box/sensor inventory listing
+    used by list_boxes() for the map's station list - that one must keep
+    returning box-level metadata only, since it backs every page load.
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            query = """
+                SELECT
+                    b.id AS box_id,
+                    b.name,
+                    b.exposure,
+                    b.model,
+                    b.updated_at,
+                    r.country,
+                    r.region,
+                    ST_X(b.location) AS lon,
+                    ST_Y(b.location) AS lat,
+                    s.id AS sensor_id,
+                    s.sensor_type,
+                    s.title,
+                    s.unit,
+                    m.time,
+                    m.value
+                FROM boxes b
+                INNER JOIN regions r ON r.id = b.region_id
+                INNER JOIN sensors s ON s.box_id = b.id
+                INNER JOIN measurements m ON m.sensor_id = s.id
+                WHERE 1=1
+            """
+            params: list = []
+
+            if box_id:
+                ids = [b.strip() for b in box_id.split(",") if b.strip()]
+                query += " AND b.id = ANY(%s)"
+                params.append(ids)
+            if geometry_wkt:
+                query += " AND ST_Intersects(b.location, ST_SetSRID(ST_GeomFromText(%s), 4326))"
+                params.append(geometry_wkt)
+            if country:
+                query += " AND r.country = %s"
+                params.append(country)
+            if region:
+                query += " AND r.region = %s"
+                params.append(region)
+            if exposure:
+                query += " AND b.exposure = %s"
+                params.append(exposure)
+            phenomenon_list = _split_csv(phenomenon)
+            if phenomenon_list:
+                query += " AND s.title = ANY(%s)"
+                params.append(phenomenon_list)
+            sensor_type_list = _split_csv(sensor_type)
+            if sensor_type_list:
+                query += " AND s.sensor_type = ANY(%s)"
+                params.append(sensor_type_list)
+            if from_date:
+                query += " AND m.time >= %s"
+                params.append(from_date)
+            if to_date:
+                query += " AND m.time < %s::date + INTERVAL '1 day'"
+                params.append(to_date)
+
+            query += """
+                ORDER BY b.name, s.title, m.time
+            """
+
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+    return [
+        {
+            "_id": r[0],
+            "name": r[1],
+            "exposure": r[2],
+            "model": r[3],
+            "updatedAt": r[4].isoformat() if r[4] else None,
+            "country": r[5],
+            "region": r[6],
+            "currentLocation": {"type": "Point", "coordinates": [r[7], r[8]]},
+            "sensor_id": r[9],
+            "sensor_type": r[10],
+            "sensor_title": r[11],
+            "sensor_unit": r[12],
+            "aggregate": "raw",
+            "time": r[13].isoformat() if r[13] else None,
+            "value": float(r[14]) if r[14] is not None else None,
+        }
+        for r in rows
+    ]
+
+
+async def query_boxes_for_aggregate(
+    *,
+    aggregate: str,
+    geometry_wkt: str | None,
+    box_id: str | None = None,
+    country: str | None = None,
+    region: str | None = None,
+    exposure: str | None = None,
+    phenomenon: str | None = None,
+    sensor_type: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[dict]:
+    """Dispatches to a true per-measurement query for "raw" downloads, or the
+    bucketed continuous-aggregate query otherwise. Used by the download/export
+    paths only - list_boxes() (the map's station list) calls
+    query_boxes_aggregated directly and is unaffected by this.
+    """
+    if aggregate == "raw":
+        return await query_measurements_raw(
+            geometry_wkt=geometry_wkt,
+            box_id=box_id,
+            country=country,
+            region=region,
+            exposure=exposure,
+            phenomenon=phenomenon,
+            sensor_type=sensor_type,
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+    return await query_boxes_aggregated(
+        geometry_wkt=geometry_wkt,
+        box_id=box_id,
+        country=country,
+        region=region,
+        exposure=exposure,
+        phenomenon=phenomenon,
+        sensor_type=sensor_type,
+        from_date=from_date,
+        to_date=to_date,
+        aggregate=aggregate,
+    )
 
 
 def to_csv(rows: list[dict]) -> str:
@@ -363,11 +563,17 @@ def respond(rows: list[dict], download: bool, file_type: str, base_filename: str
     )
 
 
-async def list_boxes(box_id: str | None) -> list[dict]:
+async def list_boxes(box_id: str | None) -> dict:
     aggregate = "monthly" if box_id else "raw"
 
-    return await query_boxes_aggregated(
+    rows = await query_boxes_aggregated(
         geometry_wkt=None,
         box_id=box_id,
         aggregate=aggregate,
     )
+    summary = await get_archive_summary()
+
+    return {
+        "summary": summary,
+        "boxes": rows,
+    }
