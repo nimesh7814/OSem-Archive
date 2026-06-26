@@ -10,3 +10,4 @@ tqdm==4.67.1
 geopandas==1.0.1
 shapely==2.0.6
 httpx==0.28.1
+celery[redis]==5.6.3

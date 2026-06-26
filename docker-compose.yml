@@ -46,6 +46,13 @@ services:
       - ./backend/db/servers.json:/pgadmin4/servers.json:ro
       - ./backend/db/pgpass:/pgpass:ro
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
   ingest:
     build:
       context: ./backend
@@ -76,8 +83,40 @@ services:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
       EXPORT_DIR: /app/jobs
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
     ports:
       - "8001:8000"
+    volumes:
+      - export_jobs:/app/jobs
+    restart: unless-stopped
+
+  export_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: export_worker
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./backend/.env
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      EXPORT_DIR: /app/jobs
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    command:
+      [
+        "celery",
+        "-A",
+        "api.functions.exports.celery_app",
+        "worker",
+        "--loglevel=info",
+      ]
     volumes:
       - export_jobs:/app/jobs
     restart: unless-stopped

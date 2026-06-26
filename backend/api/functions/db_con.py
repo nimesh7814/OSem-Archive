@@ -7,7 +7,13 @@ created once per process and reused across requests.
 
 import os
 from contextlib import contextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 from psycopg2 import pool
+
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
 
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_USER = os.getenv("POSTGRES_USER")
@@ -21,9 +27,25 @@ POOL_MAX_CONN = int(os.getenv("DB_POOL_MAX_CONN", "10"))
 _pool: pool.ThreadedConnectionPool | None = None
 
 
+def _validate_db_config() -> None:
+    required = {
+        "POSTGRES_DB": DB_NAME,
+        "POSTGRES_USER": DB_USER,
+        "POSTGRES_PASSWORD": DB_PASSWORD,
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        joined = ", ".join(missing)
+        raise RuntimeError(
+            f"Missing database environment variable(s): {joined}. "
+            f"Set them in the environment or in {env_path}."
+        )
+
+
 def _get_pool() -> pool.ThreadedConnectionPool:
     global _pool
     if _pool is None:
+        _validate_db_config()
         _pool = pool.ThreadedConnectionPool(
             POOL_MIN_CONN,
             POOL_MAX_CONN,

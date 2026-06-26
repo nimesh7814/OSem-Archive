@@ -7,7 +7,8 @@ def list_routes(app: FastAPI) -> str:
     for route in app.routes:
         if not isinstance(route, APIRoute):
             continue
-        doc = (route.endpoint.__doc__ or "").strip().splitlines()[0]
+        doc_lines = (route.endpoint.__doc__ or "").strip().splitlines()
+        doc = doc_lines[0] if doc_lines else ""
         for method in sorted((route.methods or set()) - {"HEAD", "OPTIONS"}):
             lines.append(f"{method:<7}{route.path:<50}{doc}")
     return "\n".join(lines)
