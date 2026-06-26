@@ -3,11 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, File, Form, Query, UploadFile
 from fastapi.responses import PlainTextResponse
 
-try:
+if __package__:
     from .functions import boxes, boxes_aoi, boxes_region, exports, phenomena, regions, root
     from .functions.boxes import BoxQueryParams, box_query_params
     from .functions.db_con import close_pool
-except ImportError:
+else:
     from functions import boxes, boxes_aoi, boxes_region, exports, phenomena, regions, root
     from functions.boxes import BoxQueryParams, box_query_params
     from functions.db_con import close_pool
@@ -52,11 +52,9 @@ async def list_boxes_by_region(
 async def boxes_by_aoi(
     file: UploadFile | None = File(None),
     geometry: str | None = Form(None),
-    country: str | None = Query(None),
-    region: str | None = Query(None),
     filters: BoxQueryParams = Depends(box_query_params),
 ):
-    return await boxes_aoi.boxes_by_aoi(file, geometry, country, region, filters)
+    return await boxes_aoi.boxes_by_aoi(file, geometry, filters)
 
 
 @app.get("/phenomena")

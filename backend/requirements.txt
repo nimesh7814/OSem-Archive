@@ -11,3 +11,4 @@ geopandas==1.0.1
 shapely==2.0.6
 httpx==0.28.1
 celery[redis]==5.6.3
+geojson==3.3.0

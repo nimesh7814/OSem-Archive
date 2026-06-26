@@ -1,5 +1,6 @@
 import io
 import json
+import geojson
 
 import geopandas as gpd
 from fastapi import HTTPException, UploadFile
@@ -7,19 +8,31 @@ from shapely.geometry import shape
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
+
+# Allowed file types
 ALLOWED_UPLOAD_TYPES = {".geojson", ".kml", ".zip"}
 
 
+# File or Area of Interest needs to be provided
 async def load_aoi_geometry(file: UploadFile | None, geometry: str | None):
+    
+    # If both given give an error
     if file and geometry:
-        raise HTTPException(400, "Provide either 'file' or 'geometry', not both")
+        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
+    
+    # If neither given give an error
     if not file and not geometry:
-        raise HTTPException(400, "Provide either 'file' (.geojson/.kml/.zip) or 'geometry' (GeoJSON)")
+        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
+    
+    # If a file is given load the geometry from the file
     if file:
         return await load_uploaded_geometry(file)
+    
+    # if a geometry is none of the drawing
     if geometry is None:
-        raise HTTPException(400, "Provide either 'file' (.geojson/.kml/.zip) or 'geometry' (GeoJSON)")
+        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
     return load_drawn_geometry(geometry)
+
 
 
 async def load_uploaded_geometry(file: UploadFile):
@@ -55,7 +68,7 @@ async def load_uploaded_geometry(file: UploadFile):
 
 def load_drawn_geometry(geometry: str):
     try:
-        parsed = json.loads(geometry)
+        parsed = geojson.loads(geometry)
     except json.JSONDecodeError:
         raise HTTPException(400, "'geometry' is not valid JSON")
 
