@@ -1,89 +1,215 @@
-import io
 import json
 import geojson
+import os
+import shutil
+import tempfile
+import zipfile
+from typing import Optional
 
 import geopandas as gpd
 from fastapi import HTTPException, UploadFile
+from shapely.errors import ShapelyError
 from shapely.geometry import shape
-from shapely.ops import unary_union
-from shapely.validation import make_valid
 
 
-# Allowed file types
-ALLOWED_UPLOAD_TYPES = {".geojson", ".kml", ".zip"}
-
-
-# File or Area of Interest needs to be provided
-async def load_aoi_geometry(file: UploadFile | None, geometry: str | None):
-    
-    # If both given give an error
-    if file and geometry:
-        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
-    
-    # If neither given give an error
-    if not file and not geometry:
-        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
-    
-    # If a file is given load the geometry from the file
-    if file:
-        return await load_uploaded_geometry(file)
-    
-    # if a geometry is none of the drawing
-    if geometry is None:
-        raise HTTPException(400, "Provide either a file (.geojson/.kml/.zip) or draw a geometry")
-    return load_drawn_geometry(geometry)
-
-
-
-async def load_uploaded_geometry(file: UploadFile):
-    name = (file.filename or "").lower()
-    ext = next((e for e in ALLOWED_UPLOAD_TYPES if name.endswith(e)), None)
-    if ext is None:
-        raise HTTPException(
-            400,
-            f"Unsupported file type '{name}'. Allowed: {', '.join(sorted(ALLOWED_UPLOAD_TYPES))}",
-        )
-
-    content = await file.read()
+def validate_geojson_content(raw_bytes: bytes):
+    """Reject malformed GeoJSON before handing it to GeoPandas/Shapely."""
     try:
-        if ext == ".kml":
-            gdf = gpd.read_file(io.BytesIO(content), driver="KML")
+        data = geojson.loads(raw_bytes)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(status_code=400, detail="File not valid: not valid JSON.")
+
+    if not isinstance(data, dict) or "type" not in data:
+        raise HTTPException(status_code=400, detail="File not valid: missing GeoJSON 'type' field.")
+
+    geojson_type = data.get("type")
+
+    try:
+        if geojson_type == "FeatureCollection":
+            features = data.get("features")
+            if not features or not isinstance(features, list):
+                raise HTTPException(status_code=400, detail="File not valid: FeatureCollection has no features.")
+            for feature in features:
+                geom = feature.get("geometry")
+                if not geom:
+                    continue
+                geom_obj = shape(geom)
+                if not geom_obj.is_valid:
+                    raise HTTPException(status_code=400, detail="File not valid: contains an invalid geometry.")
+
+        elif geojson_type == "Feature":
+            geom = data.get("geometry")
+            if not geom:
+                raise HTTPException(status_code=400, detail="File not valid: feature missing geometry.")
+            geom_obj = shape(geom)
+            if not geom_obj.is_valid:
+                raise HTTPException(status_code=400, detail="File not valid: invalid geometry.")
+
+        elif geojson_type in (
+            "Point", "MultiPoint", "LineString", "MultiLineString",
+            "Polygon", "MultiPolygon", "GeometryCollection",
+        ):
+            geom_obj = shape(data)
+            if not geom_obj.is_valid:
+                raise HTTPException(status_code=400, detail="File not valid: invalid geometry.")
+
         else:
-            gdf = gpd.read_file(io.BytesIO(content))
-    except Exception as exc:
-        raise HTTPException(400, f"Could not parse geometry file: {exc}") from exc
+            raise HTTPException(status_code=400, detail="File not valid: unrecognized GeoJSON type.")
 
-    gdf = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
-    if gdf.empty:
-        raise HTTPException(422, "No Polygon or MultiPolygon geometry found in file")
-
-    if gdf.crs and gdf.crs.to_epsg() != 4326:
-        gdf = gdf.to_crs(epsg=4326)
-
-    geom = make_valid(unary_union(gdf.geometry))
-    if geom.is_empty:
-        raise HTTPException(422, "Geometry resolved to an empty shape")
-    return geom
+    except HTTPException:
+        raise
+    except (ShapelyError, ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=400, detail="File not valid: malformed geometry.")
 
 
-def load_drawn_geometry(geometry: str):
+def extract_polygons(geom):
+    if geom is None:
+        return []
+    if geom.geom_type in ("Polygon", "MultiPolygon"):
+        return [geom]
+    if geom.geom_type == "GeometryCollection":
+        polygons = []
+        for part in geom.geoms:
+            polygons.extend(extract_polygons(part))
+        return polygons
+    return []
+
+
+def polygons_to_wkt(polygons, crs="EPSG:4326") -> str:
+    if not polygons:
+        raise HTTPException(status_code=400, detail="File not valid: no polygon geometry found.")
+
+    combined_geom = gpd.GeoSeries(polygons, crs=crs).union_all()
+
+    if combined_geom is None or combined_geom.is_empty:
+        raise HTTPException(status_code=400, detail="File not valid: resulting geometry is empty.")
+
+    return combined_geom.wkt
+
+
+def geojson_bytes_to_wkt(raw_bytes: bytes, source_label: str = "File") -> str:
+    """Convert GeoJSON bytes from uploads or drawn map geometry into WKT."""
+    validate_geojson_content(raw_bytes)
+
     try:
-        parsed = geojson.loads(geometry)
-    except json.JSONDecodeError:
-        raise HTTPException(400, "'geometry' is not valid JSON")
+        data = json.loads(raw_bytes)
+        geojson_type = data.get("type")
 
-    if parsed.get("type") not in ("Polygon", "MultiPolygon"):
+        if geojson_type == "FeatureCollection":
+            geoms = [
+                shape(f["geometry"])
+                for f in data.get("features", [])
+                if f.get("geometry")
+            ]
+        elif geojson_type == "Feature":
+            geoms = [shape(data["geometry"])] if data.get("geometry") else []
+        else:
+            geoms = [shape(data)]
+
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs="EPSG:4326")
+
+        if gdf.empty:
+            raise HTTPException(status_code=400, detail=f"{source_label} not valid: contains no geometries.")
+
+        polygons = []
+        for geom in gdf.geometry:
+            polygons.extend(extract_polygons(geom))
+
+        return polygons_to_wkt(polygons, crs=gdf.crs)
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"{source_label} not valid: could not parse geometry.")
+
+
+def load_geometry_from_geojson_string(geometry: str) -> str:
+    """Convert frontend-drawn GeoJSON geometry into WKT for PostGIS."""
+    if not geometry or not geometry.strip():
+        raise HTTPException(status_code=400, detail="Missing AOI geometry.")
+
+    return geojson_bytes_to_wkt(geometry.encode("utf-8"), source_label="Geometry")
+
+
+def load_geometry_from_upload_or_geometry(
+    file: Optional[UploadFile] = None,
+    geometry: Optional[str] = None,
+) -> str:
+    """Accept either an uploaded AOI file or a drawn GeoJSON geometry."""
+    if file is not None and file.filename:
+        return load_geometry_from_upload(file)
+
+    if geometry:
+        return load_geometry_from_geojson_string(geometry)
+
+    raise HTTPException(status_code=400, detail="Upload an AOI file or provide drawn AOI geometry.")
+
+
+def load_geometry_from_upload(file: UploadFile) -> str:
+    """Convert uploaded AOI files into WKT for PostGIS ST_GeomFromText."""
+    filename = file.filename or ""
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+
+    if ext not in ("geojson", "kml", "zip"):
         raise HTTPException(
-            422,
-            f"Drawn geometry must be a Polygon or MultiPolygon - got '{parsed.get('type')}'",
+            status_code=400,
+            detail="Unsupported file type. Upload a .geojson, .kml, or zipped shapefile (.zip).",
         )
 
-    try:
-        geom = shape(parsed)
-    except Exception:
-        raise HTTPException(400, "'geometry' is not a valid GeoJSON geometry")
+    raw_bytes = file.file.read()
 
-    geom = make_valid(geom)
-    if geom.is_empty:
-        raise HTTPException(422, "Geometry resolved to an empty shape")
-    return geom
+    if ext == "geojson":
+        validate_geojson_content(raw_bytes)
+
+    tmp_dir = tempfile.mkdtemp()
+    try:
+        tmp_path = os.path.join(tmp_dir, filename)
+        with open(tmp_path, "wb") as f:
+            f.write(raw_bytes)
+
+        if ext == "zip":
+            extract_dir = os.path.join(tmp_dir, "extracted")
+            try:
+                with zipfile.ZipFile(tmp_path, "r") as z:
+                    z.extractall(extract_dir)
+            except zipfile.BadZipFile:
+                raise HTTPException(status_code=400, detail="File not valid: not a valid zip archive.")
+
+            shp_files = [
+                os.path.join(extract_dir, f)
+                for f in os.listdir(extract_dir)
+                if f.lower().endswith(".shp")
+            ]
+            if not shp_files:
+                raise HTTPException(status_code=400, detail="File not valid: no .shp file found inside the zip.")
+            gdf = gpd.read_file(shp_files[0])
+
+            if gdf.crs is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="File not valid: shapefile has no coordinate reference system (.prj) defined.",
+                )
+            if gdf.crs.to_epsg() != 4326:
+                gdf = gdf.to_crs(epsg=4326)
+
+        elif ext == "kml":
+            gdf = gpd.read_file(tmp_path, driver="KML")
+
+        else:
+            return geojson_bytes_to_wkt(raw_bytes)
+
+        if gdf.empty:
+            raise HTTPException(status_code=400, detail="File not valid: contains no geometries.")
+
+        polygons = []
+        for geom in gdf.geometry:
+            polygons.extend(extract_polygons(geom))
+
+        return polygons_to_wkt(polygons, crs=gdf.crs)
+
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="File not valid: could not parse the uploaded file.")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)

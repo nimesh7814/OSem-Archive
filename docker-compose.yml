@@ -4,7 +4,7 @@
 services:
   timescaledb:
     image: timescale/timescaledb-ha:pg14-latest
-    container_name: database
+    container_name: osem_timescaledb
     restart: unless-stopped
     env_file:
       - ./backend/.env
@@ -21,6 +21,9 @@ services:
       - ./backend/db/migrations/00001_initial_schema.sql:/docker-entrypoint-initdb.d/01_initial_schema.sql:ro
       - ./backend/db/migrations/00002_regions.sql:/docker-entrypoint-initdb.d/02_regions.sql:ro
       - ./backend/db/migrations/00003_aggregated.sql:/docker-entrypoint-initdb.d/03_aggregated.sql:ro
+      - ./backend/db/migrations/00004_export_job.sql:/docker-entrypoint-initdb.d/04_export_job.sql:ro
+      - ./backend/db/migrations/00005_measurements_sensor_time_index.sql:/docker-entrypoint-initdb.d/05_measurements_sensor_time_index.sql:ro
+      - ./backend/db/migrations/00006_export_filter_indexes.sql:/docker-entrypoint-initdb.d/06_export_filter_indexes.sql:ro
       - ./backend/data/admin_boundary.geojson:/docker-entrypoint-initdb.d/admin_boundary.geojson:ro
     healthcheck:
       test:
@@ -34,7 +37,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pgadmin
+    container_name: osem_pgadmin
     restart: unless-stopped
     depends_on:
       timescaledb:
@@ -52,16 +55,18 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: osem_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   ingest:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: ingest
+    container_name: osem_ingest
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -77,16 +82,19 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: api
+    container_name: osem_api
     depends_on:
       timescaledb:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./backend/.env
     environment:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
       EXPORT_DIR: /app/jobs
+      REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
     ports:
@@ -99,7 +107,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: export_worker
+    container_name: osem_worker
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -111,13 +119,14 @@ services:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
       EXPORT_DIR: /app/jobs
+      REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
     command:
       [
         "celery",
         "-A",
-        "api.functions.exports.celery_app",
+        "api.main.celery_app",
         "worker",
         "--loglevel=info",
         "--concurrency=4",
@@ -158,4 +167,5 @@ services:
 volumes:
   timescale_data:
   pgadmin_data:
+  redis_data:
   export_jobs:

@@ -1,27 +1,20 @@
-from .db_con import get_db_connection
+import psycopg2.extras
+
+from api.functions.db_con import get_db_connection
+from api.functions.redis_cache import cached_or_compute, make_cache_key
 
 
-async def get_stats() -> dict:
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    (SELECT COUNT(*) FROM boxes) AS total_stations,
-                    (SELECT COUNT(*) FROM sensors) AS total_sensors,
-                    (SELECT COUNT(*) FROM measurements) AS total_readings,
-                    (
-                        SELECT COUNT(DISTINCT r.country)
-                        FROM boxes b
-                        INNER JOIN regions r ON r.id = b.region_id
-                    ) AS total_countries
-                """
-            )
-            total_stations, total_sensors, total_readings, total_countries = cur.fetchone()
+def get_stats():
+    """Return the precomputed archive summary table."""
+    def _compute():
+        with get_db_connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
+                cursor.execute("""
+                    SELECT stations, sensors, readings, countries, summary_date
+                    FROM summary
+                """)
+                return cursor.fetchone()
 
-    return {
-        "total_stations": total_stations,
-        "total_sensors": total_sensors,
-        "total_readings": total_readings,
-        "total_countries": total_countries,
-    }
+    key = make_cache_key("stats")
+    return cached_or_compute(key, _compute, ttl=300)
+
