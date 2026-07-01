@@ -20,6 +20,14 @@ import { type Route } from './+types/explore'
 import Map from '~/components/map'
 import { phenomenonLayers, defaultLayer } from '~/components/map/layers'
 import Legend, { type LegendValue } from '~/components/map/legend'
+import {
+	getDevices,
+	getDevicesWithSensors,
+	getUserDeviceLocations,
+} from '~/db/models/device.server'
+import { getMeasurement } from '~/db/models/measurement.query.server'
+import { getProfileByUserId } from '~/db/models/profile.server'
+import { getSensors } from '~/db/models/sensor.server'
 import { type Device } from '~/db/schema'
 import { getCSV, getJSON, getTXT } from '~/lib/file-exports'
 import {
@@ -28,13 +36,8 @@ import {
 	validLngLat,
 	type MapViewport,
 } from '~/lib/location'
-import {
-	getPublicDevicesGeoJson,
-	getPublicMeasurementCount,
-	getPublicTags,
-} from '~/lib/opensensemap-api.server'
 import { getLocale } from '~/middleware/i18next'
-import { getUserSession } from '~/services/session-service.server'
+import { getUser, getUserSession } from '~/services/session-service.server'
 import { getFilteredDevices } from '~/utils'
 import maplibregl, {
 	type LngLatLike,
@@ -46,6 +49,9 @@ import maplibregl, {
 } from 'maplibre-gl'
 import BoxMarker from '~/components/map/layers/cluster/box-marker'
 import MapHeader from '~/components/map/topbar'
+import { getMeasurementsCount } from '~/db/models/measurement.server'
+import { getTags } from '~/services/device-service.server'
+import { getPhenomena } from '~/db/models/phenomena.server'
 import { DOWNLOAD_FILTER_KEYS } from '~/components/header/download'
 
 const INITIAL_VIEW_STATE = {
@@ -73,12 +79,6 @@ type OwnedDeviceLocation = {
 	longitude: number
 }
 
-type MapProfile = {
-	homeLatitude: number | null
-	homeLongitude: number | null
-	homeZoom: number | null
-}
-
 function parseMapHash(hash: string) {
 	const match = hash.match(
 		/^#?(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/,
@@ -95,7 +95,9 @@ function parseMapHash(hash: string) {
 	})
 }
 
-function getHomeView(profile: MapProfile | null) {
+function getHomeView(
+	profile: Awaited<ReturnType<typeof getProfileByUserId>> | null,
+) {
 	if (!profile) return null
 
 	return getValidMapViewport({
@@ -205,8 +207,6 @@ export async function action({ request }: { request: Request }) {
 	const selectedPhenomena = parseCsv(formdata.get('phenomenon')).map(
 		(phenomenon) => phenomenon.toLowerCase(),
 	)
-	const { getSensors } = await import('~/db/models/sensor.server')
-	const { getMeasurement } = await import('~/db/models/measurement.query.server')
 
 	const measurementTimeRange =
 		getMeasurementTimeRangeFromSearchParams(filterParams)
@@ -342,23 +342,57 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 	const filterParams = url.search
 	const urlFilterParams = new URLSearchParams(url.search)
 
-	const [devices, availableTags, measurementCount] = await Promise.all([
-		getPublicDevicesGeoJson(),
-		getPublicTags(),
-		getPublicMeasurementCount(),
-	])
+	const measurementTimeRange =
+		getMeasurementTimeRangeFromSearchParams(urlFilterParams)
+
+	// check if sensors are queried - if not get devices only to reduce load
+	const needsSensors =
+		Boolean(urlFilterParams.get('phenomenon')) || Boolean(measurementTimeRange)
+
+	const devices = needsSensors
+		? await getDevicesWithSensors({ measurementTimeRange })
+		: await getDevices('geojson')
+
+	const availableTags = await getTags()
+
+	const measurementCount = await getMeasurementsCount()
 
 	const session = await getUserSession(request)
 	const message = session.get('global_message') || null
 
 	var filteredDevices = getFilteredDevices(devices, urlFilterParams)
 
+	const user = await getUser(request)
+	const phenomena = await getPhenomena()
+
+	if (user) {
+		const [profile, userDeviceLocations] = await Promise.all([
+			getProfileByUserId(user.id),
+			getUserDeviceLocations(user.id),
+		])
+		const userLocale = user.language
+			? user.language.split(/[_-]/)[0].toLowerCase()
+			: 'en'
+
+		return {
+			devices,
+			availableTags,
+			phenomena,
+			measurementCount,
+			user,
+			profile,
+			userDeviceLocations,
+			filteredDevices,
+			filterParams,
+			locale: userLocale,
+		}
+	}
 	return {
 		devices,
 		availableTags,
-		phenomena: [],
+		phenomena,
 		measurementCount,
-		user: null,
+		user,
 		profile: null,
 		userDeviceLocations: [],
 		filterParams,
@@ -389,7 +423,9 @@ export default function Explore() {
 	const appliedInitialMyAreaRef = useRef(false)
 	const navigate = useNavigate()
 	const location = useLocation()
+
 	const [selectedPheno, setSelectedPheno] = useState<any | undefined>(undefined)
+	
 	const [searchParams] = useSearchParams()
 	const [filteredData, setFilteredData] = useState<
 		GeoJSON.FeatureCollection<Point, any>

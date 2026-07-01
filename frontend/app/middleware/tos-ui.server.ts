@@ -1,4 +1,5 @@
 import { redirect } from 'react-router'
+import { getTosRequirementForUser } from '~/db/models/tos.server'
 import { getUserId } from '~/services/session-service.server'
 
 function isAllowedUiPath(pathname: string) {
@@ -34,7 +35,6 @@ export async function tosUiMiddleware(
 	const userId = await getUserId(request)
 	if (!userId) return next()
 
-	const { getTosRequirementForUser } = await import('~/db/models/tos.server')
 	const req = await getTosRequirementForUser(userId)
 	if (req.mustBlock && req.tos) {
 		const redirectTo = url.pathname + url.search

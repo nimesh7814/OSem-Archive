@@ -6,7 +6,6 @@ const schema = z.object({
 	PG_CLIENT_SSL: z.string(),
 	SESSION_SECRET: z.string(),
 	NOMINATIM_SEARCH_API: z.string(),
-	OSEM_GITHUB_URL: z.string().url(),
 	OSEM_API_URL: z.string().url(),
 	DIRECTUS_URL: z.string().url(),
 	SENSORWIKI_API_URL: z.string().url(),
@@ -40,8 +39,7 @@ export function init() {
 export function getEnv() {
 	return {
 		NOMINATIM_SEARCH_API: process.env.NOMINATIM_SEARCH_API,
-		OSEM_GITHUB_URL: process.env.OSEM_GITHUB_URL,
-		OSEM_API_URL: process.env.OSEM_API_URL,
+		OSEM_GITHUB_URL: process.env.OSEM_API_URL,
 		MODE: process.env.NODE_ENV,
 		DIRECTUS_URL: process.env.DIRECTUS_URL,
 		MYBADGES_API_URL: process.env.MYBADGES_API_URL,

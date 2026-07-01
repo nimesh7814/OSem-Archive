@@ -3,25 +3,27 @@ import postgres, { type Sql } from 'postgres'
 import invariant from 'tiny-invariant'
 import * as schema from './db/schema'
 
-type DbClients = {
-	drizzle: PostgresJsDatabase<typeof schema>
-	pg: Sql<any>
-}
-
+let drizzleClient: PostgresJsDatabase<typeof schema>
+let pg: Sql<any>
 declare global {
-	var __db__: DbClients | undefined
+	var __db__:
+		| {
+				drizzle: PostgresJsDatabase<typeof schema>
+				pg: Sql<any>
+		  }
+		| undefined
 }
 
-let productionDb: DbClients | undefined
-
-function getDb() {
-	if (process.env.NODE_ENV === 'production') {
-		productionDb ??= initClient()
-		return productionDb
+if (process.env.NODE_ENV === 'production') {
+	const { drizzle, pg: rawPg } = initClient()
+	drizzleClient = drizzle
+	pg = rawPg
+} else {
+	if (!global.__db__) {
+		global.__db__ = initClient()
 	}
-
-	global.__db__ ??= initClient()
-	return global.__db__
+	drizzleClient = global.__db__.drizzle
+	pg = global.__db__.pg
 }
 
 function initClient() {
@@ -39,26 +41,5 @@ function initClient() {
 
 	return { drizzle: drizzleDb, pg: rawPg }
 }
-
-function bindIfFunction<T>(value: T, target: unknown) {
-	return typeof value === 'function' ? value.bind(target) : value
-}
-
-const drizzleClient = new Proxy({} as PostgresJsDatabase<typeof schema>, {
-	get(_target, prop, receiver) {
-		const client = getDb().drizzle
-		return bindIfFunction(Reflect.get(client, prop, receiver), client)
-	},
-})
-
-const pg = new Proxy((() => {}) as unknown as Sql<any>, {
-	get(_target, prop, receiver) {
-		const client = getDb().pg
-		return bindIfFunction(Reflect.get(client, prop, receiver), client)
-	},
-	apply(_target, thisArg, argArray) {
-		return Reflect.apply(getDb().pg as any, thisArg, argArray)
-	},
-})
 
 export { drizzleClient, pg }

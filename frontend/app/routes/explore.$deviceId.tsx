@@ -4,8 +4,10 @@ import { type Route } from './+types/explore.$deviceId'
 import DeviceDetailBox from '~/components/device-detail/device-detail-box'
 import { HoveredPointContext } from '~/components/map/layers/mobile/mobile-box-layer'
 import MobileOverviewLayer from '~/components/map/layers/mobile/mobile-overview-layer'
+import { getDevice } from '~/db/models/device.server'
+import { getSensorsWithLastMeasurement } from '~/db/models/sensor.server'
 import { categorizeIntoTrips } from '~/lib/mobile-box-helper'
-import { getPublicDevice } from '~/lib/opensensemap-api.server'
+import { getDeviceImageUrl } from '~/lib/s3.server'
 import { getLocale } from '~/middleware/i18next'
 
 export async function loader({ context, params, request }: Route.LoaderArgs) {
@@ -17,8 +19,10 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
 		throw new Response('Device not found', { status: 502 })
 	}
 
-	const device = await getPublicDevice(params.deviceId)
-	const sensorsWithLastestMeasurement = device.sensors
+	const device = await getDevice({ id: params.deviceId })
+	const sensorsWithLastestMeasurement = await getSensorsWithLastMeasurement(
+		params.deviceId,
+	)
 
 	// get only locations from the last 5 trips
 	if (device?.exposure === 'mobile' && device?.locations) {
@@ -48,10 +52,20 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
 	const startDate = url.searchParams.get('date_from') || undefined
 	const endDate = url.searchParams.get('date_to') || undefined
 
+	let deviceImageUrl: string | null = null
+
+	if (device?.image) {
+		try {
+			deviceImageUrl = await getDeviceImageUrl(device.image)
+		} catch (error) {
+			console.error('Failed to create signed device image URL:', error)
+		}
+	}
+
 	// Combine the device data with the selected sensors and return the result as JSON + add env variable
 	const data = {
 		device,
-		deviceImageUrl: null,
+		deviceImageUrl,
 		sensors: sensorsWithLastestMeasurement,
 		aggregation,
 		fromDate: startDate,

@@ -1,6 +1,7 @@
 import { useMediaQuery } from '@mantine/hooks'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SearchIcon, XIcon } from 'lucide-react'
+import { Switch } from '~/components/ui/switch'
 import { useState, useEffect, useRef, createContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMap } from 'react-map-gl/maplibre'
@@ -23,6 +24,7 @@ export default function NavBar(props: NavBarProps) {
 	const [open, setOpen] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [searchString, setSearchString] = useState('')
+	const [archiveMode, setArchiveMode] = useState(false)
 
 	const { osem: mapRef } = useMap()
 
@@ -84,7 +86,7 @@ export default function NavBar(props: NavBarProps) {
 				}}
 			>
 				<div className="flex h-11 w-full items-center gap-2 text-black md:gap-4 dark:text-zinc-200">
-					<SearchIcon className="h-6 w-6 shrink-0 dark:text-zinc-200" />
+					<SearchIcon className="h-6 w-6 shrink-0 text-red-600"/>
 
 					<input
 						ref={inputRef}
@@ -115,6 +117,17 @@ export default function NavBar(props: NavBarProps) {
 							<XIcon className="h-5 w-5" />
 						</button>
 					)}
+
+					<div className="flex items-center gap-2 border-l border-black/10 pl-3 dark:border-white/10">
+						<span className="text-xs whitespace-nowrap">
+							Archive
+						</span>
+
+						<Switch
+							checked={archiveMode}
+							onCheckedChange={setArchiveMode}
+						/>
+					</div>
 				</div>
 
 				<NavbarContext.Provider value={{ open, setOpen }}>
@@ -147,6 +160,7 @@ export default function NavBar(props: NavBarProps) {
 									<NavbarHandler
 										devices={props.devices}
 										searchString={searchString}
+										archiveMode={archiveMode}
 									/>
 								</div>
 							</motion.div>

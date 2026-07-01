@@ -33,26 +33,6 @@ You can create a copy of `.env.example`, rename it to `.env` and set the values.
 To run a local development version, you only need to adjust the `OSEM_API_URL`
 to the one given above.
 
-For this workspace, `wrk_front` is configured to use the archive API from the
-root Docker stack:
-
-- Local development: `OSEM_API_URL=http://localhost:8001/`
-- Docker compose in `wrk_front`: `OSEM_API_URL=http://host.docker.internal:8001/`
-
-Start the backend from the repository root first:
-
-```bash
-docker compose up -d api
-```
-
-Then start this frontend stack from `wrk_front`:
-
-```bash
-docker compose up -d --build frontend
-```
-
-The frontend will be available at `http://localhost:3000`.
-
 ### Setup Steps
 
 1. Clone the repo: `git clone https://github.com/openSenseMap/frontend`

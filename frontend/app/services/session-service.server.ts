@@ -5,6 +5,7 @@ import {
 	type RouterContextProvider,
 } from 'react-router'
 import invariant from 'tiny-invariant'
+import { getUserById } from '~/db/models/user.server'
 import { type User } from '~/db/schema'
 
 invariant(process.env.SESSION_SECRET, 'SESSION_SECRET must be set')
@@ -52,11 +53,6 @@ Object.defineProperty(authSessionStorage, 'commitSession', {
 
 const USER_SESSION_KEY = 'userId'
 
-async function getUserByIdFromDb(userId: User['id']) {
-	const { getUserById } = await import('~/db/models/user.server')
-	return getUserById(userId)
-}
-
 export async function getUserSession(request: Request) {
 	const cookie = request.headers.get('Cookie')
 	return authSessionStorage.getSession(cookie)
@@ -74,7 +70,7 @@ export async function getUserEmail(request: Request) {
 	const userId = await getUserId(request)
 	if (userId === undefined) return null
 
-	const user = await getUserByIdFromDb(userId)
+	const user = await getUserById(userId)
 	if (user) return user.email
 
 	throw await logout({ request: request, redirectTo: '/explore' })
@@ -84,7 +80,7 @@ export async function getUserName(request: Request) {
 	const userId = await getUserId(request)
 	if (userId === undefined) return null
 
-	const user = await getUserByIdFromDb(userId)
+	const user = await getUserById(userId)
 	if (user) return user.name
 
 	throw await logout({ request: request, redirectTo: '/explore' })
@@ -94,7 +90,7 @@ export async function getUser(request: Request) {
 	const userId = await getUserId(request)
 	if (userId === undefined) return null
 
-	const user = await getUserByIdFromDb(userId)
+	const user = await getUserById(userId)
 	if (user) return user
 
 	throw await logout({ request: request, redirectTo: '/explore' })
@@ -115,7 +111,7 @@ export async function requireUserId(
 export async function requireUser(request: Request) {
 	const userId = await requireUserId(request)
 
-	const user = await getUserByIdFromDb(userId)
+	const user = await getUserById(userId)
 	if (user) return user
 
 	throw await logout({ request: request, redirectTo: '/explore' })

@@ -23,11 +23,11 @@ interface MapHeaderProps {
 }
 
 export default function MapHeader({
-	devices,
-	measurementCount,
-	onHomeClick,
-	onMyAreaClick,
-	canFocusMyArea = false,
+    devices,
+    measurementCount,
+    onHomeClick,
+    onMyAreaClick,
+    canFocusMyArea = false,
 }: MapHeaderProps) {
 	const { t } = useTranslation('menu')
 
@@ -64,7 +64,9 @@ export default function MapHeader({
 					</div>
 
 					<div className="flex min-w-0 flex-1 justify-center">
-						<NavBar devices={devices} />
+						<NavBar
+							devices={devices}
+						/>
 					</div>
 
 					<div className="flex shrink-0 items-center gap-4">

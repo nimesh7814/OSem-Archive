@@ -17,6 +17,7 @@ import invariant from 'tiny-invariant'
 import { type Route } from './+types/root'
 import ErrorMessage from './components/error-message'
 import { Toaster } from './components/ui/toaster'
+import { updateUserPreferencesById } from './db/models/user.server'
 import { getEnv } from './lib/env.server'
 import { getLocale, i18nCookie, i18nextMiddleware } from './middleware/i18next'
 import { tosUiMiddleware } from './middleware/tos-ui.server'
@@ -146,9 +147,6 @@ export async function action({ context, request }: Route.ActionArgs) {
 		const headers = new Headers()
 
 		if (user) {
-			const { updateUserPreferencesById } = await import(
-				'./db/models/user.server'
-			)
 			await updateUserPreferencesById(user.id, {
 				themePreference: result.data,
 			})
@@ -179,9 +177,6 @@ export async function action({ context, request }: Route.ActionArgs) {
 		// updating the user locale is sufficient,
 		// because the loader will set the cookie to
 		// the user locale on the next request
-		const { updateUserPreferencesById } = await import(
-			'./db/models/user.server'
-		)
 		await updateUserPreferencesById(user.id, {
 			language: setLang,
 		})
