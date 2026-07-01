@@ -1,1 +1,0 @@
-ALTER TABLE "device" ADD COLUMN "orphaned_at" timestamp;--> statement-breakpoint

@@ -76,6 +76,9 @@ def get_boxes_by_country_region(
     region: Optional[str] = Query(None),
     filters: boxes.BoxFilters = Depends(boxes.box_filters_query),
 ):
+    if not region:
+        raise HTTPException(status_code=400, detail="region is required; querying an entire country is not supported")
+
     return boxes.list_boxes_by_country_region(country, region, filters)
 
 
@@ -145,7 +148,7 @@ def create_export(
         return exports.create_aoi_export(area or file_upload, geometry, filters, aggregate, selected_format)
 
     if not region:
-        raise HTTPException(status_code=400, detail="region is required when no AOI file or geometry is provided")
+        raise HTTPException(status_code=400, detail="region is required when no AOI file or geometry is provided; querying an entire country is not supported")
 
     filters.country = country or filters.country
     return exports.create_region_export(region, filters, aggregate, selected_format)

@@ -135,25 +135,11 @@ services:
       - export_jobs:/app/jobs
     restart: unless-stopped
 
-  # Newly Designed Frontend
-  designed_frontend:
+  osem_frontend:
     build:
-      context: ./front_designed
-      args:
-        VITE_API_BASE_URL: /api
-    container_name: designed_frontend
-    depends_on:
-      api:
-        condition: service_started
-    ports:
-      - "3000:80"
-    restart: unless-stopped
-
-  staging_frontend:
-    build:
-      context: ./front_staging
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: staging_frontend
+    container_name: osem_frontend
     env_file:
       - ./front_staging/.env
     environment:

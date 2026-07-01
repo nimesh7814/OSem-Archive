@@ -1,11 +1,14 @@
 from contextlib import contextmanager
 
-from psycopg2.pool import SimpleConnectionPool
+from psycopg2.pool import ThreadedConnectionPool
 
 from api.functions.config import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
 
-db_pool = SimpleConnectionPool(
+# FastAPI runs sync `def` routes in a worker thread pool, so concurrent
+# requests can call getconn()/putconn() from different threads at once.
+# SimpleConnectionPool has no internal locking for that; ThreadedConnectionPool does.
+db_pool = ThreadedConnectionPool(
     minconn=1,
     maxconn=10,
     dbname=DB_NAME,

@@ -12,6 +12,10 @@ from shapely.errors import ShapelyError
 from shapely.geometry import shape
 
 
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB raw upload (geojson/kml/zip)
+MAX_ZIP_UNCOMPRESSED_BYTES = 200 * 1024 * 1024  # 200 MB guard against zip bombs
+
+
 def validate_geojson_content(raw_bytes: bytes):
     """Reject malformed GeoJSON before handing it to GeoPandas/Shapely."""
     try:
@@ -156,7 +160,9 @@ def load_geometry_from_upload(file: UploadFile) -> str:
             detail="Unsupported file type. Upload a .geojson, .kml, or zipped shapefile (.zip).",
         )
 
-    raw_bytes = file.file.read()
+    raw_bytes = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (limit 50 MB).")
 
     if ext == "geojson":
         validate_geojson_content(raw_bytes)
@@ -171,6 +177,16 @@ def load_geometry_from_upload(file: UploadFile) -> str:
             extract_dir = os.path.join(tmp_dir, "extracted")
             try:
                 with zipfile.ZipFile(tmp_path, "r") as z:
+                    total_uncompressed = sum(member.file_size for member in z.infolist())
+                    if total_uncompressed > MAX_ZIP_UNCOMPRESSED_BYTES:
+                        raise HTTPException(status_code=413, detail="Zip contents too large once extracted.")
+
+                    extract_root = os.path.realpath(extract_dir)
+                    for member in z.infolist():
+                        member_path = os.path.realpath(os.path.join(extract_dir, member.filename))
+                        if not (member_path == extract_root or member_path.startswith(extract_root + os.sep)):
+                            raise HTTPException(status_code=400, detail="File not valid: unsafe path in zip archive.")
+
                     z.extractall(extract_dir)
             except zipfile.BadZipFile:
                 raise HTTPException(status_code=400, detail="File not valid: not a valid zip archive.")

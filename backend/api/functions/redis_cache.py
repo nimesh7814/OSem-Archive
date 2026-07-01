@@ -46,9 +46,12 @@ def set_cached_json(key: str, value, ttl: Optional[int] = None):
 
 
 def cached_or_compute(key: str, compute_fn, ttl: int = 300):
-    cached = get_cached_json(key)
+    # Check the raw cache hit, not the deserialized value: a cached `None`
+    # (e.g. a "not found" result) round-trips through JSON as "null", which
+    # is indistinguishable from a cache miss if we deserialize first.
+    cached = redis_client.get(key)
     if cached is not None:
-        return cached
+        return json.loads(cached)
 
     result = compute_fn()
     set_cached_json(key, result, ttl=ttl)

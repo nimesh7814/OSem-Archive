@@ -1,1 +1,0 @@
-ALTER TABLE "sensor" ALTER COLUMN "title" SET NOT NULL;

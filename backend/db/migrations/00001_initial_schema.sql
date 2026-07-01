@@ -63,16 +63,14 @@ CREATE TABLE measurements (
 
 -- Summary Table
 CREATE TABLE summary (
-    id SERIAL PRIMARY KEY,
-    summary_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    stations INT,
-    sensors INT,
-    readings BIGINT,
-    countries INT,
-    updated_at TIMESTAMPTZ DEFAULT now()
+    id integer PRIMARY KEY DEFAULT 1,
+    summary_date date NOT NULL,
+    stations integer,
+    sensors integer,
+    readings integer,
+    countries integer,
+    updated_at timestamptz
 );
-
-CREATE UNIQUE INDEX uq_summary_date ON summary (summary_date);
 
 -- Hypertable
 SELECT create_hypertable(
@@ -135,11 +133,13 @@ CREATE TABLE export_job (
 CREATE INDEX idx_export_job_status ON export_job (status);
 
 -- Refresh summary function
-CREATE OR REPLACE FUNCTION refresh_summary()
-RETURNS void AS $$
+CREATE OR REPLACE FUNCTION public.refresh_summary()
+ RETURNS void
+ LANGUAGE plpgsql
+AS $function$
 BEGIN
-
     INSERT INTO summary (
+        id,
         summary_date,
         stations,
         sensors,
@@ -148,24 +148,26 @@ BEGIN
         updated_at
     )
     VALUES (
+        1,
         CURRENT_DATE,
         (SELECT COUNT(*) FROM boxes),
         (SELECT COUNT(*) FROM sensors),
         (SELECT COUNT(*) FROM measurements),
-        (SELECT COUNT(DISTINCT r.country) FROM boxes b JOIN regions r ON b.region_id = r.id),
-
+        (SELECT COUNT(DISTINCT r.country)
+         FROM boxes b
+         JOIN regions r ON b.region_id = r.id),
         now()
     )
-    ON CONFLICT (summary_date)
+    ON CONFLICT (id)
     DO UPDATE SET
+        summary_date = EXCLUDED.summary_date,
         stations = EXCLUDED.stations,
         sensors = EXCLUDED.sensors,
         readings = EXCLUDED.readings,
         countries = EXCLUDED.countries,
         updated_at = now();
-
 END;
-$$ LANGUAGE plpgsql;
+$function$;
 
 SELECT refresh_summary();
 

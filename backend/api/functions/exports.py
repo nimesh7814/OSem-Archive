@@ -41,6 +41,19 @@ def split_csv_value(value: Optional[str]):
     return values or None
 
 
+def parse_optional_date(value: Optional[str], field_name: str) -> Optional[str]:
+    """Validate an ISO 8601 date/time string before it reaches the SQL layer."""
+    if not value:
+        return None
+
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"{field_name} must be a valid ISO 8601 date/time.")
+
+    return value
+
+
 def normalize_file_format(file_format: Optional[str], file_type: Optional[str] = None) -> str:
     selected_format = file_format or file_type or "geojson"
     if selected_format == "json":
@@ -80,8 +93,8 @@ class ExportFilters:
         self.phenomenon = split_csv_value(phenomenon)
         self.sensor_type = split_csv_value(sensor_type)
         self.box_ids = [b.strip() for b in box_id.split(",") if b.strip()] if box_id else None
-        self.from_date = from_date
-        self.to_date = to_date
+        self.from_date = parse_optional_date(from_date, "from_date")
+        self.to_date = parse_optional_date(to_date, "to_date")
 
 
 def export_filters_query(
@@ -227,7 +240,6 @@ def build_filtered_query(aggregate: str, filters: dict):
                 b.model,
                 b.created_at AS box_created_at,
                 b.updated_at AS box_updated_at,
-                b.last_measurement_at,
                 ST_X(b.location) AS longitude,
                 ST_Y(b.location) AS latitude,
                 rg.country,
@@ -255,7 +267,6 @@ def build_filtered_query(aggregate: str, filters: dict):
                 b.model,
                 b.created_at AS box_created_at,
                 b.updated_at AS box_updated_at,
-                b.last_measurement_at,
                 ST_X(b.location) AS longitude,
                 ST_Y(b.location) AS latitude,
                 rg.country,
