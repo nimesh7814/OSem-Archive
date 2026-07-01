@@ -20,11 +20,7 @@ import { type Route } from './+types/explore'
 import Map from '~/components/map'
 import { phenomenonLayers, defaultLayer } from '~/components/map/layers'
 import Legend, { type LegendValue } from '~/components/map/legend'
-import {
-	getDevices,
-	getDevicesWithSensors,
-	getUserDeviceLocations,
-} from '~/db/models/device.server'
+import { getUserDeviceLocations } from '~/db/models/device.server'
 import { getMeasurement } from '~/db/models/measurement.query.server'
 import { getProfileByUserId } from '~/db/models/profile.server'
 import { getSensors } from '~/db/models/sensor.server'
@@ -37,6 +33,11 @@ import {
 	type MapViewport,
 } from '~/lib/location'
 import { getLocale } from '~/middleware/i18next'
+import {
+	getPublicDevicesGeoJson,
+	getPublicMeasurementCount,
+	getPublicTags,
+} from '~/lib/opensensemap-api.server'
 import { getUser, getUserSession } from '~/services/session-service.server'
 import { getFilteredDevices } from '~/utils'
 import maplibregl, {
@@ -49,9 +50,6 @@ import maplibregl, {
 } from 'maplibre-gl'
 import BoxMarker from '~/components/map/layers/cluster/box-marker'
 import MapHeader from '~/components/map/topbar'
-import { getMeasurementsCount } from '~/db/models/measurement.server'
-import { getTags } from '~/services/device-service.server'
-import { getPhenomena } from '~/db/models/phenomena.server'
 import { DOWNLOAD_FILTER_KEYS } from '~/components/header/download'
 
 const INITIAL_VIEW_STATE = {
@@ -342,20 +340,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 	const filterParams = url.search
 	const urlFilterParams = new URLSearchParams(url.search)
 
-	const measurementTimeRange =
-		getMeasurementTimeRangeFromSearchParams(urlFilterParams)
+	const devices = await getPublicDevicesGeoJson()
 
-	// check if sensors are queried - if not get devices only to reduce load
-	const needsSensors =
-		Boolean(urlFilterParams.get('phenomenon')) || Boolean(measurementTimeRange)
+	const availableTags = await getPublicTags()
 
-	const devices = needsSensors
-		? await getDevicesWithSensors({ measurementTimeRange })
-		: await getDevices('geojson')
-
-	const availableTags = await getTags()
-
-	const measurementCount = await getMeasurementsCount()
+	const measurementCount = await getPublicMeasurementCount()
 
 	const session = await getUserSession(request)
 	const message = session.get('global_message') || null
@@ -363,7 +352,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 	var filteredDevices = getFilteredDevices(devices, urlFilterParams)
 
 	const user = await getUser(request)
-	const phenomena = await getPhenomena()
+	// The public openSenseMap API has no endpoint for a distinct list of
+	// phenomena, and deriving it from all boxes' sensors is too slow
+	// (~60s/20MB) for a page load, so the phenomenon filter has no options.
+	const phenomena: string[] = []
 
 	if (user) {
 		const [profile, userDeviceLocations] = await Promise.all([

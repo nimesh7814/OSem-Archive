@@ -75,7 +75,9 @@ type PublicApiDevice = {
 	[key: string]: unknown
 }
 
-const CACHE_TTL_MS = 60_000
+// The public API's full box list takes 15-60s to fetch, so cache it for a
+// while rather than re-fetching on every /explore request.
+const CACHE_TTL_MS = 5 * 60_000
 
 let devicesCache:
 	| {

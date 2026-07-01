@@ -116,9 +116,8 @@ export function getFilteredDevices(
 		)
 			return false
 
-		const sensorsList = device.properties.sensors?.map((s: any) =>
-			s.title.toLowerCase(),
-		)
+		const sensorsList =
+			device.properties.sensors?.map((s: any) => s.title.toLowerCase()) ?? []
 		const deviceTags =
 			device.properties.tags?.map((tag: string) => tag.toLowerCase()) || [] // Convert device tags to lowercase
 
