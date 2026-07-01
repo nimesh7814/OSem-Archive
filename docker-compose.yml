@@ -140,11 +140,15 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: osem_frontend
+    depends_on:
+      timescaledb:
+        condition: service_healthy
     env_file:
-      - ./front_staging/.env
+      - ./frontend/.env
     environment:
       PORT: "3000"
       HOST: "0.0.0.0"
+      DATABASE_URL: "postgresql://osem:osem_db_lock@timescaledb:5432/osem_archive"
       OSEM_API_URL: "https://api.opensensemap.org/"
     ports:
       - "3010:3000"
