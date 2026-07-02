@@ -58,10 +58,20 @@ def release_connection(conn):
     if _pool:
         _pool.putconn(conn)
 
+# Discard a connection instead of returning it to the pool. Used when a
+# query failed in a way that may have killed the connection server-side
+# (e.g. the backend crashed) -- pooling a dead connection would just make
+# every subsequent request that draws it fail too.
+def discard_connection(conn):
+
+    if _pool:
+        _pool.putconn(conn, close=True)
+
 # Execute a query
 def execute_query(query, params=None):
 
     conn = None
+    healthy = True
 
     try:
         conn = get_connection()
@@ -75,13 +85,20 @@ def execute_query(query, params=None):
 
         return result
 
-    except:
+    except Exception as e:
+        healthy = False
         if conn:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
-        print(f"{formats.RED}Error:{formats.END} Could not connect to the database.")
-        exit(1)
+        print(f"{formats.RED}Error:{formats.END} {e}")
+        raise
 
     finally:
         if conn:
-            release_connection(conn)
+            if healthy:
+                release_connection(conn)
+            else:
+                discard_connection(conn)

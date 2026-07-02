@@ -188,6 +188,23 @@ def load_sensor_csv(sensor_id: str, day: date, csv_text: str) -> int:
             "INSERT INTO measurements (time, sensor_id, value) VALUES %s",
             rows,
         )
+        cur.execute(
+            """
+            UPDATE sensors s
+            SET last_measurement = lm.value,
+                last_timestamp = lm.time
+            FROM (
+                SELECT value, time
+                FROM measurements
+                WHERE sensor_id = %s
+                ORDER BY time DESC
+                LIMIT 1
+            ) lm
+            WHERE s.id = %s
+              AND (s.last_timestamp IS NULL OR lm.time > s.last_timestamp)
+            """,
+            (sensor_id, sensor_id),
+        )
 
     return len(rows)
 
