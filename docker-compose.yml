@@ -24,6 +24,7 @@ services:
       - ./backend/db/migrations/00004_export_job.sql:/docker-entrypoint-initdb.d/04_export_job.sql:ro
       - ./backend/db/migrations/00005_measurements_sensor_time_index.sql:/docker-entrypoint-initdb.d/05_measurements_sensor_time_index.sql:ro
       - ./backend/db/migrations/00006_export_filter_indexes.sql:/docker-entrypoint-initdb.d/06_export_filter_indexes.sql:ro
+      - ./backend/db/migrations/00007_sensors_last_measurement.sql:/docker-entrypoint-initdb.d/07_sensors_last_measurement.sql:ro
       - ./backend/data/admin_boundary.geojson:/docker-entrypoint-initdb.d/admin_boundary.geojson:ro
     healthcheck:
       test:
@@ -122,11 +123,19 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+    # Must match how api/main.py imports the module (`from functions.export
+    # import ...`) -- api.main's PYTHONPATH makes "functions" resolve as a
+    # package under api/, so the module's identity (and therefore the task's
+    # registered name) is "functions.export", not bare "export". Pointing
+    # celery at the wrong identity silently creates a second copy of the
+    # same module under a different name, so the worker registers the task
+    # as "export.run_export_job" while the API enqueues
+    # "functions.export.run_export_job" -- the worker never recognizes it.
     command:
       [
         "celery",
         "-A",
-        "api.main.celery_app",
+        "functions.export.celery_app",
         "worker",
         "--loglevel=info",
         "--concurrency=4",
