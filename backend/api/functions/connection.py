@@ -16,31 +16,38 @@ PORT = os.getenv("POSTGRES_PORT")
 
 logger = logging.getLogger(__name__)
 
-# Created once, eagerly, at import time.
-db_pool = psycopg2.pool.SimpleConnectionPool(
-    minconn=1,
-    maxconn=20,
-    user=USER,
-    password=PASSWORD,
-    host=HOST,
-    port=PORT,
-    database=DBNAME,
-)
+# Lazy (not at import time) so each forked Celery worker builds its own pool.
+db_pool = None
+
+
+def _get_pool():
+    global db_pool
+    if db_pool is None:
+        db_pool = psycopg2.pool.SimpleConnectionPool(
+            minconn=1,
+            maxconn=20,
+            user=USER,
+            password=PASSWORD,
+            host=HOST,
+            port=PORT,
+            database=DBNAME,
+        )
+    return db_pool
 
 
 # Get a connection
 def get_connection():
-    return db_pool.getconn()
+    return _get_pool().getconn()
 
 
 # Release the connection
 def release_connection(conn):
-    db_pool.putconn(conn)
+    _get_pool().putconn(conn)
 
 
 # Used when a query failed in a way that may have killed the connection server-side.
 def discard_connection(conn):
-    db_pool.putconn(conn, close=True)
+    _get_pool().putconn(conn, close=True)
 
 
 # Execute a query

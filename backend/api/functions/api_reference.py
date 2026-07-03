@@ -4,6 +4,10 @@ Interactive docs: /docs   |   OpenAPI schema: /openapi.json
 
 Legend: [req] required, [opt=x] optional with default x
 
+Response caching: GET responses are cached in Redis for 24h (X-Cache: HIT or
+MISS on every response). /exports and its sub-routes are never cached, since
+job status has to stay live.
+
 
 GET    /
   This overview.
@@ -179,6 +183,10 @@ POST   /exports
     - aggregate=raw or hourly -> result is a .zip with one file per calendar month.
     - aggregate=daily/monthly/yearly -> result is a single .csv or .geojson file.
     - Download filename is "{region-or-uploaded-filename}_{timestamp}.{zip|csv|geojson}".
+    - Every row/feature includes the box's country and region.
+    - Timestamps are split into a "date" (YYYY-MM-DD) and a 24-hour "time" (HH:MM:SS) field.
+    - Aggregated tiers (daily/monthly/yearly) add avg_value, min_value, max_value, rdgs_count.
+    - The finished file and its job record are auto-deleted 24h after completion (see expires_at below).
 
   Errors
     400   {"detail": "Provide either region or an AOI file, not both."}
@@ -195,9 +203,10 @@ GET    /exports
   Example
     GET /exports
     200 OK
-    [{"id": "5da51b94-9b18-446f-825c-dce28f7bddcf", "format": "csv", "aggregate": "raw",
-      "status": "done", "row_count": 6364, "file_url": "/app/jobs/5da51b94-....zip",
-      "error_message": null, "created_at": "...", "completed_at": "..."}, "..."]
+    [{"id": "c889fb69-7655-4b5f-892b-f08a5a2a2a4b", "format": "csv", "aggregate": "raw",
+      "status": "done", "row_count": 1284, "file_url": "/app/jobs/c889fb69-....zip",
+      "error_message": null, "created_at": "...", "completed_at": "...",
+      "expires_at": "2026-07-05T00:23:57+02:00"}, "..."]
 
 
 GET    /exports/{job_id}
@@ -207,11 +216,12 @@ GET    /exports/{job_id}
     job_id        path        [req]           UUID
 
   Example
-    GET /exports/5da51b94-9b18-446f-825c-dce28f7bddcf
+    GET /exports/c889fb69-7655-4b5f-892b-f08a5a2a2a4b
     200 OK
-    {"id": "5da51b94-...", "format": "csv", "aggregate": "raw", "status": "done",
-     "row_count": 6364, "file_url": "/app/jobs/5da51b94-....zip", "error_message": null,
-     "created_at": "2026-07-03T01:03:04+02:00", "completed_at": "2026-07-03T01:03:04+02:00"}
+    {"id": "c889fb69-...", "format": "csv", "aggregate": "raw", "status": "done",
+     "row_count": 1284, "file_url": "/app/jobs/c889fb69-....zip", "error_message": null,
+     "created_at": "2026-07-04T00:23:57+02:00", "completed_at": "2026-07-04T00:23:57+02:00",
+     "expires_at": "2026-07-05T00:23:57+02:00"}
 
   Errors
     422   {"detail": [{"loc": ["path", "job_id"], "msg": "Input should be a valid UUID, invalid character..."}]}
@@ -219,16 +229,20 @@ GET    /exports/{job_id}
 
 
 GET    /exports/{job_id}/download
-  Downloads a completed export job's file.
+  Downloads a completed export job's file. Response headers include X-Expires-At
+  (ISO 8601 timestamp) and X-Timezone (its UTC offset, e.g. "+02:00") -- the file
+  and job record are both auto-deleted at that moment, 24h after completion.
 
   Params
     job_id        path        [req]           UUID
 
   Example
-    GET /exports/5da51b94-9b18-446f-825c-dce28f7bddcf/download
+    GET /exports/c889fb69-7655-4b5f-892b-f08a5a2a2a4b/download
     200 OK
     Content-Type: application/zip
-    Content-Disposition: attachment; filename="Burgenland_20260703010304.zip"
+    Content-Disposition: attachment; filename="Burgenland_20260704002357.zip"
+    X-Expires-At: 2026-07-05T00:23:57.265775+02:00
+    X-Timezone: +02:00
 
   Errors
     422   job_id is not a valid UUID (same shape as /exports/{job_id})
@@ -236,6 +250,7 @@ GET    /exports/{job_id}/download
     409   {"detail": "Export job is 'pending', not ready yet"}
           also returned for 'running' and 'failed'
     410   {"detail": "Export file is missing or has expired"}
+          the job record says "done" but the file itself is gone from disk
 
 
 DELETE /exports/{job_id}
@@ -245,7 +260,7 @@ DELETE /exports/{job_id}
     job_id        path        [req]           UUID
 
   Example
-    DELETE /exports/5da51b94-9b18-446f-825c-dce28f7bddcf
+    DELETE /exports/c889fb69-7655-4b5f-892b-f08a5a2a2a4b
     204 No Content
 
   Errors

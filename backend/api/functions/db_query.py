@@ -108,8 +108,8 @@ def get_countries(country: str = None):
 
     countries = {}
     for row in rows:
-        country, region = row
-        countries.setdefault(country, []).append(region)
+        country_name, region_name = row
+        countries.setdefault(country_name, []).append(region_name)
 
     return countries
 
@@ -261,7 +261,7 @@ def format_last_measurement_rows(rows):
             box_id, name, box_type, exposure, model,
             latitude, longitude,
             sensor_id, title, unit, sensor_type,
-            time, value,
+            last_timestamp, last_value,
         ) = row
 
         if box_id not in boxes:
@@ -285,28 +285,28 @@ def format_last_measurement_rows(rows):
             "unit": unit,
             "sensorType": sensor_type,
             "lastMeasurement": {
-                "value": value,
-                "updatedAt": time,
+                "value": last_value,
+                "updatedAt": last_timestamp,
             },
         })
 
     return list(boxes.values())
 
 # Resolves an uploaded AOI file to its box ids and dissolved EPSG:4326 geometry.
-def get_box_ids_by_aoi(geometry):
+def get_box_ids_by_aoi(geometry_filename):
     aoi_processors = {
         ".zip": process_zip,
         ".kml": process_kml,
         ".geojson": process_geojson,
     }
 
-    ext = os.path.splitext(geometry)[1].lower()
+    ext = os.path.splitext(geometry_filename)[1].lower()
     processor = aoi_processors.get(ext)
 
     if processor is None:
         raise ValueError(f"Unsupported AOI file type '{ext}'.")
 
-    aoi = processor(geometry)
+    aoi = processor(geometry_filename)
     aoi_geometry = aoi["features"][0]["geometry"]
 
     box_rows = execute_query('''
@@ -320,14 +320,14 @@ def get_box_ids_by_aoi(geometry):
 
 # Get Boxes by AOI: find boxes inside the uploaded AOI, then filter via get_common_filters.
 def get_boxes_by_aoi(
-    geometry,
+    geometry_filename,
     from_date,
     to_date,
     exposure="all",
     tags="all",
     phenomenon="all"
 ):
-    box_ids, aoi_geometry = get_box_ids_by_aoi(geometry)
+    box_ids, aoi_geometry = get_box_ids_by_aoi(geometry_filename)
     boxes = []
 
     if box_ids:

@@ -4,11 +4,12 @@ import tempfile
 import time as time_module
 from datetime import date, datetime, time
 from typing import Annotated, Literal, Optional
+from urllib.parse import parse_qsl, urlencode
 from uuid import UUID
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BeforeValidator
 from starlette.convertors import Convertor, register_url_convertor
 from functions.api_reference import API_REFERENCE_TEXT
@@ -17,6 +18,7 @@ from functions.db_query import (
     get_exposures, get_phenomena, get_tags, get_boxes_by_aoi, get_boxes_by_region,
     get_filter_values,
 )
+from functions.http_cache import get_cached_body, set_cached_body
 from functions.export import (
     create_aoi_export,
     create_region_export,
@@ -67,6 +69,36 @@ async def add_response_time_header(request: Request, call_next):
     response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.2f}"
     return response
 
+
+# Caches GET responses in Redis for 24h; /exports is excluded since job status must stay live.
+_UNCACHED_PREFIXES = ("/exports", "/docs", "/redoc", "/openapi.json")
+
+
+@app.middleware("http")
+async def cache_get_responses(request: Request, call_next):
+    if request.method != "GET" or request.url.path == "/" or request.url.path.startswith(_UNCACHED_PREFIXES):
+        return await call_next(request)
+
+    cache_key = f"{request.url.path}?{urlencode(sorted(parse_qsl(request.url.query)))}"
+
+    cached_body = get_cached_body(cache_key)
+    if cached_body is not None:
+        return Response(content=cached_body, media_type="application/json", headers={"X-Cache": "HIT"})
+
+    response = await call_next(request)
+    if response.status_code != 200:
+        return response
+
+    body = b"".join([chunk async for chunk in response.body_iterator])
+    set_cached_body(cache_key, body.decode("utf-8"))
+
+    headers = {
+        name: value for name, value in response.headers.items()
+        if name.lower() not in ("content-length", "content-type")
+    }
+    headers["X-Cache"] = "MISS"
+    return Response(content=body, status_code=response.status_code, media_type=response.media_type, headers=headers)
+
 # Raw DB values, not the capitalized display versions, so filters match exactly.
 _exposure_values, _tag_values, _phenomenon_values = get_filter_values()
 ExposureFilter = Literal[tuple(["all", *_exposure_values])]
@@ -82,15 +114,15 @@ def root():
     return API_REFERENCE_TEXT
 
 @app.get("/stats")
-def summary():
+def get_stats():
     return get_summary()
 
 @app.get("/countries")
-def regions():
+def list_countries():
     return get_countries()
 
 @app.get("/countries/{country}")
-def country_data(country: str):
+def get_country_regions(country: str):
     return get_countries(country=country)
 
 @app.get("/exposures")
@@ -248,23 +280,23 @@ async def create_export(
     return create_region_export(region, from_date, to_date_end, aggregate, format, exposure, tags, phenomenon)
 
 @app.get("/exports")
-def exports_list():
+def list_exports():
     return list_export_jobs()
 
 # job_id: UUID rejects malformed ids with a 422 instead of a raw DB error.
 @app.get("/exports/{job_id}")
-def export_status(job_id: UUID):
+def get_export_status(job_id: UUID):
     job = get_export_job(str(job_id))
     if job is None:
         raise HTTPException(status_code=404, detail=f"Export job '{job_id}' not found")
     return job
 
 @app.get("/exports/{job_id}/download")
-def export_download(job_id: UUID):
+def download_export(job_id: UUID):
     return download_export_job(str(job_id))
 
 @app.delete("/exports/{job_id}", status_code=204)
-def export_delete(job_id: UUID):
+def delete_export(job_id: UUID):
     delete_export_job(str(job_id))
 
 

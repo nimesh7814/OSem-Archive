@@ -4,7 +4,7 @@ import os
 import re
 import tempfile
 import zipfile
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import psycopg2.extras
@@ -49,14 +49,16 @@ AGGREGATE_TABLES = {
 # raw/hourly are split one file per month and zipped; daily/monthly/yearly stay a single file.
 MONTHLY_SPLIT_AGGREGATES = {"raw", "hourly"}
 
+# How long a completed export's file stays on disk before auto-deletion.
+EXPORT_FILE_TTL = timedelta(hours=24)
+
 # Single source of truth for export_job's column order.
 JOB_COLUMNS = [
     "id", "format", "aggregate", "filters", "status",
-    "row_count", "file_url", "error_message", "created_at", "completed_at",
+    "row_count", "file_url", "error_message", "created_at", "completed_at", "expires_at",
 ]
 
 
-# json.dump's default callback must raise on anything it can't handle; _csv_value below doesn't need to.
 def _json_default(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
@@ -65,12 +67,9 @@ def _json_default(obj):
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
-def _csv_value(value):
-    if isinstance(value, (datetime, date)):
-        return value.isoformat()
-    if isinstance(value, Decimal):
-        return float(value)
-    return value
+# Splits a timestamp into a plain YYYY-MM-DD date and a 24-hour HH:MM:SS time.
+def _split_timestamp(value):
+    return value.strftime("%Y-%m-%d"), value.strftime("%H:%M:%S")
 
 
 # Safe to drop into a Content-Disposition filename on any OS/filesystem.
@@ -95,14 +94,18 @@ def _mark_running(job_id):
 
 
 def _mark_done(job_id, row_count, file_path):
+    completed_at = datetime.now(timezone.utc)
+    expires_at = completed_at + EXPORT_FILE_TTL
+
     execute_query(
         """
         UPDATE export_job
-        SET status = 'done', row_count = %s, file_url = %s, completed_at = %s
+        SET status = 'done', row_count = %s, file_url = %s, completed_at = %s, expires_at = %s
         WHERE id = %s
         """,
-        (row_count, file_path, datetime.now(timezone.utc), job_id),
+        (row_count, file_path, completed_at, expires_at, job_id),
     )
+    return expires_at
 
 
 def _mark_failed(job_id, error_message):
@@ -123,18 +126,20 @@ def build_filtered_query(aggregate, filters):
     time_column = f"{alias}.time" if aggregate == "raw" else f"{alias}.bucket"
     value_columns = (
         f"{alias}.time, {alias}.value" if aggregate == "raw"
-        else f"{alias}.bucket, {alias}.sum_value, {alias}.rdgs_count, {alias}.avg_value, {alias}.min_value, {alias}.max_value"
+        else f"{alias}.bucket, {alias}.avg_value, {alias}.min_value, {alias}.max_value, {alias}.rdgs_count"
     )
 
     query = f'''
         SELECT
             b.id, b.name, b.box_type, b.exposure, b.model,
             ST_Y(b.location) AS latitude, ST_X(b.location) AS longitude,
+            rg.country, rg.region,
             s.id, s.title, s.unit, s.sensor_type,
             {value_columns}
         FROM {table} {alias}
         JOIN sensors s ON s.id = {alias}.sensor_id
         JOIN boxes b ON b.id = s.box_id
+        LEFT JOIN regions rg ON b.region_id = rg.id
         WHERE TRUE
     '''
     parameters = []
@@ -166,6 +171,7 @@ def group_measurement_rows(rows, aggregate):
         (
             box_id, name, box_type, exposure, model,
             latitude, longitude,
+            country, region,
             sensor_id, title, unit, sensor_type,
             *values,
         ) = row
@@ -177,6 +183,8 @@ def group_measurement_rows(rows, aggregate):
                 "boxType": box_type,
                 "exposure": exposure,
                 "model": model,
+                "country": country,
+                "region": region,
                 "currentLocation": {
                     "coordinates": [longitude, latitude],
                     "type": "Point",
@@ -196,17 +204,19 @@ def group_measurement_rows(rows, aggregate):
             }
 
         if aggregate == "raw":
-            time, value = values
-            measurement = {"createdAt": time, "value": value}
+            timestamp, value = values
+            date_part, time_part = _split_timestamp(timestamp)
+            measurement = {"date": date_part, "time": time_part, "value": value}
         else:
-            bucket, sum_value, rdgs_count, avg_value, min_value, max_value = values
+            bucket, avg_value, min_value, max_value, rdgs_count = values
+            date_part, time_part = _split_timestamp(bucket)
             measurement = {
-                "bucket": bucket,
-                "sum_value": sum_value,
-                "rdgs_count": rdgs_count,
+                "date": date_part,
+                "time": time_part,
                 "avg_value": avg_value,
                 "min_value": min_value,
                 "max_value": max_value,
+                "rdgs_count": rdgs_count,
             }
 
         sensors_by_id[sensor_id]["measurements"].append(measurement)
@@ -219,12 +229,12 @@ def group_measurement_rows(rows, aggregate):
 
 def write_csv(boxes, file_path, aggregate):
     base_columns = [
-        "box_id", "box_name", "longitude", "latitude", "exposure", "boxType", "model",
+        "box_id", "box_name", "longitude", "latitude", "country", "region", "exposure", "boxType", "model",
         "sensor_id", "sensorType", "sensor_title", "sensor_unit",
     ]
     measurement_columns = (
-        ["time", "value"] if aggregate == "raw"
-        else ["bucket", "sum_value", "rdgs_count", "avg_value", "min_value", "max_value"]
+        ["date", "time", "value"] if aggregate == "raw"
+        else ["date", "time", "avg_value", "min_value", "max_value", "rdgs_count"]
     )
     columns = base_columns + measurement_columns
 
@@ -236,7 +246,7 @@ def write_csv(boxes, file_path, aggregate):
             longitude, latitude = box["currentLocation"]["coordinates"]
             box_values = [
                 box["_id"], box["name"], longitude, latitude,
-                box["exposure"], box["boxType"], box["model"],
+                box["country"], box["region"], box["exposure"], box["boxType"], box["model"],
             ]
 
             for sensor in box["sensors"]:
@@ -244,30 +254,49 @@ def write_csv(boxes, file_path, aggregate):
 
                 for measurement in sensor["measurements"]:
                     if aggregate == "raw":
-                        measurement_values = [_csv_value(measurement["createdAt"]), measurement["value"]]
+                        measurement_values = [measurement["date"], measurement["time"], measurement["value"]]
                     else:
                         measurement_values = [
-                            _csv_value(measurement["bucket"]),
-                            measurement["sum_value"],
-                            measurement["rdgs_count"],
+                            measurement["date"],
+                            measurement["time"],
                             measurement["avg_value"],
                             measurement["min_value"],
                             measurement["max_value"],
+                            measurement["rdgs_count"],
                         ]
 
                     writer.writerow(box_values + sensor_values + measurement_values)
 
 
+# One Feature per (box, sensor, measurement), matching write_csv's row granularity.
 def write_geojson(boxes, file_path):
     features = []
     for box in boxes:
         longitude, latitude = box["currentLocation"]["coordinates"]
-        properties = {k: v for k, v in box.items() if k != "currentLocation"}
-        features.append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [longitude, latitude]},
-            "properties": properties,
-        })
+        box_properties = {
+            "box_id": box["_id"],
+            "box_name": box["name"],
+            "boxType": box["boxType"],
+            "exposure": box["exposure"],
+            "model": box["model"],
+            "country": box["country"],
+            "region": box["region"],
+        }
+
+        for sensor in box["sensors"]:
+            sensor_properties = {
+                "sensor_id": sensor["_id"],
+                "sensorType": sensor["sensorType"],
+                "sensor_title": sensor["title"],
+                "sensor_unit": sensor["unit"],
+            }
+
+            for measurement in sensor["measurements"]:
+                features.append({
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+                    "properties": {**box_properties, **sensor_properties, **measurement},
+                })
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(
@@ -278,9 +307,9 @@ def write_geojson(boxes, file_path):
         )
 
 
-# row[11] is always the tier's primary timestamp column (time for raw, bucket otherwise).
+# row[13] is always the tier's primary timestamp column (time for raw, bucket otherwise).
 def _row_month_key(row):
-    return row[11].strftime("%Y-%m")
+    return row[13].strftime("%Y-%m")
 
 
 # One file per calendar month, zipped together.
@@ -332,7 +361,8 @@ def run_export_job(self, job_id):
             else:
                 write_geojson(boxes, file_path)
 
-        _mark_done(job_id, len(rows), file_path)
+        expires_at = _mark_done(job_id, len(rows), file_path)
+        cleanup_expired_export.apply_async(args=[job_id], eta=expires_at)
         return {"status": "done", "row_count": len(rows), "file_url": file_path}
 
     except Exception as exc:
@@ -426,19 +456,38 @@ def download_export_job(job_id):
     timestamp = (job["completed_at"] or datetime.now(timezone.utc)).strftime("%Y%m%d%H%M%S")
     extension = "zip" if zipped else job["format"]
 
+    headers = {}
+    if job["expires_at"]:
+        offset = job["expires_at"].strftime("%z")
+        headers["X-Expires-At"] = job["expires_at"].isoformat()
+        headers["X-Timezone"] = f"{offset[:3]}:{offset[3:]}" if offset else "UTC"
+
     return FileResponse(
         path=job["file_url"],
         media_type=media_type,
         filename=f"{source_name}_{timestamp}.{extension}",
+        headers=headers,
     )
 
 
-def delete_export_job(job_id):
+# Shared by delete_export_job (404s if missing) and cleanup_expired_export (no-ops).
+def _delete_job_and_file(job_id):
     job = _fetch_job(job_id)
     if job is None:
-        raise HTTPException(status_code=404, detail=f"Export job '{job_id}' not found")
+        return None
 
     execute_query("DELETE FROM export_job WHERE id = %s", (job_id,))
-
     if job["file_url"] and os.path.exists(job["file_url"]):
         os.remove(job["file_url"])
+    return job
+
+
+def delete_export_job(job_id):
+    if _delete_job_and_file(job_id) is None:
+        raise HTTPException(status_code=404, detail=f"Export job '{job_id}' not found")
+
+
+# Scheduled via .apply_async(eta=expires_at) when a job completes -- fires ~24h later.
+@celery_app.task
+def cleanup_expired_export(job_id):
+    _delete_job_and_file(job_id)

@@ -25,6 +25,7 @@ services:
       - ./backend/db/migrations/00005_measurements_sensor_time_index.sql:/docker-entrypoint-initdb.d/05_measurements_sensor_time_index.sql:ro
       - ./backend/db/migrations/00006_export_filter_indexes.sql:/docker-entrypoint-initdb.d/06_export_filter_indexes.sql:ro
       - ./backend/db/migrations/00007_sensors_last_measurement.sql:/docker-entrypoint-initdb.d/07_sensors_last_measurement.sql:ro
+      - ./backend/db/migrations/00008_export_job_expiry.sql:/docker-entrypoint-initdb.d/08_export_job_expiry.sql:ro
       - ./backend/data/admin_boundary.geojson:/docker-entrypoint-initdb.d/admin_boundary.geojson:ro
     healthcheck:
       test:
