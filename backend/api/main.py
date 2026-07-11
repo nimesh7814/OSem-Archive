@@ -1,3 +1,4 @@
+# Supports being run both as "api.main:app" (repo root on the path) and "app.app:app" (backend/api on the path).
 try:
     from api.app.logger import configure_logging
 except ModuleNotFoundError as exc:

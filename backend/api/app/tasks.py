@@ -1,6 +1,5 @@
 import os
 
-from .app import get_aoi_measurement_rows, get_region_measurement_rows
 from .bucket import upload_bytes
 from .celery_app import celery_app
 from .export import (
@@ -9,6 +8,7 @@ from .export import (
     EXPORT_CONTENT_TYPES,
     measurement_export_filename,
 )
+from .measurements import get_aoi_measurement_rows, get_region_measurement_rows
 from .schema import CommonMeasurementFilters
 
 JOB_TRY = int(os.getenv("JOB_TRY", "3"))
@@ -53,6 +53,7 @@ def export_region_measurements(self, country, region, filters_data, file_format)
             **upload_result,
         }
     except Exception as exc:
+        # Linear backoff: 30s, 60s, 90s, then give up and let the failure surface.
         retry_number = self.request.retries + 1
         if self.request.retries < JOB_TRY:
             countdown = JOB_RETRY_DELAY_SECONDS * retry_number
@@ -91,6 +92,7 @@ def export_aoi_measurements(self, aoi_name, geometry, filters_data, file_format)
             **upload_result,
         }
     except Exception as exc:
+        # Linear backoff: 30s, 60s, 90s, then give up and let the failure surface.
         retry_number = self.request.retries + 1
         if self.request.retries < JOB_TRY:
             countdown = JOB_RETRY_DELAY_SECONDS * retry_number

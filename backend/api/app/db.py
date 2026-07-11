@@ -76,8 +76,7 @@ def run_query(query, params=None, schema: Optional[Type[BaseModel]] = None, max_
         logger.error(f"Database query failed: {e}")
         raise DatabaseQueryError(f"Query failed: {e}") from e
 
-    # Handle malformed parameter values psycopg2 rejects before sending the query
-    # (e.g. NUL bytes in a string, which PostgreSQL cannot store)
+    # e.g. NUL bytes in a string, which psycopg2 rejects before ever sending the query
     except ValueError as e:
         logger.warning(f"Rejected malformed query parameter: {e}")
         raise DatabaseInputError("The request contains a value the database cannot accept.") from e

@@ -105,6 +105,7 @@ def get_presigned_download_url(object_name):
         raise BucketError("No export object name was provided.")
 
     check_object_storage_connection()
+    # MINIO_ENDPOINT only resolves inside Docker; browser-facing URLs must be signed against a public host.
     public_endpoint = os.getenv("MINIO_PUBLIC_ENDPOINT")
     secure = env_bool("MINIO_PUBLIC_USE_SSL", env_bool("MINIO_USE_SSL", False))
     client = minio_client(endpoint=public_endpoint, secure=secure) if public_endpoint else minio_client()

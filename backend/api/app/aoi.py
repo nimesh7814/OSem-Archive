@@ -13,14 +13,9 @@ import shapefile
 
 from .db import DatabaseQueryError, run_query
 
-GEOMETRY = ["Polygon", "MultiPolygon"]
+SUPPORTED_POLYGON_TYPES = ["Polygon", "MultiPolygon"]
 NESTED_GEOJSON_TYPES = {"FeatureCollection", "Feature", "GeometryCollection"}
-# Real-world AOI files nest at most a few levels (FeatureCollection -> Feature ->
-# GeometryCollection -> Polygon). A much deeper structure only serves to blow the
-# recursion budget of geojson's payload.is_valid() and our own
-# extract_polygon_geometries() - both recurse once per nesting level with no cap
-# of their own, so an attacker-controlled file can drive an unhandled
-# RecursionError. Reject anything past a generous depth before either ever runs.
+# Caps recursion depth in payload.is_valid()/extract_polygon_geometries() so a maliciously nested file can't trigger a RecursionError.
 MAX_GEOJSON_NESTING_DEPTH = 64
 UNSUPPORTED_AOI_GEOMETRY = {
     "Point",
@@ -28,16 +23,8 @@ UNSUPPORTED_AOI_GEOMETRY = {
     "LineString",
     "MultiLineString",
 }
-ALLOWED_AOI_EXTENSIONS = {".geojson", ".kml", ".zip"}
-# .prj is deliberately excluded here: it is checked separately by
-# validate_shapefile_prj(), which reports a missing .prj with the more
-# specific WRONG_CRS_ERROR instead of the generic INVALID_FILE_ERROR.
+# .prj is checked separately by validate_shapefile_prj(), which reports a missing .prj as WRONG_CRS_ERROR instead of INVALID_FILE_ERROR.
 REQUIRED_SHAPEFILE_EXTENSIONS = {".shp", ".shx", ".dbf"}
-AOI_PROCESSORS = {
-    ".geojson": ("geojson", "process_geojson"),
-    ".kml": ("kml", "process_kml"),
-    ".zip": ("shapefile", "process_zip"),
-}
 NO_VALID_GEOMETRY_ERROR = "No valid Geometry"
 INVALID_FILE_ERROR = "File is not valid"
 WRONG_CRS_ERROR = "Coordinate System is wrong (not EPSG: 4326)."
@@ -49,15 +36,14 @@ class AoiValidationError(Exception):
 
 def validate_aoi_file(filename, content):
     extension = Path(filename or "").suffix.lower()
-    processor_info = AOI_PROCESSORS.get(extension)
-    if processor_info is None:
+    processor = AOI_PROCESSORS.get(extension)
+    if processor is None:
         raise AoiValidationError(INVALID_FILE_ERROR)
 
     if not content:
         raise AoiValidationError(INVALID_FILE_ERROR)
 
-    source_format, processor_name = processor_info
-    geometries = globals()[processor_name](content)
+    geometries = processor(content)
     merged_geometry = process_geometries(geometries)
 
     return {
@@ -99,8 +85,7 @@ def process_geojson(content):
 
 
 def reject_excessive_geojson_nesting(payload):
-    # Iterative (stack-based) walk on purpose: this runs before any recursive
-    # validation, so it must not itself be recursive.
+    # Stack-based on purpose: this runs before any recursive validation, so it must not itself recurse.
     stack = [(payload, 1)]
     while stack:
         node, depth = stack.pop()
@@ -158,7 +143,7 @@ def extract_polygon_geometries(payload):
             geometries.extend(extract_polygon_geometries(geometry))
         return geometries
 
-    if payload_type in GEOMETRY:
+    if payload_type in SUPPORTED_POLYGON_TYPES:
         return [payload]
 
     if payload_type in UNSUPPORTED_AOI_GEOMETRY:
@@ -402,3 +387,11 @@ def geometry_area_sqkm(geometry):
         raise AoiValidationError(NO_VALID_GEOMETRY_ERROR)
 
     return round(float(rows[0]["area_sqkm"]), 6)
+
+
+# Built here, after the processor functions above are defined; validate_aoi_file looks this up at call time.
+AOI_PROCESSORS = {
+    ".geojson": process_geojson,
+    ".kml": process_kml,
+    ".zip": process_zip,
+}

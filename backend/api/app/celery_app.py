@@ -23,23 +23,16 @@ celery_app.conf.update(
     task_serializer="json",
     task_track_started=True,
     timezone="UTC",
-    # Without these, a broker that is down or unreachable makes
-    # send_task()/AsyncResult() block indefinitely instead of raising —
-    # see the API's own request-handling code for how that's turned into
-    # a fast 503 rather than a hung request.
+    # Bounds how long send_task()/AsyncResult() can block if the broker is unreachable.
     broker_transport_options={
         "socket_connect_timeout": 5,
         "socket_timeout": 5,
     },
     broker_connection_timeout=5,
-    # Best-effort: ask kombu to not retry connecting more than once. In
-    # testing this alone did not reliably bound the worst case (kombu's
-    # retry/backoff behavior compounded with slow DNS resolution for an
-    # unreachable host still took minutes), so it's backed by a hard
-    # wall-clock timeout below — that's the actual guarantee.
+    # Not a full guarantee on its own (see EXPORT_QUEUE_TIMEOUT_SECONDS below for the hard wall-clock backstop).
     broker_connection_retry=True,
     broker_connection_max_retries=1,
-    # Same reasoning, for reading job status/results back out.
+    # Same timeout reasoning, for reading job status/results back out.
     result_backend_transport_options={
         "socket_connect_timeout": 5,
         "socket_timeout": 5,
@@ -53,14 +46,7 @@ class ExportQueueError(Exception):
 
 EXPORT_QUEUE_TIMEOUT_SECONDS = float(os.getenv("EXPORT_QUEUE_TIMEOUT_SECONDS", "8"))
 
-# Celery/kombu's own retry and timeout settings (above) turned out not to
-# reliably bound how long a call can block when the broker/result backend
-# is unreachable. Running the call on a separate thread and giving up on
-# *waiting* for it after EXPORT_QUEUE_TIMEOUT_SECONDS guarantees the HTTP
-# request gets a fast, honest answer regardless of what Celery does
-# internally. The abandoned thread is left to finish or die on its own;
-# it holds no request state, so nothing leaks except the thread itself
-# until it eventually completes.
+# Runs Celery calls on a thread so a stuck broker can't block the HTTP request past EXPORT_QUEUE_TIMEOUT_SECONDS.
 _queue_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="export-queue")
 
 
@@ -80,9 +66,7 @@ def send_export_task(name, kwargs):
 
 def get_export_result(job_id):
     result = celery_app.AsyncResult(job_id)
-    # .state is the property that actually triggers the backend lookup;
-    # touch it here (under the same timeout) so a dead result backend
-    # raises before the caller starts branching on job state.
+    # Touching .state triggers the backend lookup, so a dead result backend raises here instead of later.
     _call_with_timeout(lambda: result.state)
     return result
 

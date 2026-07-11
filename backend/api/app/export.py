@@ -62,14 +62,6 @@ def export_value(value):
     return value
 
 
-def measurement_time(value):
-    if value is None:
-        return ""
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return value
-
-
 def build_measurement_csv(rows):
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=MEASUREMENT_EXPORT_COLUMNS)
@@ -90,7 +82,7 @@ def build_measurement_csv(rows):
             "sensor_type": row["sensor_type"],
             "phenomenon": row["title"],
             "unit": row["unit"],
-            "time": measurement_time(row["bucket"]),
+            "time": export_value(row["bucket"]),
             "value": export_value(row["value"]),
             "avg_value": export_value(row["avg_value"]),
             "min_value": export_value(row["min_value"]),
@@ -103,7 +95,7 @@ def build_measurement_csv(rows):
 
 def measurement_record(row):
     measurement = {
-        "time": measurement_time(row["bucket"]),
+        "time": export_value(row["bucket"]),
     }
     if row["aggregate"] == "raw":
         measurement["value"] = export_value(row["value"])
