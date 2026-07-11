@@ -275,12 +275,12 @@ def count_aoi_measurement_rows(geometry, filters):
 
 
 def count_result(rows, aggregate):
-    # The query is capped at MAX_EXPORT_ROWS + 1, so count is null when exceeded - the true total is unknown.
+    # The query is capped at MAX_EXPORT_ROWS + 1, so count is a lower bound (not the true total) once exceeded.
     matched = rows[0]["matched"]
     exceeds_limit = matched > MAX_EXPORT_ROWS
     return {
         "aggregate": aggregate,
-        "count": None if exceeds_limit else matched,
+        "count": min(matched, MAX_EXPORT_ROWS),
         "limit": MAX_EXPORT_ROWS,
         "exceedsLimit": exceeds_limit,
     }
