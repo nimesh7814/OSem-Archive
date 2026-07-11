@@ -11,12 +11,17 @@ from xml.etree import ElementTree
 import geojson
 import shapefile
 
-try:
-    from .db import DatabaseQueryError, run_query
-except ImportError:
-    from db import DatabaseQueryError, run_query
+from .db import DatabaseQueryError, run_query
 
 GEOMETRY = ["Polygon", "MultiPolygon"]
+NESTED_GEOJSON_TYPES = {"FeatureCollection", "Feature", "GeometryCollection"}
+# Real-world AOI files nest at most a few levels (FeatureCollection -> Feature ->
+# GeometryCollection -> Polygon). A much deeper structure only serves to blow the
+# recursion budget of geojson's payload.is_valid() and our own
+# extract_polygon_geometries() - both recurse once per nesting level with no cap
+# of their own, so an attacker-controlled file can drive an unhandled
+# RecursionError. Reject anything past a generous depth before either ever runs.
+MAX_GEOJSON_NESTING_DEPTH = 64
 UNSUPPORTED_AOI_GEOMETRY = {
     "Point",
     "MultiPoint",
@@ -85,11 +90,35 @@ def process_geojson(content):
 
     if not isinstance(payload, dict) or not payload.get("type"):
         raise AoiValidationError(INVALID_FILE_ERROR)
+    reject_excessive_geojson_nesting(payload)
     if not payload.is_valid:
         raise AoiValidationError(INVALID_FILE_ERROR)
 
     validate_geojson_crs(payload)
     return extract_polygon_geometries(payload)
+
+
+def reject_excessive_geojson_nesting(payload):
+    # Iterative (stack-based) walk on purpose: this runs before any recursive
+    # validation, so it must not itself be recursive.
+    stack = [(payload, 1)]
+    while stack:
+        node, depth = stack.pop()
+        if depth > MAX_GEOJSON_NESTING_DEPTH:
+            raise AoiValidationError(INVALID_FILE_ERROR)
+        if not isinstance(node, dict) or node.get("type") not in NESTED_GEOJSON_TYPES:
+            continue
+
+        node_type = node.get("type")
+        if node_type == "FeatureCollection":
+            children = node.get("features") or []
+        elif node_type == "Feature":
+            geometry = node.get("geometry")
+            children = [geometry] if geometry is not None else []
+        else:  # GeometryCollection
+            children = node.get("geometries") or []
+
+        stack.extend((child, depth + 1) for child in children)
 
 
 def validate_geojson_crs(payload):

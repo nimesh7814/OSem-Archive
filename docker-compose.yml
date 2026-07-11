@@ -4,14 +4,11 @@
 networks:
   osem_network:
     name: osem_network
-  osem_archive_network:
-    external: true
-    name: osem-archive_default
 
 services:
   timescaledb:
     image: timescale/timescaledb-ha:pg14-latest
-    container_name: osem_timescaledb
+    container_name: timescaledb
     restart: unless-stopped
     env_file:
       - ./backend/.env
@@ -20,7 +17,7 @@ services:
       PGTZ: Europe/Berlin
     command:
       - -cshared_preload_libraries=timescaledb,pg_cron
-      - -ccron.database_name=osem_archive
+      - -ccron.database_name=${POSTGRES_DB:-osem_archive}
     ports:
       - "5433:5432"
     networks:
@@ -48,7 +45,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: osem_pgadmin
+    container_name: pgadmin
     restart: unless-stopped
     depends_on:
       timescaledb:
@@ -119,7 +116,6 @@ services:
       "
 
   celery-worker:
-    image: api-celery-worker:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -146,17 +142,15 @@ services:
         condition: service_healthy
     networks:
       - osem_network
-      - osem_archive_network
     volumes:
       - ./backend:/app
       - api_logs:/app/logs
 
   ingest:
-    image: osem-archive-ingest:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: osem_ingest
+    container_name: ingest
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -174,12 +168,36 @@ services:
     command: ["python", "ingest/load_archive.py"]
     restart: "no"
 
-  api:
-    image: api-celery-worker:latest
+  ingest-scheduler:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: osem_api
+    container_name: ingest_scheduler
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      PYTHONPATH: /app
+      INGEST_SCHEDULE_TIME: ${INGEST_SCHEDULE_TIME:-00:00}
+      INGEST_SCHEDULE_TIMEZONE: ${INGEST_SCHEDULE_TIMEZONE:-Europe/Berlin}
+      INGEST_SCHEDULER_RUN_ON_START: ${INGEST_SCHEDULER_RUN_ON_START:-false}
+    working_dir: /app
+    networks:
+      - osem_network
+    volumes:
+      - ./backend:/app
+    command: ["python", "ingest/scheduler.py"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: api
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -211,11 +229,10 @@ services:
     restart: unless-stopped
 
   osem_frontend:
-    image: osem-archive-osem_frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: osem_frontend
+    container_name: frontend
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -224,7 +241,7 @@ services:
     environment:
       PORT: "3000"
       HOST: "0.0.0.0"
-      DATABASE_URL: "postgresql://osem:osem_db_lock@timescaledb:5432/osem_archive"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-osem}:${POSTGRES_PASSWORD:-osem_db_lock}@timescaledb:5432/${POSTGRES_DB:-osem_archive}"
       OSEM_API_URL: "https://api.opensensemap.org/"
     ports:
       - "3010:3000"

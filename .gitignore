@@ -1,7 +1,52 @@
 *.dump
-.agents
-.venv
-backend\.env
-__pycache__
+
+# Local agent/tool state
+.agents/
+.claude/
+
+# Environment files
 *.env
-backend\db\servers.json
+backend/.env
+frontend/.env
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node/frontend caches and build output
+node_modules/
+.cache/
+.parcel-cache/
+.vite/
+.next/
+.nuxt/
+.svelte-kit/
+frontend/.react-router/
+dist/
+build/
+coverage/
+
+# Logs and runtime files
+*.log
+logs/
+backend/logs/
+backend/exports/
+
+# Local service data
+frontend/rustfs-data/
+
+# Local database/admin config
+backend/db/servers.json

@@ -2,7 +2,6 @@ import os
 import re
 import csv
 import io
-import json
 import requests
 import psycopg2
 
@@ -36,9 +35,9 @@ conn = psycopg2.connect(
 conn.autocommit = False
 print(f"Connected to database: {DB_NAME} at {DB_HOST}:{DB_PORT} as user {DB_USER}\n")
 
-URL = "https://archive.opensensemap.org"
+URL = os.getenv("ARCHIVE_BASE_URL", "https://archive.opensensemap.org").rstrip("/")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-CHECKPOINT_PATH = Path(__file__).resolve().parent / ".ingest_checkpoint.json"
+DAY_COMPLETE_MARKER = "__day_complete__"
 
 # Handle HTTP requests with retries
 session = requests.Session()
@@ -51,22 +50,38 @@ adapter = HTTPAdapter(max_retries=retry)
 session.mount("https://", adapter)
 session.mount("http://", adapter)
 
-# Load the last completed day
+# Load the last fully completed day from ingest_log.
 def load_checkpoint() -> date | None:
-    if not CHECKPOINT_PATH.exists():
-        return None
-    try:
-        data = json.loads(CHECKPOINT_PATH.read_text(encoding="utf-8"))
-        return date.fromisoformat(data["last_completed_day"])
-    except (json.JSONDecodeError, KeyError, ValueError):
-        return None
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT max(archive_date)
+            FROM ingest_log
+            WHERE box_id = %s AND status = 'done'
+            """,
+            (DAY_COMPLETE_MARKER,),
+        )
+        row = cur.fetchone()
+        marker_day = row[0] if row and row[0] is not None else None
 
-# Save the Last Completed Day
+        cur.execute(
+            """
+            SELECT max(archive_date)
+            FROM ingest_log
+            WHERE box_id <> %s AND status IN ('done', 'failed')
+            """,
+            (DAY_COMPLETE_MARKER,),
+        )
+        row = cur.fetchone()
+        inferred_day = row[0] - timedelta(days=1) if row and row[0] is not None else None
+
+    completed_days = [day for day in (marker_day, inferred_day) if day is not None]
+    return max(completed_days) if completed_days else None
+
+# Save the last fully completed day in ingest_log.
 def save_checkpoint(day: date) -> None:
-    CHECKPOINT_PATH.write_text(
-        json.dumps({"last_completed_day": day.isoformat()}),
-        encoding="utf-8",
-    )
+    mark_ingest_log(DAY_COMPLETE_MARKER, day, status="done")
+    conn.commit()
 
 # Get the available date range
 def get_available_date_range() -> tuple[date, date]:
@@ -328,11 +343,15 @@ def scrape_range(date_from: date | None = None, date_to: date | None = None) -> 
         checkpoint = load_checkpoint()
         if checkpoint is not None:
             date_from = checkpoint + timedelta(days=1)
-            print(f"Resuming from checkpoint: last completed day was {checkpoint}")
+            print(f"Resuming from ingest_log: last completed day was {checkpoint}")
         else:
             date_from = archive_first
 
     total_days = (date_to - date_from).days + 1
+    if total_days <= 0:
+        print(f"No new archive days to ingest. ingest_log is already at {date_from - timedelta(days=1)}.")
+        return
+
     print(f"Scraping: {date_from} -> {date_to} ({total_days} days)\n")
 
     day_bar = tqdm(total=total_days, desc="Days remaining", unit="day")
@@ -344,7 +363,7 @@ def scrape_range(date_from: date | None = None, date_to: date | None = None) -> 
             day += timedelta(days=1)
             day_bar.update(1)
     except KeyboardInterrupt:
-        tqdm.write(f"\nInterrupted. Checkpoint saved at {day - timedelta(days=1)}. Re-run to resume.")
+        tqdm.write(f"\nInterrupted. ingest_log saved through {day - timedelta(days=1)}. Re-run to resume.")
         raise
     finally:
         day_bar.close()

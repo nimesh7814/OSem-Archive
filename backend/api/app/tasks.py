@@ -1,27 +1,15 @@
 import os
 
-try:
-    from .app import get_aoi_measurement_rows, get_region_measurement_rows
-    from .bucket import upload_bytes
-    from .celery_app import celery_app
-    from .export import (
-        aoi_measurement_export_filename,
-        build_measurement_export,
-        EXPORT_CONTENT_TYPES,
-        measurement_export_filename,
-    )
-    from .schema import CommonMeasurementFilters
-except ImportError:
-    from app import get_aoi_measurement_rows, get_region_measurement_rows
-    from bucket import upload_bytes
-    from celery_app import celery_app
-    from export import (
-        aoi_measurement_export_filename,
-        build_measurement_export,
-        EXPORT_CONTENT_TYPES,
-        measurement_export_filename,
-    )
-    from schema import CommonMeasurementFilters
+from .app import get_aoi_measurement_rows, get_region_measurement_rows
+from .bucket import upload_bytes
+from .celery_app import celery_app
+from .export import (
+    aoi_measurement_export_filename,
+    build_measurement_export,
+    EXPORT_CONTENT_TYPES,
+    measurement_export_filename,
+)
+from .schema import CommonMeasurementFilters
 
 JOB_TRY = int(os.getenv("JOB_TRY", "3"))
 JOB_RETRY_DELAY_SECONDS = 30

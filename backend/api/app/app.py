@@ -10,36 +10,20 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-try:
-    from .aoi import AoiValidationError, validate_aoi_file
-    from .bucket import BucketError, check_object_storage_connection, get_presigned_download_url
-    from .cache import CacheUnavailableError, check_cache_connection, get_cached, set_cached, key_exists
-    from .celery_app import (
-        ensure_export_workers_available,
-        export_workers_available,
-        send_export_task,
-        get_export_result,
-        ExportQueueError,
-    )
-    from .db import run_query, DatabaseBusyError, DatabaseQueryError, DatabaseConnectionLostError, DatabaseInputError
-    from .format import format_box, format_measurement_boxes
-    from .queries import TAGS_QUERY, PHENOMENA_QUERY, EXPOSURE_QUERY, MEASUREMENT_AGGREGATES
-    from .schema import Summary, Tag, Phenomenon, Exposure, CommonMeasurementFilters, ExportFormat, MeasurementAggregate
-except ImportError:
-    from aoi import AoiValidationError, validate_aoi_file
-    from bucket import BucketError, check_object_storage_connection, get_presigned_download_url
-    from cache import CacheUnavailableError, check_cache_connection, get_cached, set_cached, key_exists
-    from celery_app import (
-        ensure_export_workers_available,
-        export_workers_available,
-        send_export_task,
-        get_export_result,
-        ExportQueueError,
-    )
-    from db import run_query, DatabaseBusyError, DatabaseQueryError, DatabaseConnectionLostError, DatabaseInputError
-    from format import format_box, format_measurement_boxes
-    from queries import TAGS_QUERY, PHENOMENA_QUERY, EXPOSURE_QUERY, MEASUREMENT_AGGREGATES
-    from schema import Summary, Tag, Phenomenon, Exposure, CommonMeasurementFilters, ExportFormat, MeasurementAggregate
+from .aoi import AoiValidationError, validate_aoi_file
+from .bucket import BucketError, check_object_storage_connection, get_presigned_download_url
+from .cache import CacheUnavailableError, check_cache_connection, get_cached, set_cached, key_exists
+from .celery_app import (
+    ensure_export_workers_available,
+    export_workers_available,
+    send_export_task,
+    get_export_result,
+    ExportQueueError,
+)
+from .db import run_query, DatabaseBusyError, DatabaseQueryError, DatabaseConnectionLostError, DatabaseInputError
+from .format import format_box, format_measurement_boxes
+from .queries import TAGS_QUERY, PHENOMENA_QUERY, EXPOSURE_QUERY, MEASUREMENT_AGGREGATES
+from .schema import Summary, Tag, Phenomenon, Exposure, CommonMeasurementFilters, ExportFormat, MeasurementAggregate
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
