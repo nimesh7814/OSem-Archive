@@ -113,6 +113,17 @@ def measurement_filter_params(
     return build_common_measurement_filters(from_date, to_date, tags, phenomena, exposure, aggregate)
 
 
+def daily_measurement_filter_params(
+    from_date: Annotated[str, Query(alias="from", pattern=r"^\d{4}-\d{2}-\d{2}$")],
+    to_date: Annotated[str, Query(alias="to", pattern=r"^\d{4}-\d{2}-\d{2}$")],
+    tags: Annotated[list[str] | None, Query()] = None,
+    phenomena: Annotated[list[str] | None, Query()] = None,
+    exposure: Annotated[list[str] | None, Query()] = None,
+):
+    # No aggregate parameter on purpose: this endpoint always returns daily data, not user-selectable.
+    return build_common_measurement_filters(from_date, to_date, tags, phenomena, exposure, "daily")
+
+
 def validate_measurement_filters(filters):
     tag_filter = normalize_filter(filters.tags)
     phenomenon_filter = normalize_filter(filters.phenomena)

@@ -60,7 +60,6 @@ async def log_http_requests(request: Request, call_next):
     return response
 
 
-
 # Health
 def service_status(name, check):
     try:
@@ -109,7 +108,6 @@ def dependency_health_check():
         "status": "ok" if status_code == 200 else "degraded",
         "dependencies": checks,
     })
-
 
 
 # Summary of the data
@@ -233,6 +231,7 @@ def get_country(country: str):
     set_cached(cache_key, regions)
     return {"country": country, "regions": regions, "source": "database"}
 
+
 @app.get("/tags")
 def get_tags():
     tag_results, source = filters.get_tags()
@@ -251,15 +250,16 @@ def get_exposure():
     return {"exposure": exposure_results, "source": source}
 
 
-
 # Region measurements
 @app.get("/regions/{country}/{region}/measurements")
 def get_region_measurements(
     country: str,
     region: str,
-    request_filters: Annotated[CommonMeasurementFilters, Depends(filters.measurement_filter_params)],
+    request_filters: Annotated[CommonMeasurementFilters, Depends(filters.daily_measurement_filter_params)],
+    count_aggregate: Annotated[MeasurementAggregate | None, Query(alias="aggregate")] = None,
 ):
-    return measurements.get_region_measurements_response(country, region, request_filters)
+    # aggregate here only selects what to count in recordCount - boxes data is always daily.
+    return measurements.get_region_measurements_response(country, region, request_filters, count_aggregate)
 
 
 @app.post("/regions/{country}/{region}/measurements/exports", status_code=202)
@@ -290,10 +290,7 @@ def create_region_measurements_export(
     }
 
 
-# ---------------------------------------------------------------------------
 # Area-of-interest (AOI) measurements
-# ---------------------------------------------------------------------------
-
 @app.post("/aoi/validate")
 def validate_aoi(file: UploadFile = File(...)):
     content = file.file.read()
@@ -308,12 +305,13 @@ def get_aoi_measurements(
     tags: Annotated[list[str] | None, Form()] = None,
     phenomena: Annotated[list[str] | None, Form()] = None,
     exposure: Annotated[list[str] | None, Form()] = None,
-    aggregate: Annotated[MeasurementAggregate, Form()] = "daily",
+    count_aggregate: Annotated[MeasurementAggregate | None, Form(alias="aggregate")] = None,
 ):
+    # aggregate here only selects what to count in recordCount - boxes data is always daily.
     content = file.file.read()
     aoi = validate_aoi_file(file.filename or "", content)
-    request_filters = filters.build_common_measurement_filters(from_date, to_date, tags, phenomena, exposure, aggregate)
-    return measurements.get_aoi_measurements_response(aoi, request_filters)
+    request_filters = filters.build_common_measurement_filters(from_date, to_date, tags, phenomena, exposure, "daily")
+    return measurements.get_aoi_measurements_response(aoi, request_filters, count_aggregate)
 
 
 @app.post("/aoi/measurements/exports", status_code=202)
@@ -351,10 +349,7 @@ def create_aoi_measurements_export(
     }
 
 
-# ---------------------------------------------------------------------------
 # Export jobs
-# ---------------------------------------------------------------------------
-
 @app.get("/exports/{job_id}")
 def get_export_job(job_id: str):
     status_code, payload = export_jobs.export_job_payload(job_id)

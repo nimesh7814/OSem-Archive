@@ -1,10 +1,11 @@
-import redis
 import json
-import os
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from dotenv import load_dotenv
 from pathlib import Path
+
+import redis
+from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 

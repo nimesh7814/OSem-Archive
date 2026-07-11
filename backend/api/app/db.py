@@ -1,11 +1,12 @@
-import psycopg2.pool
-from dotenv import load_dotenv
-from pathlib import Path
+import logging
 import os
 import sys
 import time
-import logging
+from pathlib import Path
 from typing import Optional, Type
+
+import psycopg2.pool
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")

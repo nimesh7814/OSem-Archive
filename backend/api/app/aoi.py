@@ -11,12 +11,17 @@ from xml.etree import ElementTree
 import geojson
 import shapefile
 
-from .db import DatabaseQueryError, run_query
+try:
+    from .db import DatabaseQueryError, run_query
+except ImportError:
+    from db import DatabaseQueryError, run_query
 
 SUPPORTED_POLYGON_TYPES = ["Polygon", "MultiPolygon"]
 NESTED_GEOJSON_TYPES = {"FeatureCollection", "Feature", "GeometryCollection"}
 # Caps recursion depth in payload.is_valid()/extract_polygon_geometries() so a maliciously nested file can't trigger a RecursionError.
 MAX_GEOJSON_NESTING_DEPTH = 64
+# CPython's own JSON decoder is recursive too, so this rejects pathological bracket nesting before json.loads() runs.
+MAX_RAW_JSON_BRACKET_DEPTH = 256
 UNSUPPORTED_AOI_GEOMETRY = {
     "Point",
     "MultiPoint",
@@ -25,9 +30,12 @@ UNSUPPORTED_AOI_GEOMETRY = {
 }
 # .prj is checked separately by validate_shapefile_prj(), which reports a missing .prj as WRONG_CRS_ERROR instead of INVALID_FILE_ERROR.
 REQUIRED_SHAPEFILE_EXTENSIONS = {".shp", ".shx", ".dbf"}
+# A 500k-vertex/20MB polygon already took ~12s to process; this keeps uploads well short of that.
+MAX_AOI_FILE_SIZE_BYTES = int(os.getenv("MAX_AOI_FILE_SIZE_BYTES", str(10 * 1024 * 1024)))
 NO_VALID_GEOMETRY_ERROR = "No valid Geometry"
 INVALID_FILE_ERROR = "File is not valid"
 WRONG_CRS_ERROR = "Coordinate System is wrong (not EPSG: 4326)."
+FILE_TOO_LARGE_ERROR = f"File exceeds the {MAX_AOI_FILE_SIZE_BYTES // (1024 * 1024)} MB limit."
 
 
 class AoiValidationError(Exception):
@@ -42,6 +50,8 @@ def validate_aoi_file(filename, content):
 
     if not content:
         raise AoiValidationError(INVALID_FILE_ERROR)
+    if len(content) > MAX_AOI_FILE_SIZE_BYTES:
+        raise AoiValidationError(FILE_TOO_LARGE_ERROR)
 
     geometries = processor(content)
     merged_geometry = process_geometries(geometries)
@@ -70,8 +80,15 @@ def geojson_filename(filename):
 
 def process_geojson(content):
     try:
-        payload = geojson.loads(content.decode("utf-8-sig"))
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise AoiValidationError(INVALID_FILE_ERROR) from exc
+
+    reject_excessive_raw_nesting(text)
+
+    try:
+        payload = geojson.loads(text)
+    except (json.JSONDecodeError, ValueError) as exc:
         raise AoiValidationError(INVALID_FILE_ERROR) from exc
 
     if not isinstance(payload, dict) or not payload.get("type"):
@@ -82,6 +99,31 @@ def process_geojson(content):
 
     validate_geojson_crs(payload)
     return extract_polygon_geometries(payload)
+
+
+def reject_excessive_raw_nesting(text):
+    # Character scan, not a JSON parse: must stay non-recursive since it runs before json.loads() is trusted.
+    depth = 0
+    in_string = False
+    escaped = False
+    for char in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char in "{[":
+            depth += 1
+            if depth > MAX_RAW_JSON_BRACKET_DEPTH:
+                raise AoiValidationError(INVALID_FILE_ERROR)
+        elif char in "}]":
+            depth -= 1
 
 
 def reject_excessive_geojson_nesting(payload):

@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, time, timezone
 
 from fastapi import HTTPException
@@ -19,8 +20,24 @@ except ImportError:
     from queries import MEASUREMENT_AGGREGATES
 
 
+# Caps how many rows a single query can return, so a huge area/date range fails fast instead of exhausting memory.
+MAX_EXPORT_ROWS = int(os.getenv("MAX_EXPORT_ROWS", "1000000"))
+
+TRUNCATION_NOTE = (
+    f"This request matched more than {MAX_EXPORT_ROWS:,} measurement records. Only the first {MAX_EXPORT_ROWS:,} "
+    "(ordered by station and sensor, not date) were included - some stations in this area may be completely "
+    "missing. Narrow the date range, area, or filters for full coverage."
+)
+
+
 def response_timestamp():
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def limit_rows(rows):
+    if len(rows) > MAX_EXPORT_ROWS:
+        return rows[:MAX_EXPORT_ROWS], True
+    return rows, False
 
 
 def get_region_by_name(country, region):
@@ -99,9 +116,10 @@ def get_region_measurement_rows(country, region, filters):
         query += " AND b.exposure = ANY(%s)"
         params.append(exposure_filter)
 
-    query += f" ORDER BY b.id, s.id, d.{time_column}"
+    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
+    params.append(MAX_EXPORT_ROWS + 1)
 
-    return run_query(query, tuple(params))
+    return limit_rows(run_query(query, tuple(params)))
 
 
 def get_aoi_measurement_rows(geometry, filters):
@@ -161,9 +179,111 @@ def get_aoi_measurement_rows(geometry, filters):
         query += " AND b.exposure = ANY(%s)"
         params.append(exposure_filter)
 
-    query += f" ORDER BY b.id, s.id, d.{time_column}"
+    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
+    params.append(MAX_EXPORT_ROWS + 1)
 
-    return run_query(query, tuple(params))
+    return limit_rows(run_query(query, tuple(params)))
+
+
+def count_region_measurement_rows(country, region, filters):
+    tag_filter, phenomenon_filter, exposure_filter = get_validated_measurement_filters(country, region, filters)
+    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
+    measurement_table = aggregate["table"]
+    time_column = aggregate["time_column"]
+
+    query = f'''
+        SELECT count(*) AS matched FROM (
+            SELECT 1
+            FROM {measurement_table} d
+            JOIN sensors s ON s.id = d.sensor_id
+            JOIN boxes b ON b.id = s.box_id
+            JOIN regions r ON r.id = b.region_id
+            WHERE r.country = %s
+              AND r.region = %s
+              AND s.last_measurement IS NOT NULL
+    '''
+    params = [country, region]
+
+    if filters.from_date is not None and filters.to_date is not None:
+        to_date_end = datetime.combine(filters.to_date, time.max)
+        query += f'''
+              AND d.{time_column} >= %s
+              AND d.{time_column} <= %s
+        '''
+        params.extend([filters.from_date, to_date_end])
+
+    if tag_filter is not None:
+        query += " AND s.sensor_type = ANY(%s)"
+        params.append(tag_filter)
+
+    if phenomenon_filter is not None:
+        query += " AND s.title = ANY(%s)"
+        params.append(phenomenon_filter)
+
+    if exposure_filter is not None:
+        query += " AND b.exposure = ANY(%s)"
+        params.append(exposure_filter)
+
+    query += " LIMIT %s) matching_rows"
+    params.append(MAX_EXPORT_ROWS + 1)
+
+    return count_result(run_query(query, tuple(params)), filters.aggregate)
+
+
+def count_aoi_measurement_rows(geometry, filters):
+    tag_filter, phenomenon_filter, exposure_filter = validate_measurement_filters(filters)
+    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
+    measurement_table = aggregate["table"]
+    time_column = aggregate["time_column"]
+
+    query = f'''
+        SELECT count(*) AS matched FROM (
+            SELECT 1
+            FROM {measurement_table} d
+            JOIN sensors s ON s.id = d.sensor_id
+            JOIN boxes b ON b.id = s.box_id
+            WHERE s.last_measurement IS NOT NULL
+              AND b.location IS NOT NULL
+              AND ST_Intersects(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), b.location)
+    '''
+    params = [json.dumps(geometry)]
+
+    if filters.from_date is not None and filters.to_date is not None:
+        to_date_end = datetime.combine(filters.to_date, time.max)
+        query += f'''
+              AND d.{time_column} >= %s
+              AND d.{time_column} <= %s
+        '''
+        params.extend([filters.from_date, to_date_end])
+
+    if tag_filter is not None:
+        query += " AND s.sensor_type = ANY(%s)"
+        params.append(tag_filter)
+
+    if phenomenon_filter is not None:
+        query += " AND s.title = ANY(%s)"
+        params.append(phenomenon_filter)
+
+    if exposure_filter is not None:
+        query += " AND b.exposure = ANY(%s)"
+        params.append(exposure_filter)
+
+    query += " LIMIT %s) matching_rows"
+    params.append(MAX_EXPORT_ROWS + 1)
+
+    return count_result(run_query(query, tuple(params)), filters.aggregate)
+
+
+def count_result(rows, aggregate):
+    # The query is capped at MAX_EXPORT_ROWS + 1, so count is null when exceeded - the true total is unknown.
+    matched = rows[0]["matched"]
+    exceeds_limit = matched > MAX_EXPORT_ROWS
+    return {
+        "aggregate": aggregate,
+        "count": None if exceeds_limit else matched,
+        "limit": MAX_EXPORT_ROWS,
+        "exceedsLimit": exceeds_limit,
+    }
 
 
 def get_aggregate_data_coverage(aggregate):
@@ -229,7 +349,7 @@ def coverage_note(no_data_scope, filters, rows):
     )
 
 
-def build_region_measurement_payload(country, region, filters, rows):
+def build_region_measurement_payload(country, region, filters, rows, truncated=False):
     payload = {
         "input": "region",
         "time": response_timestamp(),
@@ -239,17 +359,20 @@ def build_region_measurement_payload(country, region, filters, rows):
         "to": filters.to_date.isoformat() if filters.to_date is not None else None,
         "exposure": filters.exposure,
         "boxes": format_measurement_boxes(rows),
-        "source": "database",
+        "truncated": truncated,
     }
 
-    note = coverage_note(f"for {country}/{region} in this date range", filters, rows)
-    if note is not None:
-        payload["note"] = note
+    if truncated:
+        payload["note"] = TRUNCATION_NOTE
+    else:
+        note = coverage_note(f"for {country}/{region} in this date range", filters, rows)
+        if note is not None:
+            payload["note"] = note
 
     return payload
 
 
-def build_aoi_measurement_payload(aoi, filters, rows):
+def build_aoi_measurement_payload(aoi, filters, rows, truncated=False):
     payload = {
         "input": "aoi",
         "time": response_timestamp(),
@@ -263,39 +386,59 @@ def build_aoi_measurement_payload(aoi, filters, rows):
         "to": filters.to_date.isoformat() if filters.to_date is not None else None,
         "exposure": filters.exposure,
         "boxes": format_measurement_boxes(rows),
-        "source": "database",
+        "truncated": truncated,
     }
 
-    note = coverage_note("inside this AOI in this date range", filters, rows)
-    if note is not None:
-        payload["note"] = note
+    if truncated:
+        payload["note"] = TRUNCATION_NOTE
+    else:
+        note = coverage_note("inside this AOI in this date range", filters, rows)
+        if note is not None:
+            payload["note"] = note
 
     return payload
 
 
-def get_region_measurements_response(country, region, filters):
+def get_region_measurements_response(country, region, filters, count_aggregate=None):
     tag_filter, phenomenon_filter, exposure_filter = get_validated_measurement_filters(country, region, filters)
     cache_key = region_cache_key(country, region, filters, tag_filter, phenomenon_filter, exposure_filter)
 
     cached_payload = get_cached_measurements(cache_key)
     if cached_payload is not None:
-        return {**cached_payload, "source": "minio"}
+        payload = dict(cached_payload)
+        source = "minio"
+    else:
+        rows, truncated = get_region_measurement_rows(country, region, filters)
+        payload = build_region_measurement_payload(country, region, filters, rows, truncated)
+        set_cached_measurements(cache_key, payload)
+        source = "database"
 
-    rows = get_region_measurement_rows(country, region, filters)
-    payload = build_region_measurement_payload(country, region, filters, rows)
-    set_cached_measurements(cache_key, payload)
+    if count_aggregate is not None:
+        count_filters = filters.model_copy(update={"aggregate": count_aggregate})
+        payload["recordCount"] = count_region_measurement_rows(country, region, count_filters)
+
+    payload["source"] = source
     return payload
 
 
-def get_aoi_measurements_response(aoi, filters):
+def get_aoi_measurements_response(aoi, filters, count_aggregate=None):
     tag_filter, phenomenon_filter, exposure_filter = validate_measurement_filters(filters)
     cache_key = aoi_cache_key(aoi["geometry"], filters, tag_filter, phenomenon_filter, exposure_filter)
 
     cached_payload = get_cached_measurements(cache_key)
     if cached_payload is not None:
-        return {**cached_payload, "source": "minio"}
+        payload = dict(cached_payload)
+        source = "minio"
+    else:
+        rows, truncated = get_aoi_measurement_rows(aoi["geometry"], filters)
+        payload = build_aoi_measurement_payload(aoi, filters, rows, truncated)
+        set_cached_measurements(cache_key, payload)
+        source = "database"
 
-    rows = get_aoi_measurement_rows(aoi["geometry"], filters)
-    payload = build_aoi_measurement_payload(aoi, filters, rows)
-    set_cached_measurements(cache_key, payload)
+    if count_aggregate is not None:
+        count_filters = filters.model_copy(update={"aggregate": count_aggregate})
+        payload["recordCount"] = count_aoi_measurement_rows(aoi["geometry"], count_filters)
+
+    payload["source"] = source
+
     return payload
