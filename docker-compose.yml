@@ -1,6 +1,13 @@
 # docker-compose.yml
 # openSenseMap Archive — database services
 
+networks:
+  osem_network:
+    name: osem_network
+  osem_archive_network:
+    external: true
+    name: osem-archive_default
+
 services:
   timescaledb:
     image: timescale/timescaledb-ha:pg14-latest
@@ -16,6 +23,8 @@ services:
       - -ccron.database_name=osem_archive
     ports:
       - "5433:5432"
+    networks:
+      - osem_network
     volumes:
       - timescale_data:/home/postgres/pgdata
       - ./backend/db/migrations/00001_initial_schema.sql:/docker-entrypoint-initdb.d/01_initial_schema.sql:ro
@@ -49,7 +58,9 @@ services:
     environment:
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "5151:80"
+    networks:
+      - osem_network
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./backend/db/servers.json:/pgadmin4/servers.json:ro
@@ -57,14 +68,91 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: osem_redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - osem_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    networks:
+      - osem_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    env_file:
+      - ./backend/.env
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - osem_network
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb -p local/$${MINIO_BUCKET} &&
+      mc anonymous set none local/$${MINIO_BUCKET} &&
+      exit 0
+      "
+
+  celery-worker:
+    image: api-celery-worker:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      POSTGRES_HOST: timescaledb
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LOG_FILE: /app/logs/api.log
+      PYTHONPATH: /app
+    working_dir: /app
+    command: celery -A api.app.tasks:celery_app worker --loglevel=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    networks:
+      - osem_network
+      - osem_archive_network
+    volumes:
+      - ./backend:/app
+      - api_logs:/app/logs
 
   ingest:
+    image: osem-archive-ingest:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -77,10 +165,17 @@ services:
     environment:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
+      PYTHONPATH: /app
+    working_dir: /app
+    networks:
+      - osem_network
+    volumes:
+      - ./backend:/app
     command: ["python", "ingest/load_archive.py"]
     restart: "no"
 
   api:
+    image: api-celery-worker:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -96,56 +191,27 @@ services:
       POSTGRES_HOST: timescaledb
       POSTGRES_PORT: 5432
       EXPORT_DIR: /app/jobs
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      LOG_FILE: /app/logs/api.log
+      PYTHONPATH: /app
+    working_dir: /app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8001:8000"
+    networks:
+      - osem_network
     volumes:
+      - ./backend:/app
       - export_jobs:/app/jobs
-    restart: unless-stopped
-
-  export_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: osem_worker
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    env_file:
-      - ./backend/.env
-    environment:
-      POSTGRES_HOST: timescaledb
-      POSTGRES_PORT: 5432
-      EXPORT_DIR: /app/jobs
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-    # Must match how api/main.py imports the module (`from functions.export
-    # import ...`) -- api.main's PYTHONPATH makes "functions" resolve as a
-    # package under api/, so the module's identity (and therefore the task's
-    # registered name) is "functions.export", not bare "export". Pointing
-    # celery at the wrong identity silently creates a second copy of the
-    # same module under a different name, so the worker registers the task
-    # as "export.run_export_job" while the API enqueues
-    # "functions.export.run_export_job" -- the worker never recognizes it.
-    command:
-      [
-        "celery",
-        "-A",
-        "functions.export.celery_app",
-        "worker",
-        "--loglevel=info",
-        "--concurrency=4",
-      ]
-    volumes:
-      - export_jobs:/app/jobs
+      - api_logs:/app/logs
     restart: unless-stopped
 
   osem_frontend:
+    image: osem-archive-osem_frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -162,10 +228,14 @@ services:
       OSEM_API_URL: "https://api.opensensemap.org/"
     ports:
       - "3010:3000"
+    networks:
+      - osem_network
     restart: unless-stopped
 
 volumes:
   timescale_data:
   pgadmin_data:
   redis_data:
+  minio_data:
   export_jobs:
+  api_logs:
