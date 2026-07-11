@@ -11,7 +11,7 @@ try:
     from .bucket import check_object_storage_connection, get_presigned_download_url
     from .cache import check_cache_connection, get_cached, set_cached
     from .celery_app import ensure_export_workers_available, send_export_task, get_export_result
-    from .db import run_query
+    from .db import check_database_connection, run_query
     from .errors import register_exception_handlers
     from .format import format_box
     from .schema import CommonMeasurementFilters, ExportFormat, MeasurementAggregate, Summary
@@ -23,7 +23,7 @@ except ImportError:
     from bucket import check_object_storage_connection, get_presigned_download_url
     from cache import check_cache_connection, get_cached, set_cached
     from celery_app import ensure_export_workers_available, send_export_task, get_export_result
-    from db import run_query
+    from db import check_database_connection, run_query
     from errors import register_exception_handlers
     from format import format_box
     from schema import CommonMeasurementFilters, ExportFormat, MeasurementAggregate, Summary
@@ -60,10 +60,8 @@ async def log_http_requests(request: Request, call_next):
     return response
 
 
-# ---------------------------------------------------------------------------
-# Health
-# ---------------------------------------------------------------------------
 
+# Health
 def service_status(name, check):
     try:
         check()
@@ -72,18 +70,14 @@ def service_status(name, check):
     return name, {"status": "ok"}
 
 
-@app.get("/")
-def health_check():
-    return {"status": "ok"}
-
-
-@app.get("/health/dependencies")
-def dependency_health_check():
+def dependency_checks():
     redis_name, redis_status = service_status("redis", check_cache_connection)
     minio_name, minio_status = service_status("minio", check_object_storage_connection)
+    database_name, database_status = service_status("database", check_database_connection)
     checks = {
         redis_name: redis_status,
         minio_name: minio_status,
+        database_name: database_status,
     }
 
     if redis_status["status"] == "ok":
@@ -95,6 +89,21 @@ def dependency_health_check():
             "message": "The export worker cannot be checked because Redis is unavailable.",
         }
 
+    return checks
+
+
+@app.get("/")
+def health_check():
+    checks = dependency_checks()
+    status_code = 200 if all(item["status"] == "ok" for item in checks.values()) else 503
+    return JSONResponse(status_code=status_code, content={
+        "status": "ok" if status_code == 200 else "degraded, further information available at /health",
+    })
+
+
+@app.get("/health")
+def dependency_health_check():
+    checks = dependency_checks()
     status_code = 200 if all(item["status"] == "ok" for item in checks.values()) else 503
     return JSONResponse(status_code=status_code, content={
         "status": "ok" if status_code == 200 else "degraded",
@@ -102,10 +111,8 @@ def dependency_health_check():
     })
 
 
-# ---------------------------------------------------------------------------
-# Reference data
-# ---------------------------------------------------------------------------
 
+# Summary of the data
 @app.get("/stats")
 def get_stats():
     cache_key = "stats:summary"
@@ -130,7 +137,7 @@ def get_stats():
 
 @app.get("/boxes")
 def get_boxes():
-    cache_key = "boxes:details:v2"
+    cache_key = "boxes:details"
     cached_result = get_cached(cache_key)
     if cached_result is not None:
         return {"boxes": cached_result, "source": "cache"}
@@ -202,6 +209,30 @@ def get_countries():
     return {"countries": country_results, "source": "database"}
 
 
+@app.get("/countries/{country}")
+def get_country(country: str):
+    cache_key = f"countries:{country}"
+    cached_result = get_cached(cache_key)
+    if cached_result is not None:
+        return {"country": country, "regions": cached_result, "source": "cache"}
+
+    results = run_query('''
+        SELECT DISTINCT r.region
+        FROM regions r
+        JOIN boxes b ON r.id = b.region_id
+        JOIN sensors s ON b.id = s.box_id
+        WHERE s.last_measurement IS NOT NULL
+          AND r.country = %s
+        ORDER BY r.region;
+    ''', (country,))
+
+    if not results:
+        raise HTTPException(status_code=404, detail=f"Country '{country}' not found")
+
+    regions = [row["region"] for row in results]
+    set_cached(cache_key, regions)
+    return {"country": country, "regions": regions, "source": "database"}
+
 @app.get("/tags")
 def get_tags():
     tag_results, source = filters.get_tags()
@@ -220,18 +251,15 @@ def get_exposure():
     return {"exposure": exposure_results, "source": source}
 
 
-# ---------------------------------------------------------------------------
-# Region measurements
-# ---------------------------------------------------------------------------
 
+# Region measurements
 @app.get("/regions/{country}/{region}/measurements")
 def get_region_measurements(
     country: str,
     region: str,
     request_filters: Annotated[CommonMeasurementFilters, Depends(filters.measurement_filter_params)],
 ):
-    rows = measurements.get_region_measurement_rows(country, region, request_filters)
-    return measurements.build_region_measurement_payload(country, region, request_filters, rows)
+    return measurements.get_region_measurements_response(country, region, request_filters)
 
 
 @app.post("/regions/{country}/{region}/measurements/exports", status_code=202)
@@ -285,8 +313,7 @@ def get_aoi_measurements(
     content = file.file.read()
     aoi = validate_aoi_file(file.filename or "", content)
     request_filters = filters.build_common_measurement_filters(from_date, to_date, tags, phenomena, exposure, aggregate)
-    rows = measurements.get_aoi_measurement_rows(aoi["geometry"], request_filters)
-    return measurements.build_aoi_measurement_payload(aoi, request_filters, rows)
+    return measurements.get_aoi_measurements_response(aoi, request_filters)
 
 
 @app.post("/aoi/measurements/exports", status_code=202)

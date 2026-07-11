@@ -8,12 +8,14 @@ try:
     from .db import run_query
     from .filters import validate_measurement_filters
     from .format import format_measurement_boxes
+    from .measurement_cache import aoi_cache_key, get_cached_measurements, region_cache_key, set_cached_measurements
     from .queries import MEASUREMENT_AGGREGATES
 except ImportError:
     from cache import get_cached, set_cached
     from db import run_query
     from filters import validate_measurement_filters
     from format import format_measurement_boxes
+    from measurement_cache import aoi_cache_key, get_cached_measurements, region_cache_key, set_cached_measurements
     from queries import MEASUREMENT_AGGREGATES
 
 
@@ -268,4 +270,32 @@ def build_aoi_measurement_payload(aoi, filters, rows):
     if note is not None:
         payload["note"] = note
 
+    return payload
+
+
+def get_region_measurements_response(country, region, filters):
+    tag_filter, phenomenon_filter, exposure_filter = get_validated_measurement_filters(country, region, filters)
+    cache_key = region_cache_key(country, region, filters, tag_filter, phenomenon_filter, exposure_filter)
+
+    cached_payload = get_cached_measurements(cache_key)
+    if cached_payload is not None:
+        return {**cached_payload, "source": "minio"}
+
+    rows = get_region_measurement_rows(country, region, filters)
+    payload = build_region_measurement_payload(country, region, filters, rows)
+    set_cached_measurements(cache_key, payload)
+    return payload
+
+
+def get_aoi_measurements_response(aoi, filters):
+    tag_filter, phenomenon_filter, exposure_filter = validate_measurement_filters(filters)
+    cache_key = aoi_cache_key(aoi["geometry"], filters, tag_filter, phenomenon_filter, exposure_filter)
+
+    cached_payload = get_cached_measurements(cache_key)
+    if cached_payload is not None:
+        return {**cached_payload, "source": "minio"}
+
+    rows = get_aoi_measurement_rows(aoi["geometry"], filters)
+    payload = build_aoi_measurement_payload(aoi, filters, rows)
+    set_cached_measurements(cache_key, payload)
     return payload

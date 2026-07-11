@@ -83,3 +83,8 @@ def run_query(query, params=None, schema: Optional[Type[BaseModel]] = None, max_
 
     finally:
         pool.putconn(connection)
+
+
+def check_database_connection():
+    run_query("SELECT 1")
+    return True

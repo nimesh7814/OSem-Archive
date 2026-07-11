@@ -11,6 +11,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 DATE_ONLY_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DAYS_LIMIT = int(os.getenv("DAYS_LIMIT", "1826").replace(",", ""))
+DAYS_LIMIT_YEARS = round(DAYS_LIMIT / 365)
 
 MeasurementAggregate: TypeAlias = Literal["raw", "hourly", "daily", "monthly", "yearly"]
 ExportFormat: TypeAlias = Literal["csv", "geojson"]
@@ -43,7 +44,7 @@ class CommonMeasurementFilters(BaseModel):
         if self.to_date < self.from_date:
             raise ValueError("to must be on or after from.")
         if (self.to_date - self.from_date).days > DAYS_LIMIT:
-            raise ValueError(f"Date range cannot exceed {DAYS_LIMIT} days.")
+            raise ValueError(f"Date range cannot exceed {DAYS_LIMIT_YEARS} years.")
         return self
 
 

@@ -30,7 +30,7 @@ http://localhost:8001
 Dependency health:
 
 ```text
-http://localhost:8001/health/dependencies
+http://localhost:8001/health
 ```
 
 ## Run Locally
@@ -84,7 +84,7 @@ Exports are asynchronous:
 4. MinIO stores the result.
 5. API returns job status and download URL.
 
-The API reports dependency problems through `/health/dependencies` and returns service errors if Redis, MinIO, or workers are unavailable.
+The API reports dependency problems through `/health` and returns service errors if the database, Redis, MinIO, or workers are unavailable.
 
 ## Database
 

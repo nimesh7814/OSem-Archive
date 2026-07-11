@@ -34,7 +34,7 @@ docker compose --env-file backend/.env up -d --build
 Check API dependencies:
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing http://localhost:8001/health/dependencies
+Invoke-WebRequest -UseBasicParsing http://localhost:8001/health
 ```
 
 ## Ingest

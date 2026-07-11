@@ -20,6 +20,7 @@ AVAILABLE_ENDPOINTS = [
     "GET /stats",
     "GET /boxes",
     "GET /countries",
+    "GET /countries/{country}",
     "GET /tags",
     "GET /phenomena",
     "GET /exposure",
