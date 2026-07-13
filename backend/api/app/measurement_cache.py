@@ -2,44 +2,26 @@ import hashlib
 import io
 import json
 import logging
-import os
 import time
 
-from minio.commonconfig import ENABLED, Filter
-from minio.lifecycleconfig import Expiration, LifecycleConfig, Rule
-
 try:
-    from .bucket import bucket_name, ensure_bucket_exists, minio_client
+    from .bucket import (
+        bucket_name,
+        ensure_bucket_exists,
+        minio_client,
+        MEASUREMENT_CACHE_PREFIX,
+        MEASUREMENT_CACHE_TTL_SECONDS,
+    )
 except ImportError:
-    from bucket import bucket_name, ensure_bucket_exists, minio_client
+    from bucket import (
+        bucket_name,
+        ensure_bucket_exists,
+        minio_client,
+        MEASUREMENT_CACHE_PREFIX,
+        MEASUREMENT_CACHE_TTL_SECONDS,
+    )
 
 logger = logging.getLogger(__name__)
-
-MEASUREMENT_CACHE_PREFIX = "cache/measurements/"
-MEASUREMENT_CACHE_TTL_SECONDS = int(os.getenv("MEASUREMENT_CACHE_TTL_SECONDS", str(14 * 24 * 60 * 60)))
-MEASUREMENT_CACHE_TTL_DAYS = max(1, MEASUREMENT_CACHE_TTL_SECONDS // 86400)
-
-# Set once per process: avoids re-issuing the lifecycle PUT on every single cache write.
-_lifecycle_policy_confirmed = False
-
-
-def _ensure_cache_lifecycle_policy(client, bucket):
-    # Isolated on purpose: this is best-effort housekeeping and must never prevent the actual cache write below.
-    global _lifecycle_policy_confirmed
-    if _lifecycle_policy_confirmed:
-        return
-
-    try:
-        rule = Rule(
-            status=ENABLED,
-            rule_id="measurement-cache-expiry",
-            rule_filter=Filter(prefix=MEASUREMENT_CACHE_PREFIX),
-            expiration=Expiration(days=MEASUREMENT_CACHE_TTL_DAYS),
-        )
-        client.set_bucket_lifecycle(bucket, LifecycleConfig([rule]))
-        _lifecycle_policy_confirmed = True
-    except Exception as exc:
-        logger.warning("Could not configure MinIO lifecycle policy for measurement cache: %s", exc)
 
 
 def _fingerprint(*parts):
@@ -112,7 +94,6 @@ def set_cached_measurements(cache_key, payload):
         client = minio_client()
         bucket = bucket_name()
         ensure_bucket_exists(client, bucket)
-        _ensure_cache_lifecycle_policy(client, bucket)
 
         body = json.dumps({"cachedAt": time.time(), "payload": payload}, default=str).encode("utf-8")
         expected_md5 = hashlib.md5(body).hexdigest()

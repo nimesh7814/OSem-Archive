@@ -64,6 +64,11 @@ def export_value(value):
 
 def build_measurement_csv(rows):
     output = io.StringIO()
+    write_measurement_csv(rows, output)
+    return output.getvalue()
+
+
+def write_measurement_csv(rows, output):
     writer = csv.DictWriter(output, fieldnames=MEASUREMENT_EXPORT_COLUMNS)
     writer.writeheader()
 
@@ -89,8 +94,6 @@ def build_measurement_csv(rows):
             "max_value": export_value(row["max_value"]),
             "readings": row["rdgs_count"],
         })
-
-    return output.getvalue()
 
 
 def measurement_record(row):
@@ -167,9 +170,21 @@ def build_measurement_geojson(rows):
     }, ensure_ascii=False)
 
 
+def write_measurement_geojson(rows, output):
+    output.write(build_measurement_geojson(rows))
+
+
 def build_measurement_export(rows, file_format):
     if file_format == "csv":
         return build_measurement_csv(rows)
     if file_format == "geojson":
         return build_measurement_geojson(rows)
+    raise ValueError(f"Unsupported export format: {file_format}")
+
+
+def write_measurement_export(rows, file_format, output):
+    if file_format == "csv":
+        return write_measurement_csv(rows, output)
+    if file_format == "geojson":
+        return write_measurement_geojson(rows, output)
     raise ValueError(f"Unsupported export format: {file_format}")

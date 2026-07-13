@@ -1,4 +1,5 @@
 import logging
+import os
 import time as time_module
 from typing import Annotated
 
@@ -32,6 +33,39 @@ app = FastAPI()
 register_exception_handlers(app)
 
 request_logger = logging.getLogger("api.requests")
+SERVICE_STATUS_CACHE_SECONDS = int(os.getenv("SERVICE_STATUS_CACHE_SECONDS", "5"))
+_dependency_status_cache = {"checked_at": 0.0, "checks": None}
+
+
+def get_dependency_checks_cached():
+    now = time_module.monotonic()
+    cached_checks = _dependency_status_cache["checks"]
+    checked_at = _dependency_status_cache["checked_at"]
+    if cached_checks is not None and (now - checked_at) < SERVICE_STATUS_CACHE_SECONDS:
+        return cached_checks
+
+    checks = dependency_checks()
+    _dependency_status_cache["checked_at"] = now
+    _dependency_status_cache["checks"] = checks
+    return checks
+
+
+def is_service_degraded():
+    checks = get_dependency_checks_cached()
+    return any(item["status"] != "ok" for item in checks.values())
+
+
+async def annotate_json_response_with_service_status(request: Request, response):
+    if request.url.path in {"/", "/health"}:
+        return response
+
+    if is_service_degraded():
+        return JSONResponse(
+            status_code=503,
+            content={"status": "degraded, further information available at /health"},
+        )
+
+    return response
 
 
 @app.middleware("http")
@@ -48,6 +82,8 @@ async def log_http_requests(request: Request, call_next):
             duration_ms,
         )
         raise
+
+    response = await annotate_json_response_with_service_status(request, response)
 
     duration_ms = (time_module.perf_counter() - started_at) * 1000
     request_logger.info(
@@ -93,7 +129,7 @@ def dependency_checks():
 
 @app.get("/")
 def health_check():
-    checks = dependency_checks()
+    checks = get_dependency_checks_cached()
     status_code = 200 if all(item["status"] == "ok" for item in checks.values()) else 503
     return JSONResponse(status_code=status_code, content={
         "status": "ok" if status_code == 200 else "degraded, further information available at /health",
@@ -102,7 +138,7 @@ def health_check():
 
 @app.get("/health")
 def dependency_health_check():
-    checks = dependency_checks()
+    checks = get_dependency_checks_cached()
     status_code = 200 if all(item["status"] == "ok" for item in checks.values()) else 503
     return JSONResponse(status_code=status_code, content={
         "status": "ok" if status_code == 200 else "degraded",
@@ -170,7 +206,6 @@ def get_boxes():
         FROM boxes b
         LEFT JOIN regions r ON r.id = b.region_id
         LEFT JOIN sensors s ON s.box_id = b.id
-        WHERE s.last_measurement IS NOT NULL
         GROUP BY b.id, r.country, r.region
         ORDER BY b.id
     ''')

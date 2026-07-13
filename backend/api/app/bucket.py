@@ -1,15 +1,30 @@
-import io
+import logging
 import os
 from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
 from minio import Minio
+from minio.commonconfig import ENABLED, Filter
+from minio.lifecycleconfig import Expiration, LifecycleConfig, Rule
 import urllib3
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
+logger = logging.getLogger(__name__)
+
 MINIO_TTL_SECONDS = int(os.getenv("MINIO_TTL_SECONDS", "86400"))
+
+MEASUREMENT_CACHE_PREFIX = "cache/measurements/"
+MEASUREMENT_CACHE_TTL_SECONDS = int(os.getenv("MEASUREMENT_CACHE_TTL_SECONDS", str(14 * 24 * 60 * 60)))
+MEASUREMENT_CACHE_TTL_DAYS = max(1, MEASUREMENT_CACHE_TTL_SECONDS // 86400)
+
+EXPORTS_PREFIX = "exports/"
+EXPORT_EXPIRE_HOURS = int(os.getenv("EXPORT_EXPIRE_HOURS", "24"))
+EXPORT_EXPIRE_DAYS = max(1, -(-EXPORT_EXPIRE_HOURS // 24))
+
+# Set once per process: avoids re-issuing the lifecycle PUT on every single upload.
+_lifecycle_policy_confirmed = False
 
 
 class BucketError(Exception):
@@ -61,6 +76,34 @@ def ensure_bucket_exists(client, bucket):
             client.make_bucket(bucket)
     except Exception as exc:
         raise BucketError(f"Could not prepare MinIO bucket '{bucket}'.") from exc
+    _ensure_bucket_lifecycle_policy(client, bucket)
+
+
+def _ensure_bucket_lifecycle_policy(client, bucket):
+    # Isolated on purpose: this is best-effort housekeeping and must never prevent the actual upload/write.
+    global _lifecycle_policy_confirmed
+    if _lifecycle_policy_confirmed:
+        return
+
+    try:
+        rules = [
+            Rule(
+                status=ENABLED,
+                rule_id="measurement-cache-expiry",
+                rule_filter=Filter(prefix=MEASUREMENT_CACHE_PREFIX),
+                expiration=Expiration(days=MEASUREMENT_CACHE_TTL_DAYS),
+            ),
+            Rule(
+                status=ENABLED,
+                rule_id="export-file-expiry",
+                rule_filter=Filter(prefix=EXPORTS_PREFIX),
+                expiration=Expiration(days=EXPORT_EXPIRE_DAYS),
+            ),
+        ]
+        client.set_bucket_lifecycle(bucket, LifecycleConfig(rules))
+        _lifecycle_policy_confirmed = True
+    except Exception as exc:
+        logger.warning("Could not configure MinIO lifecycle policy for bucket '%s': %s", bucket, exc)
 
 
 def check_object_storage_connection():
@@ -72,21 +115,17 @@ def check_object_storage_connection():
     return True
 
 
-def upload_bytes(object_name, content, content_type):
-    if isinstance(content, str):
-        content = content.encode("utf-8")
-
+def upload_file(object_name, file_object, length, content_type):
     client = minio_client()
     bucket = bucket_name()
     ensure_bucket_exists(client, bucket)
 
-    data = io.BytesIO(content)
     try:
         client.put_object(
             bucket,
             object_name,
-            data,
-            length=len(content),
+            file_object,
+            length=length,
             content_type=content_type,
         )
     except Exception as exc:
@@ -95,7 +134,7 @@ def upload_bytes(object_name, content, content_type):
     return {
         "bucket": bucket,
         "objectName": object_name,
-        "sizeBytes": len(content),
+        "sizeBytes": length,
         "contentType": content_type,
     }
 

@@ -6,14 +6,14 @@ from fastapi import HTTPException
 
 try:
     from .cache import get_cached, set_cached
-    from .db import run_query
+    from .db import run_query, stream_query
     from .filters import validate_measurement_filters
     from .format import format_measurement_boxes
     from .measurement_cache import aoi_cache_key, get_cached_measurements, region_cache_key, set_cached_measurements
     from .queries import MEASUREMENT_AGGREGATES
 except ImportError:
     from cache import get_cached, set_cached
-    from db import run_query
+    from db import run_query, stream_query
     from filters import validate_measurement_filters
     from format import format_measurement_boxes
     from measurement_cache import aoi_cache_key, get_cached_measurements, region_cache_key, set_cached_measurements
@@ -34,12 +34,6 @@ def response_timestamp():
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def limit_rows(rows):
-    if len(rows) > MAX_EXPORT_ROWS:
-        return rows[:MAX_EXPORT_ROWS], True
-    return rows, False
-
-
 def get_region_by_name(country, region):
     rows = run_query('''
         SELECT id
@@ -57,132 +51,6 @@ def get_region_by_name(country, region):
 def get_validated_measurement_filters(country, region, filters):
     get_region_by_name(country, region)
     return validate_measurement_filters(filters)
-
-
-def get_region_measurement_rows(country, region, filters):
-    tag_filter, phenomenon_filter, exposure_filter = get_validated_measurement_filters(country, region, filters)
-    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
-    measurement_table = aggregate["table"]
-    time_column = aggregate["time_column"]
-    value_columns = aggregate["value_columns"]
-
-    query = f'''
-        SELECT
-            %s AS aggregate,
-            b.id AS box_id,
-            b.name,
-            b.exposure,
-            b.model,
-            b.created_at,
-            b.updated_at,
-            b.last_measurement_at,
-            r.country,
-            r.region,
-            ST_X(b.location) AS longitude,
-            ST_Y(b.location) AS latitude,
-            s.id AS sensor_id,
-            s.box_id,
-            s.sensor_type,
-            s.title,
-            s.unit,
-            {value_columns}
-        FROM {measurement_table} d
-        JOIN sensors s ON s.id = d.sensor_id
-        JOIN boxes b ON b.id = s.box_id
-        JOIN regions r ON r.id = b.region_id
-        WHERE r.country = %s
-          AND r.region = %s
-          AND s.last_measurement IS NOT NULL
-    '''
-    params = [filters.aggregate, country, region]
-
-    if filters.from_date is not None and filters.to_date is not None:
-        to_date_end = datetime.combine(filters.to_date, time.max)
-        query += f'''
-          AND d.{time_column} >= %s
-          AND d.{time_column} <= %s
-        '''
-        params.extend([filters.from_date, to_date_end])
-
-    if tag_filter is not None:
-        query += " AND s.sensor_type = ANY(%s)"
-        params.append(tag_filter)
-
-    if phenomenon_filter is not None:
-        query += " AND s.title = ANY(%s)"
-        params.append(phenomenon_filter)
-
-    if exposure_filter is not None:
-        query += " AND b.exposure = ANY(%s)"
-        params.append(exposure_filter)
-
-    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
-    params.append(MAX_EXPORT_ROWS + 1)
-
-    return limit_rows(run_query(query, tuple(params)))
-
-
-def get_aoi_measurement_rows(geometry, filters):
-    tag_filter, phenomenon_filter, exposure_filter = validate_measurement_filters(filters)
-    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
-    measurement_table = aggregate["table"]
-    time_column = aggregate["time_column"]
-    value_columns = aggregate["value_columns"]
-
-    query = f'''
-        SELECT
-            %s AS aggregate,
-            b.id AS box_id,
-            b.name,
-            b.exposure,
-            b.model,
-            b.created_at,
-            b.updated_at,
-            b.last_measurement_at,
-            r.country,
-            r.region,
-            ST_X(b.location) AS longitude,
-            ST_Y(b.location) AS latitude,
-            s.id AS sensor_id,
-            s.box_id,
-            s.sensor_type,
-            s.title,
-            s.unit,
-            {value_columns}
-        FROM {measurement_table} d
-        JOIN sensors s ON s.id = d.sensor_id
-        JOIN boxes b ON b.id = s.box_id
-        LEFT JOIN regions r ON r.id = b.region_id
-        WHERE s.last_measurement IS NOT NULL
-          AND b.location IS NOT NULL
-          AND ST_Intersects(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), b.location)
-    '''
-    params = [filters.aggregate, json.dumps(geometry)]
-
-    if filters.from_date is not None and filters.to_date is not None:
-        to_date_end = datetime.combine(filters.to_date, time.max)
-        query += f'''
-          AND d.{time_column} >= %s
-          AND d.{time_column} <= %s
-        '''
-        params.extend([filters.from_date, to_date_end])
-
-    if tag_filter is not None:
-        query += " AND s.sensor_type = ANY(%s)"
-        params.append(tag_filter)
-
-    if phenomenon_filter is not None:
-        query += " AND s.title = ANY(%s)"
-        params.append(phenomenon_filter)
-
-    if exposure_filter is not None:
-        query += " AND b.exposure = ANY(%s)"
-        params.append(exposure_filter)
-
-    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
-    params.append(MAX_EXPORT_ROWS + 1)
-
-    return limit_rows(run_query(query, tuple(params)))
 
 
 def count_region_measurement_rows(country, region, filters):
@@ -284,6 +152,141 @@ def count_result(rows, aggregate):
         "limit": MAX_EXPORT_ROWS,
         "exceedsLimit": exceeds_limit,
     }
+
+
+def iter_region_measurement_rows(country, region, filters):
+    tag_filter, phenomenon_filter, exposure_filter = get_validated_measurement_filters(country, region, filters)
+    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
+    measurement_table = aggregate["table"]
+    time_column = aggregate["time_column"]
+    value_columns = aggregate["value_columns"]
+
+    query = f'''
+        SELECT
+            %s AS aggregate,
+            b.id AS box_id,
+            b.name,
+            b.exposure,
+            b.model,
+            b.created_at,
+            b.updated_at,
+            b.last_measurement_at,
+            r.country,
+            r.region,
+            ST_X(b.location) AS longitude,
+            ST_Y(b.location) AS latitude,
+            s.id AS sensor_id,
+            s.box_id,
+            s.sensor_type,
+            s.title,
+            s.unit,
+            {value_columns}
+        FROM {measurement_table} d
+        JOIN sensors s ON s.id = d.sensor_id
+        JOIN boxes b ON b.id = s.box_id
+        JOIN regions r ON r.id = b.region_id
+        WHERE r.country = %s
+          AND r.region = %s
+          AND s.last_measurement IS NOT NULL
+    '''
+    params = [filters.aggregate, country, region]
+
+    if filters.from_date is not None and filters.to_date is not None:
+        to_date_end = datetime.combine(filters.to_date, time.max)
+        query += f'''
+          AND d.{time_column} >= %s
+          AND d.{time_column} <= %s
+        '''
+        params.extend([filters.from_date, to_date_end])
+
+    if tag_filter is not None:
+        query += " AND s.sensor_type = ANY(%s)"
+        params.append(tag_filter)
+
+    if phenomenon_filter is not None:
+        query += " AND s.title = ANY(%s)"
+        params.append(phenomenon_filter)
+
+    if exposure_filter is not None:
+        query += " AND b.exposure = ANY(%s)"
+        params.append(exposure_filter)
+
+    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
+    params.append(MAX_EXPORT_ROWS + 1)
+
+    return stream_query(query, tuple(params))
+
+
+def iter_aoi_measurement_rows(geometry, filters):
+    tag_filter, phenomenon_filter, exposure_filter = validate_measurement_filters(filters)
+    aggregate = MEASUREMENT_AGGREGATES[filters.aggregate]
+    measurement_table = aggregate["table"]
+    time_column = aggregate["time_column"]
+    value_columns = aggregate["value_columns"]
+
+    query = f'''
+        SELECT
+            %s AS aggregate,
+            b.id AS box_id,
+            b.name,
+            b.exposure,
+            b.model,
+            b.created_at,
+            b.updated_at,
+            b.last_measurement_at,
+            r.country,
+            r.region,
+            ST_X(b.location) AS longitude,
+            ST_Y(b.location) AS latitude,
+            s.id AS sensor_id,
+            s.box_id,
+            s.sensor_type,
+            s.title,
+            s.unit,
+            {value_columns}
+        FROM {measurement_table} d
+        JOIN sensors s ON s.id = d.sensor_id
+        JOIN boxes b ON b.id = s.box_id
+        LEFT JOIN regions r ON r.id = b.region_id
+        WHERE s.last_measurement IS NOT NULL
+          AND b.location IS NOT NULL
+          AND ST_Intersects(ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), b.location)
+    '''
+    params = [filters.aggregate, json.dumps(geometry)]
+
+    if filters.from_date is not None and filters.to_date is not None:
+        to_date_end = datetime.combine(filters.to_date, time.max)
+        query += f'''
+          AND d.{time_column} >= %s
+          AND d.{time_column} <= %s
+        '''
+        params.extend([filters.from_date, to_date_end])
+
+    if tag_filter is not None:
+        query += " AND s.sensor_type = ANY(%s)"
+        params.append(tag_filter)
+
+    if phenomenon_filter is not None:
+        query += " AND s.title = ANY(%s)"
+        params.append(phenomenon_filter)
+
+    if exposure_filter is not None:
+        query += " AND b.exposure = ANY(%s)"
+        params.append(exposure_filter)
+
+    query += f" ORDER BY b.id, s.id, d.{time_column} LIMIT %s"
+    params.append(MAX_EXPORT_ROWS + 1)
+
+    return stream_query(query, tuple(params))
+
+
+def collect_limited_rows(row_iterable):
+    rows = []
+    for row in row_iterable:
+        rows.append(row)
+        if len(rows) > MAX_EXPORT_ROWS:
+            return rows[:MAX_EXPORT_ROWS], True
+    return rows, False
 
 
 def get_aggregate_data_coverage(aggregate):
@@ -408,7 +411,7 @@ def get_region_measurements_response(country, region, filters, count_aggregate=N
         payload = dict(cached_payload)
         source = "minio"
     else:
-        rows, truncated = get_region_measurement_rows(country, region, filters)
+        rows, truncated = collect_limited_rows(iter_region_measurement_rows(country, region, filters))
         payload = build_region_measurement_payload(country, region, filters, rows, truncated)
         set_cached_measurements(cache_key, payload)
         source = "database"
@@ -430,7 +433,7 @@ def get_aoi_measurements_response(aoi, filters, count_aggregate=None):
         payload = dict(cached_payload)
         source = "minio"
     else:
-        rows, truncated = get_aoi_measurement_rows(aoi["geometry"], filters)
+        rows, truncated = collect_limited_rows(iter_aoi_measurement_rows(aoi["geometry"], filters))
         payload = build_aoi_measurement_payload(aoi, filters, rows, truncated)
         set_cached_measurements(cache_key, payload)
         source = "database"
