@@ -4,6 +4,7 @@ import time as time_module
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
 try:
@@ -30,6 +31,8 @@ except ImportError:
     from schema import CommonMeasurementFilters, ExportFormat, MeasurementAggregate, Summary
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
 register_exception_handlers(app)
 
 request_logger = logging.getLogger("api.requests")

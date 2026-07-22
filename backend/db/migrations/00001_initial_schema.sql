@@ -111,27 +111,6 @@ CREATE TABLE ingest_log (
 
 CREATE INDEX idx_ingest_log_status ON ingest_log (status);
 
-
--- export jobs
-CREATE TABLE export_job (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    box_id TEXT,
-    phenomenon TEXT,
-    date_from TIMESTAMPTZ,
-    date_to TIMESTAMPTZ,
-    format TEXT NOT NULL DEFAULT 'csv'
-        CHECK (format IN ('csv', 'json')),
-    status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'running', 'done', 'failed')),
-    row_count INT,
-    file_url TEXT,
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    completed_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_export_job_status ON export_job (status);
-
 -- Refresh summary function
 CREATE OR REPLACE FUNCTION public.refresh_summary()
  RETURNS void

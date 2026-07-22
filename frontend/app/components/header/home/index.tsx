@@ -12,12 +12,15 @@ interface HomeProps {
 	deviceCount?: number
 	measurementCount?: number
 	onHomeClick?: () => void
+	archiveMode?: boolean
+
 }
 
 export default function Home({
 	deviceCount = 0,
 	measurementCount = 0,
 	onHomeClick,
+	archiveMode = false,
 }: HomeProps) {
 	const { t } = useTranslation('menu')
 
@@ -35,9 +38,17 @@ export default function Home({
 						)}
 					>
 						<img
-							src="/img/openSenseMap.png"
-							alt="openSenseMapLogo"
-							className="h-7 w-auto shrink-0"
+							src={
+		                        archiveMode
+			                        ? "/img/OsemArchive.png"
+			                        : "/img/openSenseMap.png"
+	                        }
+	                        alt={
+		                        archiveMode
+			                        ? "OsemArchive"
+			                        : "openSenseMap"
+	                } 
+	                className="h-6 w-auto shrink-0"
 						/>
 
 						{deviceCount > 0 && (

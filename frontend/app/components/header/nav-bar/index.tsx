@@ -1,7 +1,9 @@
+import ArchiveFilterPanel from "./archive-filter-panel"
 import { useMediaQuery } from '@mantine/hooks'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SearchIcon, XIcon } from 'lucide-react'
 import { Switch } from '~/components/ui/switch'
+import { Button } from '~/components/ui/button'
 import { useState, useEffect, useRef, createContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMap } from 'react-map-gl/maplibre'
@@ -11,8 +13,15 @@ import { DeviceFeatureCollection } from '~/components/search/search-types'
 import { cn } from '~/lib/utils'
 import { topbarSurface } from '~/components/map/topbar-styles'
 
+import type { Feature } from "geojson"
+import maplibregl from "maplibre-gl"
+
 interface NavBarProps {
-	devices: DeviceFeatureCollection
+    devices: DeviceFeatureCollection
+    archiveMode: boolean
+    setArchiveMode: React.Dispatch<React.SetStateAction<boolean>>
+    onArchiveApply: (filters: any) => void
+    onArchiveClear?: () => void
 }
 
 export const NavbarContext = createContext({
@@ -21,18 +30,116 @@ export const NavbarContext = createContext({
 })
 
 export default function NavBar(props: NavBarProps) {
+	console.log("NavBar props:", props.archiveMode)
 	const [open, setOpen] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [searchString, setSearchString] = useState('')
-	const [archiveMode, setArchiveMode] = useState(false)
-
 	const { osem: mapRef } = useMap()
+	const [currentAOI, setCurrentAOI] = useState<Feature | null>(null)
+	const [appliedSummary, setAppliedSummary] = useState<{
+		country?: string
+		region?: string
+	} | null>(null)
+
+	const zoomToAOI = (feature: Feature) => {
+		setCurrentAOI(feature)
+
+		if (!mapRef) return
+
+		if (!['Polygon', 'MultiPolygon'].includes(feature.geometry.type)) return
+
+		const bounds = new maplibregl.LngLatBounds()
+		const extendFromCoords = (coords: any): void => {
+			if (typeof coords[0] === 'number') {
+				bounds.extend(coords as [number, number])
+				return
+			}
+			coords.forEach(extendFromCoords)
+		}
+
+		extendFromCoords((feature.geometry as any).coordinates)
+
+		mapRef.fitBounds(bounds, {
+			padding: 80,
+			duration: 1200,
+		})
+
+		const map = mapRef.getMap()
+
+		if (map.getLayer("aoi-fill")) {
+			map.removeLayer("aoi-fill")
+		}
+
+		if (map.getLayer("aoi-outline")) {
+			map.removeLayer("aoi-outline")
+		}
+
+		if (map.getSource("aoi")) {
+			map.removeSource("aoi")
+		}
+
+		map.addSource("aoi", {
+			type: "geojson",
+			data: feature,
+		})
+
+		map.addLayer({
+			id: "aoi-fill",
+			type: "fill",
+			source: "aoi",
+			paint: {
+				"fill-color": "#2563eb",
+				"fill-opacity": 0.2,
+			},
+		})
+
+		map.addLayer({
+			id: "aoi-outline",
+			type: "line",
+			source: "aoi",
+			paint: {
+				"line-color": "#2563eb",
+				"line-width": 3,
+			},
+		})
+	}
+
+	const handleArchivePanelApply = (filters: any) => {
+		setAppliedSummary({
+			country: filters.country,
+			region: filters.region,
+		})
+		props.onArchiveApply(filters)
+	}
+
+	const handleClear = () => {
+		setAppliedSummary(null)
+		setCurrentAOI(null)
+
+		if (mapRef) {
+			const map = mapRef.getMap()
+			if (map.getLayer("aoi-fill")) map.removeLayer("aoi-fill")
+			if (map.getLayer("aoi-outline")) map.removeLayer("aoi-outline")
+			if (map.getSource("aoi")) map.removeSource("aoi")
+		}
+
+		props.onArchiveClear?.()
+		setOpen(true)
+	}
 
 	const { t } = useTranslation('search')
 
 	useEffect(() => {
-		if (mapRef) {
-			mapRef.on('click', () => setOpen(false))
+		if (!mapRef) return
+
+		const closePanel = () => {
+			setOpen(false)
+		}
+
+		mapRef.on("click", closePanel)
+
+		return () => {
+			mapRef.off("click", closePanel)
 		}
 	}, [mapRef])
 
@@ -72,7 +179,7 @@ export default function NavBar(props: NavBarProps) {
 					'w-full overflow-hidden px-3 md:px-4',
 				)}
 				animate={{
-					borderRadius: open ? 16 : 999,
+					borderRadius: 16,
 				}}
 				transition={{
 					layout: {
@@ -85,50 +192,122 @@ export default function NavBar(props: NavBarProps) {
 					},
 				}}
 			>
-				<div className="flex h-11 w-full items-center gap-2 text-black md:gap-4 dark:text-zinc-200">
-					<SearchIcon className="h-6 w-6 shrink-0 text-red-600"/>
+				{props.archiveMode ? (
 
-					<input
-						ref={inputRef}
-						placeholder={t('placeholder') || undefined}
-						onFocus={() => setOpen(true)}
-						onChange={(e) => setSearchString(e.target.value)}
-						className="h-full w-full flex-1 border-none bg-transparent focus:border-none focus:ring-0 focus:outline-hidden dark:text-zinc-200"
-						value={searchString}
-					/>
+					<div className="flex h-14 items-center justify-between gap-6" onClick={() => setOpen(true)}>
 
-					{!open && (
-						<span className="hidden flex-none text-xs font-semibold text-gray-400 md:block">
-							<kbd>ctrl</kbd> + <kbd>K</kbd>
-						</span>
-					)}
+						<div className="flex flex-1 items-center gap-3 overflow-hidden cursor-pointer">
 
-					{open && (
-						<button
-							type="button"
-							onClick={() => {
-								setSearchString('')
-								setOpen(false)
-								inputRef.current?.blur()
-							}}
-							aria-label="Close search"
-							className="rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10"
-						>
-							<XIcon className="h-5 w-5" />
-						</button>
-					)}
+							{appliedSummary && (appliedSummary.country || appliedSummary.region) && (
+								<span className="truncate text-sm text-gray-700 dark:text-zinc-300">
+									{[appliedSummary.country, appliedSummary.region]
+										.filter(Boolean)
+										.join(' / ')}
+								</span>
+							)}
 
-					<div className="flex items-center gap-2 border-l border-black/10 pl-3 dark:border-white/10">
-						<span className="text-xs whitespace-nowrap">
-							Archive
-						</span>
+						</div>
 
-						<Switch
-							checked={archiveMode}
-							onCheckedChange={setArchiveMode}
-						/>
+						<div className="flex items-center gap-3 border-l border-black/10 pl-4" onClick={(e) => e.stopPropagation()}>
+
+							{appliedSummary && (
+								<>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										className="h-7 px-2 text-xs"
+										onClick={() => setOpen(true)}
+									>
+										Edit
+									</Button>
+
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										className="h-7 px-2 text-xs"
+										onClick={handleClear}
+									>
+										Clear
+									</Button>
+								</>
+							)}
+
+							<span className="text-sm">
+								Archive
+							</span>
+
+							<Switch
+								checked={props.archiveMode}
+								onCheckedChange={(checked) => {
+									props.setArchiveMode(checked)
+
+									if (!checked) {
+										setOpen(false)
+									}
+								}}
+							/>
+
+						</div>
+
 					</div>
-				</div>
+
+				) : (
+
+					<div className="flex h-11 w-full items-center gap-2 text-black md:gap-4 dark:text-zinc-200">
+
+						<SearchIcon className="h-6 w-6 shrink-0 text-red-600"/>
+
+						<input
+							ref={inputRef}
+							placeholder={t('placeholder') || undefined}
+							onFocus={() => setOpen(true)}
+							onChange={(e) => setSearchString(e.target.value)}
+							className="h-full w-full flex-1 border-none bg-transparent focus:border-none focus:ring-0 focus:outline-hidden dark:text-zinc-200"
+							value={searchString}
+						/>
+
+						{!open && (
+							<span className="hidden flex-none text-xs font-semibold text-gray-400 md:block">
+								<kbd>ctrl</kbd> + <kbd>K</kbd>
+							</span>
+						)}
+
+						{open && (
+							<button
+								type="button"
+								onClick={() => {
+									setSearchString("")
+									setOpen(false)
+								}}
+							>
+								<XIcon className="h-5 w-5" />
+							</button>
+						)}
+
+						<div className="flex items-center gap-2 border-l border-black/10 pl-3">
+
+							<span className="text-xs">
+								Archive
+							</span>
+
+							<Switch
+								checked={props.archiveMode}
+								onCheckedChange={(checked) => {
+									props.setArchiveMode(checked)
+
+									if (checked) {
+										setOpen(true)
+									}
+								}}
+							/>
+
+						</div>
+
+					</div>
+
+				)}
 
 				<NavbarContext.Provider value={{ open, setOpen }}>
 					<AnimatePresence initial={false}>
@@ -157,11 +336,20 @@ export default function NavBar(props: NavBarProps) {
 								}}
 							>
 								<div className="pt-2">
-									<NavbarHandler
-										devices={props.devices}
-										searchString={searchString}
-										archiveMode={archiveMode}
-									/>
+									{props.archiveMode ? (
+										<ArchiveFilterPanel
+											onZoomToAOI={zoomToAOI}
+											onApply={handleArchivePanelApply}
+										/>
+									) : (
+										<NavbarHandler
+											devices={props.devices}
+											searchString={searchString}
+											archiveMode={props.archiveMode}
+											onZoomToAOI={zoomToAOI}
+										/>
+									)}
+
 								</div>
 							</motion.div>
 						)}

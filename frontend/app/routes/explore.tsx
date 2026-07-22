@@ -50,6 +50,7 @@ import maplibregl, {
 } from 'maplibre-gl'
 import BoxMarker from '~/components/map/layers/cluster/box-marker'
 import MapHeader from '~/components/map/topbar'
+import ArchiveResultsPanel from '~/components/map/archive-results-panel'
 import { DOWNLOAD_FILTER_KEYS } from '~/components/header/download'
 
 const INITIAL_VIEW_STATE = {
@@ -91,6 +92,37 @@ function parseMapHash(hash: string) {
 		longitude: Number(longitude),
 		zoom: Number(zoom),
 	})
+}
+function collectPositions(coords: any, out: [number, number][]) {
+	if (typeof coords[0] === 'number') {
+		out.push(coords as [number, number])
+		return
+	}
+	for (const c of coords) collectPositions(c, out)
+}
+
+function getBoundsFromGeometry(
+	geometry: { coordinates: any } | undefined | null,
+): [[number, number], [number, number]] | null {
+	if (!geometry?.coordinates) return null
+
+	const positions: [number, number][] = []
+	collectPositions(geometry.coordinates, positions)
+	if (positions.length === 0) return null
+
+	let west = positions[0][0]
+	let east = positions[0][0]
+	let south = positions[0][1]
+	let north = positions[0][1]
+
+	for (const [lng, lat] of positions) {
+		west = Math.min(west, lng)
+		east = Math.max(east, lng)
+		south = Math.min(south, lat)
+		north = Math.max(north, lat)
+	}
+
+	return [[west, south], [east, north]]
 }
 
 function getHomeView(
@@ -415,7 +447,7 @@ export default function Explore() {
 	const appliedInitialMyAreaRef = useRef(false)
 	const navigate = useNavigate()
 	const location = useLocation()
-
+	
 	const [selectedPheno, setSelectedPheno] = useState<any | undefined>(undefined)
 	
 	const [searchParams] = useSearchParams()
@@ -425,6 +457,242 @@ export default function Explore() {
 		type: 'FeatureCollection',
 		features: [],
 	})
+	const [uploadedArea, setUploadedArea] =
+    useState<GeoJSON.FeatureCollection | null>(null)
+	const [archiveFilters, setArchiveFilters] = useState<any | null>(null)
+
+	const [archiveResults, setArchiveResults] = useState<any>(null)
+	const [exportStatus, setExportStatus] = useState<
+		'idle' | 'queued' | 'running' | 'done' | 'failed'
+	>('idle')
+	const [exportError, setExportError] = useState<string | null>(null)
+
+	const handleArchiveApply = useCallback(async (filters: any) => {
+		setArchiveFilters(filters)
+
+		try {
+			let response: Response
+
+			// ---------- AOI SEARCH ----------
+			if (filters.areaFile) {
+				const formData = new FormData()
+
+				formData.append("file", filters.areaFile)
+				formData.append("from", filters.startDate)
+				formData.append("to", filters.endDate)
+
+				filters.sensors.forEach((sensor: string) => {
+					formData.append("phenomena", sensor)
+				})
+
+				if (filters.sensorType !== "all") {
+					formData.append("exposure", filters.sensorType)
+				}
+
+				response = await fetch(
+					"http://127.0.0.1:8001/aoi/measurements",
+					{
+						method: "POST",
+						body: formData,
+					}
+				)
+			}
+
+			// ---------- COUNTRY / REGION SEARCH ----------
+			else {
+				const params = new URLSearchParams()
+
+				params.append("from", filters.startDate)
+				params.append("to", filters.endDate)
+
+				filters.sensors.forEach((sensor: string) => {
+					params.append("phenomena", sensor)
+				})
+
+				if (filters.sensorType !== "all") {
+					params.append("exposure", filters.sensorType)
+				}
+				params.append("aggregate", "raw")
+
+
+				response = await fetch(
+					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+						filters.country
+					)}/${encodeURIComponent(
+						filters.region
+					)}/measurements?${params.toString()}`
+				)
+			}
+
+			if (!response.ok) {
+				throw new Error(await response.text())
+			}
+
+			const data = await response.json()
+
+			console.log('Archive response:', { ...data, aoi: { ...data.aoi, geometry: '[omitted]' } })
+
+
+			setArchiveResults(data)
+		} catch (err) {
+			console.error("Archive request failed:", err)
+		}
+	}, [])
+
+	useEffect(() => {
+		const geometry = archiveResults?.aoi?.geometry
+		const bounds = getBoundsFromGeometry(geometry)
+		if (!bounds) return
+
+		mapRef.current?.fitBounds(bounds, {
+			padding: 80,
+			duration: 900,
+			essential: true,
+		})
+
+		const map = mapRef.current?.getMap()
+		if (!map) return
+
+		const aoiFeature = {
+			type: 'Feature' as const,
+			geometry,
+			properties: {},
+		}
+
+		const drawAoiLayer = () => {
+			if (map.getLayer('archive-aoi-fill')) map.removeLayer('archive-aoi-fill')
+			if (map.getLayer('archive-aoi-outline')) map.removeLayer('archive-aoi-outline')
+			if (map.getSource('archive-aoi')) map.removeSource('archive-aoi')
+
+			map.addSource('archive-aoi', {
+				type: 'geojson',
+				data: aoiFeature as any,
+			})
+
+			map.addLayer({
+				id: 'archive-aoi-fill',
+				type: 'fill',
+				source: 'archive-aoi',
+				paint: {
+					'fill-color': '#2563eb',
+					'fill-opacity': 0.2,
+				},
+			})
+
+			map.addLayer({
+				id: 'archive-aoi-outline',
+				type: 'line',
+				source: 'archive-aoi',
+				paint: {
+					'line-color': '#2563eb',
+					'line-width': 3,
+				},
+			})
+		}
+
+		try {
+			drawAoiLayer()
+		} catch (err) {
+            console.error('Failed to draw AOI highlight:', err)		}
+	}, [archiveResults])
+
+	const handleArchiveClear = useCallback(() => {
+		setArchiveFilters(null)
+		setArchiveResults(null)
+
+		const map = mapRef.current?.getMap()
+		if (!map) return
+
+		if (map.getLayer('archive-aoi-fill')) map.removeLayer('archive-aoi-fill')
+		if (map.getLayer('archive-aoi-outline')) map.removeLayer('archive-aoi-outline')
+		if (map.getSource('archive-aoi')) map.removeSource('archive-aoi')
+	}, [])
+
+
+	const handleDownloadAll = useCallback(async (format: 'csv' | 'geojson') => {
+		if (!archiveFilters) return
+
+		setExportStatus('queued')
+		setExportError(null)
+
+		try {
+			let response: Response
+
+			if (archiveFilters.areaFile) {
+				const formData = new FormData()
+				formData.append('file', archiveFilters.areaFile)
+				formData.append('from', archiveFilters.startDate)
+				formData.append('to', archiveFilters.endDate)
+				archiveFilters.sensors.forEach((sensor: string) => {
+					formData.append('phenomena', sensor)
+				})
+				if (archiveFilters.sensorType !== 'all') {
+					formData.append('exposure', archiveFilters.sensorType)
+				}
+				formData.append('aggregate', 'raw')
+				formData.append('format', format)
+
+				response = await fetch('http://127.0.0.1:8001/aoi/measurements/exports', {
+					method: 'POST',
+					body: formData,
+				})
+			} else {
+				const params = new URLSearchParams()
+				params.append('from', archiveFilters.startDate)
+				params.append('to', archiveFilters.endDate)
+				archiveFilters.sensors.forEach((sensor: string) => {
+					params.append('phenomena', sensor)
+				})
+				if (archiveFilters.sensorType !== 'all') {
+					params.append('exposure', archiveFilters.sensorType)
+				}
+				params.append('aggregate', 'raw')
+				params.append('format', format)
+
+				response = await fetch(
+					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+						archiveFilters.country,
+					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`,
+					{ method: 'POST' },
+				)
+			}
+
+			if (!response.ok) throw new Error(await response.text())
+
+			const job = await response.json()
+			setExportStatus('running')
+
+			const poll = async (): Promise<void> => {
+				const statusRes = await fetch(`http://127.0.0.1:8001${job.statusUrl}`)
+				const statusData = await statusRes.json()
+
+				if (!statusRes.ok || statusData.error) {
+					setExportStatus('failed')
+					setExportError(statusData.error?.message ?? 'Export failed.')
+					return
+				}
+
+				if (statusData.status === 'completed') {
+					setExportStatus('done')
+					const link = document.createElement('a')
+					link.href = `http://127.0.0.1:8001${job.downloadUrl}`
+					link.rel = 'noopener'
+					document.body.appendChild(link)
+					link.click()
+					link.remove()
+					return
+				}
+
+				setTimeout(poll, 2000)
+			}
+
+			poll()
+		} catch (err) {
+			setExportStatus('failed')
+			setExportError(err instanceof Error ? err.message : 'Download failed.')
+		}
+	}, [archiveFilters])
+
 	const [hoveredFeatureId, setHoveredFeatureId] = useState<
 		string | number | null
 	>(null)
@@ -640,6 +908,29 @@ export default function Explore() {
 		() => getOwnedDevicesAreaTarget(userDeviceLocations),
 		[userDeviceLocations],
 	)
+	const archiveDeviceLocations = useMemo(() => {
+		if (!archiveResults?.boxes) return null
+
+		return {
+			type: 'FeatureCollection' as const,
+			features: archiveResults.boxes
+				.filter((box: any) => box.currentLocation?.coordinates)
+				.map((box: any) => ({
+					type: 'Feature' as const,
+					geometry: {
+						type: 'Point' as const,
+						coordinates: box.currentLocation.coordinates,
+					},
+					properties: {
+						id: box._id,
+						name: box.name,
+						exposure: box.exposure,
+						status: 'active',
+					},
+				})),
+		}
+	}, [archiveResults])
+	
 	const myAreaTarget = homeView
 		? ({
 				type: 'view',
@@ -761,7 +1052,18 @@ export default function Explore() {
 					onHomeClick={handleHomeClick}
 					onMyAreaClick={() => focusMyArea(myAreaTarget)}
 					canFocusMyArea={Boolean(myAreaTarget)}
+					onArchiveApply={handleArchiveApply}
+					onArchiveClear={handleArchiveClear}
 				/>
+
+				<ArchiveResultsPanel
+					results={archiveResults}
+					onDownload={handleDownloadAll}
+					downloadStatus={exportStatus}
+					downloadError={exportError}
+					onClose={() => setArchiveResults(null)}
+				/>
+
 				{/* <Header devices={devices} /> */}
 				{selectedPheno && (
 					<Legend
@@ -787,7 +1089,7 @@ export default function Explore() {
 						<Source
 							id="osem-devices"
 							type="geojson"
-							data={filteredDevices as FeatureCollection<Point, Device>}
+							data={(archiveDeviceLocations ?? filteredDevices) as FeatureCollection<Point, Device>}
 							promoteId="id"
 							cluster={true}
 							clusterRadius={64} // 1/8 of a tile
@@ -917,6 +1219,8 @@ export default function Explore() {
 							device={selectedDevice.properties as Device}
 						/>
 					)}
+
+					
 
 					<div className="pointer-events-none absolute inset-0 z-10">
 						<div className="pointer-events-auto">

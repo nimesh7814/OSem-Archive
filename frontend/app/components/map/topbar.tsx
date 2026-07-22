@@ -11,15 +11,23 @@ import {
 } from '../ui/tooltip'
 import ThemeToggle from '../landing/header/theme-toggle'
 import { MapPinned } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/button'
 
 interface MapHeaderProps {
-	devices: any
-	measurementCount: number | undefined
-	onHomeClick?: () => void
-	onMyAreaClick?: () => void
-	canFocusMyArea?: boolean
+    devices: any
+    measurementCount: number | undefined
+    onHomeClick?: () => void
+    onMyAreaClick?: () => void
+    canFocusMyArea?: boolean
+
+    onAreaUploaded?: (
+        area: GeoJSON.FeatureCollection,
+    ) => void
+
+    onArchiveApply?: (filters: any) => void
+	onArchiveClear?: () => void
 }
 
 export default function MapHeader({
@@ -28,8 +36,12 @@ export default function MapHeader({
     onHomeClick,
     onMyAreaClick,
     canFocusMyArea = false,
+    onAreaUploaded,
+    onArchiveApply,
+	onArchiveClear,
 }: MapHeaderProps) {
 	const { t } = useTranslation('menu')
+	const [archiveMode, setArchiveMode] = useState(false)
 
 	return (
 		<TooltipProvider>
@@ -40,6 +52,7 @@ export default function MapHeader({
 							deviceCount={devices.features.length}
 							measurementCount={measurementCount ?? 0}
 							onHomeClick={onHomeClick}
+							archiveMode={archiveMode}
 						/>
 
 						{canFocusMyArea && (
@@ -66,6 +79,11 @@ export default function MapHeader({
 					<div className="flex min-w-0 flex-1 justify-center">
 						<NavBar
 							devices={devices}
+							onAreaUploaded={onAreaUploaded}
+							archiveMode={archiveMode}
+	                        setArchiveMode={setArchiveMode}
+							onArchiveApply={onArchiveApply}
+							onArchiveClear={onArchiveClear}
 						/>
 					</div>
 
