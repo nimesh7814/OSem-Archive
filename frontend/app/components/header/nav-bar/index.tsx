@@ -1,4 +1,4 @@
-import ArchiveFilterPanel from "./archive-filter-panel"
+import ArchiveFilterPanel, { emptyFilters, type ArchiveFilterState } from "./archive-filter-panel"
 import { useMediaQuery } from '@mantine/hooks'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SearchIcon, XIcon } from 'lucide-react'
@@ -22,6 +22,8 @@ interface NavBarProps {
     setArchiveMode: React.Dispatch<React.SetStateAction<boolean>>
     onArchiveApply: (filters: any) => void
     onArchiveClear?: () => void
+    onArchiveHideResults?: () => void
+    isDownloading?: boolean
 }
 
 export const NavbarContext = createContext({
@@ -40,6 +42,9 @@ export default function NavBar(props: NavBarProps) {
 		country?: string
 		region?: string
 	} | null>(null)
+	const [archiveFilters, setArchiveFilters] = useState<ArchiveFilterState>(emptyFilters)
+	const [selectedCountry, setSelectedCountry] = useState("")
+	const [selectedRegion, setSelectedRegion] = useState("")
 
 	const zoomToAOI = (feature: Feature) => {
 		setCurrentAOI(feature)
@@ -115,6 +120,9 @@ export default function NavBar(props: NavBarProps) {
 	const handleClear = () => {
 		setAppliedSummary(null)
 		setCurrentAOI(null)
+		setArchiveFilters(emptyFilters)
+		setSelectedCountry("")
+		setSelectedRegion("")
 
 		if (mapRef) {
 			const map = mapRef.getMap()
@@ -217,7 +225,10 @@ export default function NavBar(props: NavBarProps) {
 										variant="ghost"
 										size="sm"
 										className="h-7 px-2 text-xs"
-										onClick={() => setOpen(true)}
+										onClick={() => {
+											setOpen(true)
+											props.onArchiveHideResults?.()
+										}}
 									>
 										Edit
 									</Button>
@@ -340,6 +351,13 @@ export default function NavBar(props: NavBarProps) {
 										<ArchiveFilterPanel
 											onZoomToAOI={zoomToAOI}
 											onApply={handleArchivePanelApply}
+											disabled={props.isDownloading}
+											filters={archiveFilters}
+											onFiltersChange={setArchiveFilters}
+											selectedCountry={selectedCountry}
+											onSelectedCountryChange={setSelectedCountry}
+											selectedRegion={selectedRegion}
+											onSelectedRegionChange={setSelectedRegion}
 										/>
 									) : (
 										<NavbarHandler
@@ -349,7 +367,6 @@ export default function NavBar(props: NavBarProps) {
 											onZoomToAOI={zoomToAOI}
 										/>
 									)}
-
 								</div>
 							</motion.div>
 						)}

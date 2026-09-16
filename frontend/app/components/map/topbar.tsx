@@ -28,6 +28,8 @@ interface MapHeaderProps {
 
     onArchiveApply?: (filters: any) => void
 	onArchiveClear?: () => void
+	onArchiveHideResults?: () => void
+	isDownloading?: boolean
 }
 
 export default function MapHeader({
@@ -39,6 +41,8 @@ export default function MapHeader({
     onAreaUploaded,
     onArchiveApply,
 	onArchiveClear,
+	onArchiveHideResults,
+	isDownloading,
 }: MapHeaderProps) {
 	const { t } = useTranslation('menu')
 	const [archiveMode, setArchiveMode] = useState(false)
@@ -84,6 +88,8 @@ export default function MapHeader({
 	                        setArchiveMode={setArchiveMode}
 							onArchiveApply={onArchiveApply}
 							onArchiveClear={onArchiveClear}
+							onArchiveHideResults={onArchiveHideResults}
+							isDownloading={isDownloading}
 						/>
 					</div>
 

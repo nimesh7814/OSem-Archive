@@ -80,7 +80,7 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     restart: unless-stopped
     env_file:
       - ./backend/.env
@@ -99,7 +99,7 @@ services:
       retries: 5
 
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:latest
     env_file:
       - ./backend/.env
     depends_on:
@@ -110,7 +110,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-      mc mb -p local/$${MINIO_BUCKET} &&
+      mc mb --ignore-existing local/$${MINIO_BUCKET} &&
       mc anonymous set none local/$${MINIO_BUCKET} &&
       exit 0
       "
@@ -243,6 +243,8 @@ services:
       HOST: "0.0.0.0"
       DATABASE_URL: "postgresql://${POSTGRES_USER:-osem}:${POSTGRES_PASSWORD:-osem_db_lock}@timescaledb:5432/${POSTGRES_DB:-osem_archive}"
       OSEM_API_URL: "https://api.opensensemap.org/"
+      ARCHIVE_API_URL: "http://localhost:8001"
+      ARCHIVE_API_INTERNAL_URL: "http://api:8000"
     ports:
       - "3010:3000"
     networks:

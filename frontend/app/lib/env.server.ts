@@ -7,6 +7,8 @@ const schema = z.object({
 	SESSION_SECRET: z.string(),
 	NOMINATIM_SEARCH_API: z.string(),
 	OSEM_API_URL: z.string().url(),
+	ARCHIVE_API_URL: z.string().url(),
+	ARCHIVE_API_INTERNAL_URL: z.string().url(),
 	DIRECTUS_URL: z.string().url(),
 	SENSORWIKI_API_URL: z.string().url(),
 	MYBADGES_API_URL: z.string().url(),
@@ -16,7 +18,7 @@ const schema = z.object({
 	MYBADGES_ISSUERID_OSEM: z.string(),
 	MYBADGES_CLIENT_ID: z.string(),
 	MYBADGES_CLIENT_SECRET: z.string(),
-	DISCOURSE_URL: z.string().url(),
+	DISCOURSE_URL: z.union([z.literal(''), z.string().url()]),
 })
 
 declare global {
@@ -40,6 +42,7 @@ export function getEnv() {
 	return {
 		NOMINATIM_SEARCH_API: process.env.NOMINATIM_SEARCH_API,
 		OSEM_GITHUB_URL: process.env.OSEM_API_URL,
+		ARCHIVE_API_URL: process.env.ARCHIVE_API_URL,
 		MODE: process.env.NODE_ENV,
 		DIRECTUS_URL: process.env.DIRECTUS_URL,
 		MYBADGES_API_URL: process.env.MYBADGES_API_URL,

@@ -35,9 +35,10 @@ import {
 import { getLocale } from '~/middleware/i18next'
 import {
 	getPublicDevicesGeoJson,
-	getPublicMeasurementCount,
+	getArchiveMeasurementCount,
 	getPublicTags,
 } from '~/lib/opensensemap-api.server'
+import { archiveApiUrl } from '~/lib/archive-api'
 import { getUser, getUserSession } from '~/services/session-service.server'
 import { getFilteredDevices } from '~/utils'
 import maplibregl, {
@@ -376,7 +377,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 
 	const availableTags = await getPublicTags()
 
-	const measurementCount = await getPublicMeasurementCount()
+	const measurementCount = await getArchiveMeasurementCount()
 
 	const session = await getUserSession(request)
 	const message = session.get('global_message') || null
@@ -466,6 +467,7 @@ export default function Explore() {
 		'idle' | 'queued' | 'running' | 'done' | 'failed'
 	>('idle')
 	const [exportError, setExportError] = useState<string | null>(null)
+	const [exportMessage, setExportMessage] = useState<string | null>(null)
 
 	const handleArchiveApply = useCallback(async (filters: any) => {
 		setArchiveFilters(filters)
@@ -490,7 +492,7 @@ export default function Explore() {
 				}
 
 				response = await fetch(
-					"http://127.0.0.1:8001/aoi/measurements",
+					archiveApiUrl('/aoi/measurements'),
 					{
 						method: "POST",
 						body: formData,
@@ -516,11 +518,11 @@ export default function Explore() {
 
 
 				response = await fetch(
-					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+					archiveApiUrl(`/regions/${encodeURIComponent(
 						filters.country
 					)}/${encodeURIComponent(
 						filters.region
-					)}/measurements?${params.toString()}`
+					)}/measurements?${params.toString()}`)
 				)
 			}
 
@@ -596,6 +598,10 @@ export default function Explore() {
             console.error('Failed to draw AOI highlight:', err)		}
 	}, [archiveResults])
 
+	const handleArchiveHideResults = useCallback(() => {
+		setArchiveResults(null)
+	}, [])
+
 	const handleArchiveClear = useCallback(() => {
 		setArchiveFilters(null)
 		setArchiveResults(null)
@@ -614,6 +620,7 @@ export default function Explore() {
 
 		setExportStatus('queued')
 		setExportError(null)
+		setExportMessage(null)
 
 		try {
 			let response: Response
@@ -632,7 +639,7 @@ export default function Explore() {
 				formData.append('aggregate', 'raw')
 				formData.append('format', format)
 
-				response = await fetch('http://127.0.0.1:8001/aoi/measurements/exports', {
+				response = await fetch(archiveApiUrl('/aoi/measurements/exports'), {
 					method: 'POST',
 					body: formData,
 				})
@@ -650,9 +657,9 @@ export default function Explore() {
 				params.append('format', format)
 
 				response = await fetch(
-					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+					archiveApiUrl(`/regions/${encodeURIComponent(
 						archiveFilters.country,
-					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`,
+					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`),
 					{ method: 'POST' },
 				)
 			}
@@ -663,7 +670,7 @@ export default function Explore() {
 			setExportStatus('running')
 
 			const poll = async (): Promise<void> => {
-				const statusRes = await fetch(`http://127.0.0.1:8001${job.statusUrl}`)
+				const statusRes = await fetch(archiveApiUrl(job.statusUrl))
 				const statusData = await statusRes.json()
 
 				if (!statusRes.ok || statusData.error) {
@@ -672,10 +679,12 @@ export default function Explore() {
 					return
 				}
 
+				setExportMessage(statusData.details?.message ?? null)
+
 				if (statusData.status === 'completed') {
 					setExportStatus('done')
 					const link = document.createElement('a')
-					link.href = `http://127.0.0.1:8001${job.downloadUrl}`
+					link.href = archiveApiUrl(job.downloadUrl)
 					link.rel = 'noopener'
 					document.body.appendChild(link)
 					link.click()
@@ -1054,6 +1063,8 @@ export default function Explore() {
 					canFocusMyArea={Boolean(myAreaTarget)}
 					onArchiveApply={handleArchiveApply}
 					onArchiveClear={handleArchiveClear}
+					onArchiveHideResults={handleArchiveHideResults}
+					isDownloading={exportStatus === 'queued' || exportStatus === 'running'}
 				/>
 
 				<ArchiveResultsPanel
@@ -1061,6 +1072,7 @@ export default function Explore() {
 					onDownload={handleDownloadAll}
 					downloadStatus={exportStatus}
 					downloadError={exportError}
+					downloadMessage={exportMessage}
 					onClose={() => setArchiveResults(null)}
 				/>
 

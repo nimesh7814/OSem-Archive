@@ -6,6 +6,7 @@ interface ArchiveResultsPanelProps {
 	onDownload: (format: 'csv' | 'geojson') => void
 	downloadStatus: 'idle' | 'queued' | 'running' | 'done' | 'failed'
 	downloadError?: string | null
+	downloadMessage?: string | null
 	onClose: () => void
 }
 
@@ -136,6 +137,7 @@ export default function ArchiveResultsPanel({
 	onDownload,
 	downloadStatus,
 	downloadError,
+	downloadMessage,
 	onClose,
 }: ArchiveResultsPanelProps) {
 	const series = useMemo(() => extractSensorSeries(results), [results])
@@ -202,6 +204,17 @@ export default function ArchiveResultsPanel({
 					{downloadStatus === 'done' && "Download started — click again if it didn't open"}
 					{downloadStatus === 'failed' && 'Failed — try again'}
 				</button>
+
+				{(downloadStatus === 'queued' || downloadStatus === 'running') && (
+					<div className="mt-2">
+						<div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+							<div className="h-full w-1/3 animate-[export-progress_1.2s_ease-in-out_infinite] rounded-full bg-blue-500" />
+						</div>
+						{downloadMessage && (
+							<p className="mt-1 text-[10px] text-gray-400">{downloadMessage}</p>
+						)}
+					</div>
+				)}
 
 				{downloadError && <p className="mt-2 text-xs text-red-600">{downloadError}</p>}
 			</div>

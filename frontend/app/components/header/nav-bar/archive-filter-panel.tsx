@@ -22,7 +22,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import Spinner from '~/components/spinner'
-import { validateAOI } from '~/lib/archive-api'
+import { archiveApiUrl, validateAOI } from '~/lib/archive-api'
 import { useNavigation } from 'react-router'
 import {
 	ToggleGroup,
@@ -54,7 +54,7 @@ interface RegionFeatureCollection {
 	features: RegionFeature[]
 }
 
-interface ArchiveFilterState {
+export interface ArchiveFilterState {
     sensorType: 'all' | 'indoor' | 'outdoor'
 
     country?: string
@@ -85,9 +85,16 @@ const addYears = (dateString: string, years: number) => {
 interface ArchiveFilterPanelProps {
     onZoomToAOI: (feature: Feature) => void
     onApply: (filters: ArchiveFilterState) => void
+    disabled?: boolean
+    filters: ArchiveFilterState
+    onFiltersChange: (updater: ArchiveFilterState | ((prev: ArchiveFilterState) => ArchiveFilterState)) => void
+    selectedCountry: string
+    onSelectedCountryChange: (value: string) => void
+    selectedRegion: string
+    onSelectedRegionChange: (value: string) => void
 }
 
-const emptyFilters: ArchiveFilterState = {
+export const emptyFilters: ArchiveFilterState = {
     sensorType: 'all',
 
     country: '',
@@ -128,25 +135,29 @@ function FilterChip({
 export default function ArchiveFilterPanel({
 	onZoomToAOI,
 	onApply,
+	disabled,
+	filters,
+	onFiltersChange,
+	selectedCountry,
+	onSelectedCountryChange,
+	selectedRegion,
+	onSelectedRegionChange,
 }: ArchiveFilterPanelProps) {
 	const navigation = useNavigation()
 	const { setOpen } = useContext(NavbarContext)
 
-	const [filters, setFilters] =
-		useState<ArchiveFilterState>(emptyFilters)
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const [dragging, setDragging] = useState(false)
 	const [countries, setCountries] = useState<any[]>([])
 	const [sensorOpen, setSensorOpen] = useState(false)
 	const [phenomena, setPhenomena] = useState<string[]>([])
-	const [selectedCountry, setSelectedCountry] = useState("")
-	const [selectedRegion, setSelectedRegion] = useState("")
+
 	useEffect(() => {
 		console.log("useEffect running");
 		const loadCountries = async () => {
 			    console.log("🚀 loadCountries started");
 			try {
-				const response = await fetch("http://127.0.0.1:8001/countries")
+				const response = await fetch(archiveApiUrl('/countries'))
 
 				console.log("Response:", response)
 
@@ -156,7 +167,7 @@ export default function ArchiveFilterPanel({
 
 				setCountries(data.countries ?? [])
 
-				const p = await fetch("http://127.0.0.1:8001/phenomena")
+				const p = await fetch(archiveApiUrl('/phenomena'))
 				const pdata = await p.json()
 
 				setPhenomena(pdata.phenomena ?? [])
@@ -174,7 +185,7 @@ export default function ArchiveFilterPanel({
 		key: K,
 		value: ArchiveFilterState[K],
 	) => {
-		setFilters((current) => ({
+		onFiltersChange((current) => ({
 			...current,
 			[key]: value,
 		}))
@@ -228,10 +239,10 @@ export default function ArchiveFilterPanel({
 	}
 
 	const handleReset = () => {
-		setFilters(emptyFilters)
+		onFiltersChange(emptyFilters)
 
-		setSelectedCountry("")
-		setSelectedRegion("")
+		onSelectedCountryChange("")
+		onSelectedRegionChange("")
 
 		setDragging(false)
 		if (fileInputRef.current) {
@@ -291,8 +302,8 @@ export default function ArchiveFilterPanel({
 							<Select
 								value={selectedCountry}
 								onValueChange={(value) => {
-									setSelectedCountry(value)
-									setSelectedRegion("")
+									onSelectedCountryChange(value)
+									onSelectedRegionChange("")
 								}}
 								disabled={!!filters.areaGeoJSON}
 							>
@@ -318,8 +329,9 @@ export default function ArchiveFilterPanel({
 									variant="ghost"
 									size="icon"
 									onClick={() => {
-										setSelectedCountry("")
-										setSelectedRegion("")
+										onSelectedCountryChange("")
+										onSelectedRegionChange("")
+
 									}}
 								>
 									<X className="h-4 w-4"/>
@@ -340,7 +352,7 @@ export default function ArchiveFilterPanel({
 
 							<Select
 								value={selectedRegion}
-								onValueChange={setSelectedRegion}
+								onValueChange={onSelectedRegionChange}
 								disabled={!selectedCountry || !!filters.areaGeoJSON}
 							>
 								<SelectTrigger className="flex-1">
@@ -371,7 +383,7 @@ export default function ArchiveFilterPanel({
 								<Button
 									variant="ghost"
 									size="icon"
-									onClick={() => setSelectedRegion("")}
+									onClick={() => onSelectedRegionChange("")}
 								>
 									<X className="h-4 w-4"/>
 								</Button>
@@ -693,8 +705,8 @@ export default function ArchiveFilterPanel({
 							<FilterChip
 								label={`Country: ${selectedCountry}`}
 								onClear={() => {
-									setSelectedCountry("")
-									setSelectedRegion("")
+									onSelectedCountryChange("")
+									onSelectedRegionChange("")
 								}}
 							/>
 						)}
@@ -702,7 +714,7 @@ export default function ArchiveFilterPanel({
 						{selectedRegion && (
 							<FilterChip
 								label={`Region: ${selectedRegion}`}
-								onClear={() => setSelectedRegion("")}
+								onClear={() => onSelectedRegionChange("")}
 							/>
 						)}
 
