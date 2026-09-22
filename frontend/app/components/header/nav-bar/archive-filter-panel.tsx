@@ -22,7 +22,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import Spinner from '~/components/spinner'
-import { archiveApiUrl, validateAOI } from '~/lib/archive-api'
+import { validateAOI } from '~/lib/archive-api'
 import { useNavigation } from 'react-router'
 import {
 	ToggleGroup,
@@ -157,7 +157,7 @@ export default function ArchiveFilterPanel({
 		const loadCountries = async () => {
 			    console.log("🚀 loadCountries started");
 			try {
-				const response = await fetch(archiveApiUrl('/countries'))
+				const response = await fetch("http://127.0.0.1:8001/countries")
 
 				console.log("Response:", response)
 
@@ -167,7 +167,7 @@ export default function ArchiveFilterPanel({
 
 				setCountries(data.countries ?? [])
 
-				const p = await fetch(archiveApiUrl('/phenomena'))
+				const p = await fetch("http://127.0.0.1:8001/phenomena")
 				const pdata = await p.json()
 
 				setPhenomena(pdata.phenomena ?? [])

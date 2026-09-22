@@ -38,7 +38,6 @@ import {
 	getArchiveMeasurementCount,
 	getPublicTags,
 } from '~/lib/opensensemap-api.server'
-import { archiveApiUrl } from '~/lib/archive-api'
 import { getUser, getUserSession } from '~/services/session-service.server'
 import { getFilteredDevices } from '~/utils'
 import maplibregl, {
@@ -492,7 +491,7 @@ export default function Explore() {
 				}
 
 				response = await fetch(
-					archiveApiUrl('/aoi/measurements'),
+					"http://127.0.0.1:8001/aoi/measurements",
 					{
 						method: "POST",
 						body: formData,
@@ -518,11 +517,11 @@ export default function Explore() {
 
 
 				response = await fetch(
-					archiveApiUrl(`/regions/${encodeURIComponent(
+					`http://127.0.0.1:8001/regions/${encodeURIComponent(
 						filters.country
 					)}/${encodeURIComponent(
 						filters.region
-					)}/measurements?${params.toString()}`)
+					)}/measurements?${params.toString()}`
 				)
 			}
 
@@ -639,7 +638,7 @@ export default function Explore() {
 				formData.append('aggregate', 'raw')
 				formData.append('format', format)
 
-				response = await fetch(archiveApiUrl('/aoi/measurements/exports'), {
+				response = await fetch('http://127.0.0.1:8001/aoi/measurements/exports', {
 					method: 'POST',
 					body: formData,
 				})
@@ -657,9 +656,9 @@ export default function Explore() {
 				params.append('format', format)
 
 				response = await fetch(
-					archiveApiUrl(`/regions/${encodeURIComponent(
+					`http://127.0.0.1:8001/regions/${encodeURIComponent(
 						archiveFilters.country,
-					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`),
+					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`,
 					{ method: 'POST' },
 				)
 			}
@@ -670,7 +669,7 @@ export default function Explore() {
 			setExportStatus('running')
 
 			const poll = async (): Promise<void> => {
-				const statusRes = await fetch(archiveApiUrl(job.statusUrl))
+				const statusRes = await fetch(`http://127.0.0.1:8001${job.statusUrl}`)
 				const statusData = await statusRes.json()
 
 				if (!statusRes.ok || statusData.error) {
@@ -684,7 +683,7 @@ export default function Explore() {
 				if (statusData.status === 'completed') {
 					setExportStatus('done')
 					const link = document.createElement('a')
-					link.href = archiveApiUrl(job.downloadUrl)
+					link.href = `http://127.0.0.1:8001${job.downloadUrl}`
 					link.rel = 'noopener'
 					document.body.appendChild(link)
 					link.click()

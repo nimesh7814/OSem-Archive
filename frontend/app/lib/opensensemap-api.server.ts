@@ -1,5 +1,4 @@
 import type { FeatureCollection, Point } from 'geojson'
-import { archiveApiUrl } from './archive-api'
 
 type PublicApiFeature = GeoJSON.Feature<Point> & {
 	properties: {
@@ -282,7 +281,7 @@ export async function getPublicDevicesGeoJson() {
 }
 
 export async function getArchiveMeasurementCount() {
-	const response = await fetch(archiveApiUrl('/stats'))
+	const response = await fetch('http://127.0.0.1:8001/stats')
 	if (!response.ok) return 0
 	const stats = await response.json()
 	return stats.summary?.[0]?.readings ?? 0
