@@ -52,6 +52,7 @@ import BoxMarker from '~/components/map/layers/cluster/box-marker'
 import MapHeader from '~/components/map/topbar'
 import ArchiveResultsPanel from '~/components/map/archive-results-panel'
 import { DOWNLOAD_FILTER_KEYS } from '~/components/header/download'
+import { archiveApiUrl } from '~/lib/archive-api'
 
 const INITIAL_VIEW_STATE = {
 	zoom: 2,
@@ -491,7 +492,7 @@ export default function Explore() {
 				}
 
 				response = await fetch(
-					"http://127.0.0.1:8001/aoi/measurements",
+					archiveApiUrl('/aoi/measurements'),
 					{
 						method: "POST",
 						body: formData,
@@ -517,11 +518,11 @@ export default function Explore() {
 
 
 				response = await fetch(
-					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+					archiveApiUrl(`/regions/${encodeURIComponent(
 						filters.country
 					)}/${encodeURIComponent(
 						filters.region
-					)}/measurements?${params.toString()}`
+					)}/measurements?${params.toString()}`)
 				)
 			}
 
@@ -530,9 +531,6 @@ export default function Explore() {
 			}
 
 			const data = await response.json()
-
-			console.log('Archive response:', { ...data, aoi: { ...data.aoi, geometry: '[omitted]' } })
-
 
 			setArchiveResults(data)
 		} catch (err) {
@@ -638,7 +636,7 @@ export default function Explore() {
 				formData.append('aggregate', 'raw')
 				formData.append('format', format)
 
-				response = await fetch('http://127.0.0.1:8001/aoi/measurements/exports', {
+				response = await fetch(archiveApiUrl('/aoi/measurements/exports'), {
 					method: 'POST',
 					body: formData,
 				})
@@ -656,9 +654,9 @@ export default function Explore() {
 				params.append('format', format)
 
 				response = await fetch(
-					`http://127.0.0.1:8001/regions/${encodeURIComponent(
+					archiveApiUrl(`/regions/${encodeURIComponent(
 						archiveFilters.country,
-					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`,
+					)}/${encodeURIComponent(archiveFilters.region)}/measurements/exports?${params.toString()}`),
 					{ method: 'POST' },
 				)
 			}
@@ -669,7 +667,7 @@ export default function Explore() {
 			setExportStatus('running')
 
 			const poll = async (): Promise<void> => {
-				const statusRes = await fetch(`http://127.0.0.1:8001${job.statusUrl}`)
+				const statusRes = await fetch(archiveApiUrl(job.statusUrl))
 				const statusData = await statusRes.json()
 
 				if (!statusRes.ok || statusData.error) {
@@ -683,7 +681,7 @@ export default function Explore() {
 				if (statusData.status === 'completed') {
 					setExportStatus('done')
 					const link = document.createElement('a')
-					link.href = `http://127.0.0.1:8001${job.downloadUrl}`
+					link.href = archiveApiUrl(job.downloadUrl)
 					link.rel = 'noopener'
 					document.body.appendChild(link)
 					link.click()

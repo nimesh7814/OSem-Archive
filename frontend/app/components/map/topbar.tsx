@@ -22,11 +22,7 @@ interface MapHeaderProps {
     onMyAreaClick?: () => void
     canFocusMyArea?: boolean
 
-    onAreaUploaded?: (
-        area: GeoJSON.FeatureCollection,
-    ) => void
-
-    onArchiveApply?: (filters: any) => void
+    onArchiveApply: (filters: any) => void
 	onArchiveClear?: () => void
 	onArchiveHideResults?: () => void
 	isDownloading?: boolean
@@ -38,7 +34,6 @@ export default function MapHeader({
     onHomeClick,
     onMyAreaClick,
     canFocusMyArea = false,
-    onAreaUploaded,
     onArchiveApply,
 	onArchiveClear,
 	onArchiveHideResults,
@@ -83,7 +78,6 @@ export default function MapHeader({
 					<div className="flex min-w-0 flex-1 justify-center">
 						<NavBar
 							devices={devices}
-							onAreaUploaded={onAreaUploaded}
 							archiveMode={archiveMode}
 	                        setArchiveMode={setArchiveMode}
 							onArchiveApply={onArchiveApply}

@@ -16,44 +16,18 @@ import {
 	SelectValue,
 } from '~/components/ui/select'
 import { X, CalendarIcon, Upload } from 'lucide-react'
-import { useContext, useState, useEffect, useCallback, useRef } from 'react' // + useEffect, useCallback, useRef
+import { useContext, useState, useEffect, useRef } from 'react'
 import { NavbarContext } from '.'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import Spinner from '~/components/spinner'
-import { validateAOI } from '~/lib/archive-api'
+import { archiveApiUrl, validateAOI } from '~/lib/archive-api'
 import { useNavigation } from 'react-router'
 import {
 	ToggleGroup,
 	ToggleGroupItem,
 } from '~/components/ui/toggle-group'
-import type maplibregl from 'maplibre-gl' // + type-only import, no runtime cost
-
-interface CountryOption {
-	name: string
-	iso3: string // e.g. "DEU"
-}
-interface GeoJSONPosition extends Array<number> {}
-interface GeoJSONGeometry {
-	type: string
-	coordinates: unknown
-}
-interface RegionFeature {
-	type: 'Feature'
-	geometry: GeoJSONGeometry
-	properties: {
-		shapeName: string
-		shapeID: string
-		shapeGroup: string
-		shapeType: string
-	}
-}
-interface RegionFeatureCollection {
-	type: 'FeatureCollection'
-	features: RegionFeature[]
-}
-
 export interface ArchiveFilterState {
     sensorType: 'all' | 'indoor' | 'outdoor'
 
@@ -153,32 +127,23 @@ export default function ArchiveFilterPanel({
 	const [phenomena, setPhenomena] = useState<string[]>([])
 
 	useEffect(() => {
-		console.log("useEffect running");
 		const loadCountries = async () => {
-			    console.log("🚀 loadCountries started");
 			try {
-				const response = await fetch("http://127.0.0.1:8001/countries")
-
-				console.log("Response:", response)
-
+				const response = await fetch(archiveApiUrl('/countries'))
+				if (!response.ok) throw new Error(await response.text())
 				const data = await response.json()
-
-				console.log("Data:", data)
-
 				setCountries(data.countries ?? [])
 
-				const p = await fetch("http://127.0.0.1:8001/phenomena")
+				const p = await fetch(archiveApiUrl('/phenomena'))
+				if (!p.ok) throw new Error(await p.text())
 				const pdata = await p.json()
-
 				setPhenomena(pdata.phenomena ?? [])
-
-				
 			} catch (err) {
-				console.error("Fetch failed:", err);
+				console.error('Failed to load archive filters:', err)
 			}
-		};
+		}
 
-		loadCountries()
+		void loadCountries()
 	}, [])
 
 	const update = <K extends keyof ArchiveFilterState>(
@@ -254,12 +219,6 @@ export default function ArchiveFilterPanel({
 	const canApply = hasLocation && Boolean(filters.startDate) && Boolean(filters.endDate)
 
 	const handleApply = () => {
-		console.log("Selected values")
-		console.log("Country:", selectedCountry)
-		console.log("Region:", selectedRegion)
-
-		console.log(filters)
-
 		const sensorsPayload =
 			filters.sensors.length > 0 && filters.sensors.length === phenomena.length
 				? []
@@ -274,8 +233,6 @@ export default function ArchiveFilterPanel({
 
 		setOpen(false)
 	}
-
-	console.log(filters)
 
 	return (
 		<div className="relative py-2 dark:text-zinc-200">
@@ -783,7 +740,7 @@ export default function ArchiveFilterPanel({
 				<Button
 					className="h-8 rounded-md px-3 text-sm disabled:opacity-50"
 					onClick={handleApply}
-					disabled={!canApply}
+					disabled={disabled || !canApply}
 				>
 					Apply
 				</Button>

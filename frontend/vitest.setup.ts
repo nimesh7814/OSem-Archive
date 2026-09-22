@@ -1,6 +1,3 @@
-import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
 import { seedTos } from './scripts/db/seed-tos'
 import { drizzleClient, pg } from '~/db.server'
 
@@ -12,10 +9,6 @@ beforeAll(async () => {
 		effectiveFrom: new Date('2020-01-01T00:00:00.000Z'),
 		acceptBy: new Date('2030-01-01T00:00:00.000Z'),
 	})
-})
-
-afterEach(() => {
-	cleanup()
 })
 
 afterAll(async () => {

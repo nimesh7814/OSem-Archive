@@ -32,12 +32,11 @@ export const NavbarContext = createContext({
 })
 
 export default function NavBar(props: NavBarProps) {
-	console.log("NavBar props:", props.archiveMode)
 	const [open, setOpen] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [searchString, setSearchString] = useState('')
 	const { osem: mapRef } = useMap()
-	const [currentAOI, setCurrentAOI] = useState<Feature | null>(null)
+	const [, setCurrentAOI] = useState<Feature | null>(null)
 	const [appliedSummary, setAppliedSummary] = useState<{
 		country?: string
 		region?: string
@@ -363,8 +362,6 @@ export default function NavBar(props: NavBarProps) {
 										<NavbarHandler
 											devices={props.devices}
 											searchString={searchString}
-											archiveMode={props.archiveMode}
-											onZoomToAOI={zoomToAOI}
 										/>
 									)}
 								</div>

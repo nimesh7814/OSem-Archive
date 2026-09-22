@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 db/
 tests/
+README.md
+README.html
+README_files/
+logs/
+jobs/

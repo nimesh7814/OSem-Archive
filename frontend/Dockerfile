@@ -1,4 +1,4 @@
-ARG NODE_VERSION=current
+ARG NODE_VERSION=24
 
 # base node image
 FROM node:${NODE_VERSION}-slim AS base
@@ -14,8 +14,8 @@ FROM base AS deps
 
 WORKDIR /myapp
 
-ADD package.json package-lock.json ./
-RUN npm install --include=dev
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev
 
 # Setup production node_modules
 FROM base AS production-deps
@@ -23,7 +23,7 @@ FROM base AS production-deps
 WORKDIR /myapp
 
 COPY --from=deps /myapp/node_modules /myapp/node_modules
-ADD package.json package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm prune --omit=dev
 
 # Build the app
@@ -32,7 +32,7 @@ FROM base AS build
 WORKDIR /myapp
 
 COPY --from=deps /myapp/node_modules /myapp/node_modules
-ADD . .
+COPY . .
 
 RUN npm run build
 
@@ -47,9 +47,10 @@ COPY --from=build /myapp/build /myapp/build
 # Not sure if we really need this or if we should move all our /public folder to /app/assets
 COPY --from=build /myapp/public /myapp/public
 
-COPY ./entrypoint.sh /myapp/entrypoint.sh
-
-ADD . .
+COPY ./package.json ./package.json
+COPY ./entrypoint.sh ./entrypoint.sh
+COPY ./scripts/db/migrate.ts ./scripts/db/env-schema.ts ./scripts/db/
+COPY ./app/db/drizzle ./app/db/drizzle
 RUN chmod +x ./entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]

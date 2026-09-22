@@ -9,7 +9,9 @@ export default defineConfig(({ mode }) => {
 	if (mode === 'test') {
 		// Loads .env, .env.test, etc.
 		const env = loadEnv(mode, process.cwd(), '')
-		Object.assign(process.env, env)
+		for (const [key, value] of Object.entries(env)) {
+			process.env[key] ??= value
+		}
 	}
 
 	return {
@@ -25,7 +27,7 @@ export default defineConfig(({ mode }) => {
 		],
 		test: {
 			globals: true,
-			environment: 'jsdom',
+			environment: 'node',
 			setupFiles: ['./vitest.setup.ts'],
 			include: ['**/*.{test,spec}.{ts,tsx}'],
 			coverage: {

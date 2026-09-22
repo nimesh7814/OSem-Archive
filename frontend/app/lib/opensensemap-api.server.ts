@@ -14,11 +14,6 @@ type PublicApiFeature = GeoJSON.Feature<Point> & {
 	}
 }
 
-type PublicApiStats = {
-	code?: string
-	data?: number[]
-}
-
 type PublicApiTags = {
 	code?: string
 	data?: string[]
@@ -281,7 +276,12 @@ export async function getPublicDevicesGeoJson() {
 }
 
 export async function getArchiveMeasurementCount() {
-	const response = await fetch('http://127.0.0.1:8001/stats')
+	const archiveApiUrl = (
+		process.env.ARCHIVE_API_INTERNAL_URL ||
+		process.env.ARCHIVE_API_URL ||
+		'http://localhost:8001'
+	).replace(/\/$/, '')
+	const response = await fetch(`${archiveApiUrl}/stats`)
 	if (!response.ok) return 0
 	const stats = await response.json()
 	return stats.summary?.[0]?.readings ?? 0

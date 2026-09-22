@@ -1,3 +1,4 @@
+import { type CSSProperties } from 'react'
 import { type FieldTemplateProps } from '@rjsf/utils'
 
 export function FieldTemplate(props: FieldTemplateProps) {
@@ -18,7 +19,7 @@ export function FieldTemplate(props: FieldTemplateProps) {
 	}
 
 	return (
-		<div className={classNames} style={style}>
+		<div className={classNames} style={style as CSSProperties | undefined}>
 			{displayLabel && label && (
 				<label
 					htmlFor={id}

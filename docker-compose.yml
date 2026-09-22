@@ -46,6 +46,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
+    profiles: ["admin"]
     restart: unless-stopped
     depends_on:
       timescaledb:
@@ -151,6 +152,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ingest
+    profiles: ["manual"]
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -202,7 +204,9 @@ services:
       timescaledb:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     env_file:
       - ./backend/.env
     environment:
@@ -220,6 +224,18 @@ services:
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8001:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 6s
+      retries: 12
+      start_period: 10s
     networks:
       - osem_network
     volumes:
@@ -234,7 +250,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     depends_on:
-      timescaledb:
+      api:
         condition: service_healthy
     env_file:
       - ./frontend/.env
