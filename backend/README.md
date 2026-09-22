@@ -4,7 +4,11 @@ The backend imports, stores, queries, and exports historical openSenseMap measur
 
 ## Backend Architecture
 
-![Architecture of the openSenseMap archive backend](../materials/Backend%20Architecture.png)
+<p align="center">
+  <img src="../img/Architecture.jpg" alt="Architecture of the openSenseMap archive backend" width="100%">
+</p>
+
+<p align="center"><em>Archive backend components and the data flow between FastAPI, TimescaleDB, Redis, Celery, and MinIO.</em></p>
 
 | Component | Technology | Responsibility |
 | --- | --- | --- |

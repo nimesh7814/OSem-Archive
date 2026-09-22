@@ -10,7 +10,6 @@ backend/README.html
 backend/README_files/
 
 # Superseded local documentation images
-img/Architecture.jpg
 img/component_celery.jpg
 img/component_db.png
 img/component_fastapi.jpg

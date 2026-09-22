@@ -6,9 +6,19 @@ This repository redesigns the folder-based historical archive published at [arch
 
 ## Project Goal
 
-The regular openSenseMap service is optimized for recent and live station data and retains measurements for the most recent five years. The folder-based archive contains older measurements, including data from the beginning of many stations and sensors, but it is difficult to search across dates, places, and phenomena.
+The regular openSenseMap service is optimized for recent and live station data and retains measurements for the most recent five years. Older measurements remain available in the historical archive, but its original folder-based structure makes them difficult to explore.
 
-![Folder-based openSenseMap archive organized by date](img/old_archive.png)
+### Previous Archive Experience
+
+Before this redesign, the archive was presented as thousands of folders—one folder for each day. A user had to choose a date first and then manually inspect station metadata and individual sensor CSV files. Finding the same phenomenon across several dates or locations required repeating this process, and there was no direct filtering by region, time range, sensor type, or area of interest.
+
+<p align="center">
+  <img src="img/old_archive.png" alt="Previous openSenseMap archive showing thousands of folders organized by date" width="900">
+</p>
+
+<p align="center"><em>The previous archive interface organized historical data by date folders rather than searchable criteria.</em></p>
+
+### Redesigned Experience
 
 This project provides one user experience for both data sources:
 
@@ -75,23 +85,6 @@ The results view highlights the selected area and its sensors on the map. A summ
 | `materials/`             | Architecture and presentation source material            |
 | `img/`                   | Images used by this README                                |
 | `docker-compose.yml`     | Complete local infrastructure and application stack      |
-
-## Services
-
-| Service            | Purpose                              | Local address         |
-| ------------------ | ------------------------------------ | --------------------- |
-| `osem_frontend`    | Integrated map interface             | http://localhost:3010 |
-| `api`              | Archive FastAPI service              | http://localhost:8001 |
-| `timescaledb`      | Archive PostgreSQL/TimescaleDB       | `localhost:5433`      |
-| `redis`            | API cache and Celery broker          | `localhost:6379`      |
-| `minio`            | Export object storage                | http://localhost:9000 |
-| `minio` console    | Object storage administration        | http://localhost:9001 |
-| `celery-worker`    | Background CSV/GeoJSON export worker | Internal only         |
-| `ingest-scheduler` | Scheduled daily archive import       | Internal only         |
-| `pgadmin`          | Optional database administration (`admin` profile) | http://localhost:5151 |
-| `ingest`           | Manual historical import (`manual` profile)        | Run on demand         |
-
-`minio-init` is a short-lived setup container. An `Exited (0)` status is expected after it creates or verifies the export bucket.
 
 ## Run the Project Locally
 
